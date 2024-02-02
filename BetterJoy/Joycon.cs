@@ -178,6 +178,7 @@ namespace BetterJoy
 
         private readonly bool _swapAB = bool.Parse(ConfigurationManager.AppSettings["SwapAB"]);
         private readonly bool _swapXY = bool.Parse(ConfigurationManager.AppSettings["SwapXY"]);
+        private readonly bool _minusToShare = bool.Parse(ConfigurationManager.AppSettings["MinusToShare"]);
         private readonly bool _useFilteredIMU = bool.Parse(ConfigurationManager.AppSettings["UseFilteredIMU"]);
         private readonly DebugType _debugType = (DebugType)int.Parse(ConfigurationManager.AppSettings["DebugType"]);
 
@@ -2641,6 +2642,8 @@ namespace BetterJoy
             var swapAB = input._swapAB;
             var swapXY = input._swapXY;
 
+            var minusToShare = input._minusToShare;
+
             var isPro = input.IsPro;
             var isLeft = input.IsLeft;
             var isSNES = input.IsSNES;
@@ -2666,10 +2669,10 @@ namespace BetterJoy
                     buttons[(int)Button.DpadRight]
                 );
 
-                output.Share = buttons[(int)Button.Capture];
+                output.Share = !minusToShare ? buttons[(int)Button.Capture] : buttons[(int)Button.Minus];
                 output.Options = buttons[(int)Button.Plus];
                 output.Ps = buttons[(int)Button.Home];
-                output.Touchpad = buttons[(int)Button.Minus];
+                output.Touchpad = !minusToShare && buttons[(int)Button.Minus];
                 output.ShoulderLeft = buttons[(int)Button.Shoulder1];
                 output.ShoulderRight = buttons[(int)Button.Shoulder21];
                 output.ThumbLeft = buttons[(int)Button.Stick];
