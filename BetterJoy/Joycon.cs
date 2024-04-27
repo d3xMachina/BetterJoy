@@ -298,6 +298,7 @@ namespace BetterJoy
         public bool IsJoycon => Type is ControllerType.JoyconRight or ControllerType.JoyconLeft;
         public bool IsLeft => Type != ControllerType.JoyconRight;
         public bool IsJoined => Other != null && Other != this;
+        public bool IsPrimaryGyro => !IsJoined || Config.GyroLeftHanded == IsLeft;
 
         public Joycon Other;
 
@@ -880,7 +881,10 @@ namespace BetterJoy
                 Timestamp += deltaPacketsMicroseconds;
                 PacketCounter++;
 
-                Program.Server?.NewReportIncoming(this);
+                if (IsPrimaryGyro)
+                {
+                    Program.Server?.NewReportIncoming(this);
+                }
             }
 
             UpdateInput();
@@ -892,7 +896,7 @@ namespace BetterJoy
 
         private void DetectShake()
         {
-            if (Config.ShakeInputEnabled)
+            if (Config.ShakeInputEnabled && IsPrimaryGyro)
             {
                 var currentShakeTime = _shakeTimer.ElapsedMilliseconds;
 
@@ -1159,14 +1163,33 @@ namespace BetterJoy
         private void DoThingsWithButtons()
         {
             var powerOffButton = (int)(IsPro || !IsLeft || IsJoined ? Button.Home : Button.Capture);
-
             var timestampNow = Stopwatch.GetTimestamp();
-            if (Config.HomeLongPowerOff && _buttons[powerOffButton] && !IsUSB)
+
+            if (!IsUSB)
             {
-                var powerOffPressedDurationMs = (timestampNow - _buttonsDownTimestamp[powerOffButton]) / 10000;
-                if (powerOffPressedDurationMs > 2000)
+                bool powerOff = false;
+
+                if (Config.HomeLongPowerOff && _buttons[powerOffButton])
                 {
-                    if (Other != null)
+                    var powerOffPressedDurationMs = (timestampNow - _buttonsDownTimestamp[powerOffButton]) / 10000;
+                    if (powerOffPressedDurationMs > 2000)
+                    {
+                        powerOff = true;
+                    }
+                }
+
+                if (Config.PowerOffInactivityMins > 0)
+                {
+                    var timeSinceActivityMs = (timestampNow - _timestampActivity) / 10000;
+                    if (timeSinceActivityMs > Config.PowerOffInactivityMins * 60 * 1000)
+                    {
+                        powerOff = true;
+                    }
+                }
+
+                if (powerOff)
+                {
+                    if (IsJoined)
                     {
                         Program.Mgr.PowerOff(Other);
                     }
@@ -1195,23 +1218,40 @@ namespace BetterJoy
                 }
             }
 
-            if (Config.PowerOffInactivityMins > 0 && !IsUSB)
+            DetectShake();
+            RemapButtons();
+
+            if (HandleJoyAction("swap_ab", out int button) && IsButtonDown(button))
             {
-                var timeSinceActivityMs = (timestampNow - _timestampActivity) / 10000;
-                if (timeSinceActivityMs > Config.PowerOffInactivityMins * 60 * 1000)
-                {
-                    if (Other != null)
-                    {
-                        Program.Mgr.PowerOff(Other);
-                    }
-                    PowerOff();
-                    return;
-                }
+                Config.SwapAB = !Config.SwapAB;
             }
 
-            DetectShake();
+            if (HandleJoyAction("swap_xy", out button) && IsButtonDown(button))
+            {
+                Config.SwapXY = !Config.SwapXY;
+            }
 
-            RemapButtons();
+            if (HandleJoyAction("active_gyro", out button))
+            {
+                if (Config.GyroHoldToggle)
+                {
+                    if (IsButtonDown(button))
+                    {
+                        ActiveGyro = true;
+                    }
+                    else if (IsButtonUp(button))
+                    {
+                        ActiveGyro = false;
+                    }
+                }
+                else
+                {
+                    if (IsButtonDown(button))
+                    {
+                        ActiveGyro = !ActiveGyro;
+                    }
+                }
+            }
 
             // Filtered IMU data
             _AHRS.GetEulerAngles(_curRotation);
@@ -1255,91 +1295,61 @@ namespace BetterJoy
                 }
             }
 
-            if (HandleJoyAction("active_gyro", out int button))
+            if (IsPrimaryGyro)
             {
-                if (Config.GyroHoldToggle)
+                if (Config.ExtraGyroFeature.StartsWith("joy"))
                 {
-                    if (IsButtonDown(button))
+                    if (Settings.Value("active_gyro") == "0" || ActiveGyro)
                     {
-                        ActiveGyro = true;
-                    }
-                    else if (IsButtonUp(button))
-                    {
-                        ActiveGyro = false;
+                        var controlStick = Config.ExtraGyroFeature == "joy_left" ? _stick : _stick2;
+
+                        float dx, dy;
+                        if (Config.UseFilteredIMU)
+                        {
+                            dx = Config.GyroStickSensitivityX * (_curRotation[1] - _curRotation[4]); // yaw
+                            dy = -(Config.GyroStickSensitivityY * (_curRotation[0] - _curRotation[3])); // pitch
+                        }
+                        else
+                        {
+                            dx = Config.GyroStickSensitivityX * (_gyrG.Z * dt); // yaw
+                            dy = -(Config.GyroStickSensitivityY * (_gyrG.Y * dt)); // pitch
+                        }
+
+                        controlStick[0] = Math.Clamp(controlStick[0] / Config.GyroStickReduction + dx, -1.0f, 1.0f);
+                        controlStick[1] = Math.Clamp(controlStick[1] / Config.GyroStickReduction + dy, -1.0f, 1.0f);
                     }
                 }
-                else
+                else if (Config.ExtraGyroFeature == "mouse")
                 {
-                    if (IsButtonDown(button))
+                    // gyro data is in degrees/s
+                    if (Settings.Value("active_gyro") == "0" || ActiveGyro)
                     {
-                        ActiveGyro = !ActiveGyro;
-                    }
-                }
-            }
+                        int dx, dy;
 
-            if (HandleJoyAction("swap_ab", out button) && IsButtonDown(button))
-            {
-                Config.SwapAB = !Config.SwapAB;
-            }
+                        if (Config.UseFilteredIMU)
+                        {
+                            dx = (int)(Config.GyroMouseSensitivityX * (_curRotation[1] - _curRotation[4])); // yaw
+                            dy = (int)-(Config.GyroMouseSensitivityY * (_curRotation[0] - _curRotation[3])); // pitch
+                        }
+                        else
+                        {
+                            dx = (int)(Config.GyroMouseSensitivityX * (_gyrG.Z * dt));
+                            dy = (int)-(Config.GyroMouseSensitivityY * (_gyrG.Y * dt));
+                        }
 
-            if (HandleJoyAction("swap_xy", out button) && IsButtonDown(button))
-            {
-                Config.SwapXY = !Config.SwapXY;
-            }
-
-            if (Config.ExtraGyroFeature.StartsWith("joy"))
-            {
-                if (Settings.Value("active_gyro") == "0" || ActiveGyro)
-                {
-                    var controlStick = Config.ExtraGyroFeature == "joy_left" ? _stick : _stick2;
-
-                    float dx, dy;
-                    if (Config.UseFilteredIMU)
-                    {
-                        dx = Config.GyroStickSensitivityX * (_curRotation[1] - _curRotation[4]); // yaw
-                        dy = -(Config.GyroStickSensitivityY * (_curRotation[0] - _curRotation[3])); // pitch
-                    }
-                    else
-                    {
-                        dx = Config.GyroStickSensitivityX * (_gyrG.Z * dt); // yaw
-                        dy = -(Config.GyroStickSensitivityY * (_gyrG.Y * dt)); // pitch
+                        WindowsInput.Simulate.Events().MoveBy(dx, dy).Invoke();
                     }
 
-                    controlStick[0] = Math.Clamp(controlStick[0] / Config.GyroStickReduction + dx, -1.0f, 1.0f);
-                    controlStick[1] = Math.Clamp(controlStick[1] / Config.GyroStickReduction + dy, -1.0f, 1.0f);
-                }
-            }
-            else if (Config.ExtraGyroFeature == "mouse" &&
-                     (IsPro || Other == null || (Other != null && (Config.GyroMouseLeftHanded ? IsLeft : !IsLeft))))
-            {
-                // gyro data is in degrees/s
-                if (Settings.Value("active_gyro") == "0" || ActiveGyro)
-                {
-                    int dx, dy;
-
-                    if (Config.UseFilteredIMU)
+                    // reset mouse position to centre of primary monitor
+                    if (HandleJoyAction("reset_mouse", out button) && IsButtonDown(button))
                     {
-                        dx = (int)(Config.GyroMouseSensitivityX * (_curRotation[1] - _curRotation[4])); // yaw
-                        dy = (int)-(Config.GyroMouseSensitivityY * (_curRotation[0] - _curRotation[3])); // pitch
+                        WindowsInput.Simulate.Events()
+                                    .MoveTo(
+                                        Screen.PrimaryScreen.Bounds.Width / 2,
+                                        Screen.PrimaryScreen.Bounds.Height / 2
+                                    )
+                                    .Invoke();
                     }
-                    else
-                    {
-                        dx = (int)(Config.GyroMouseSensitivityX * (_gyrG.Z * dt));
-                        dy = (int)-(Config.GyroMouseSensitivityY * (_gyrG.Y * dt));
-                    }
-
-                    WindowsInput.Simulate.Events().MoveBy(dx, dy).Invoke();
-                }
-
-                // reset mouse position to centre of primary monitor
-                if (HandleJoyAction("reset_mouse", out button) && IsButtonDown(button))
-                {
-                    WindowsInput.Simulate.Events()
-                                .MoveTo(
-                                    Screen.PrimaryScreen.Bounds.Width / 2,
-                                    Screen.PrimaryScreen.Bounds.Height / 2
-                                )
-                                .Invoke();
                 }
             }
         }

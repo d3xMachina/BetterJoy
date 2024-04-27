@@ -78,7 +78,7 @@ namespace BetterJoy
         public int GyroAnalogSensitivity;
         public bool GyroAnalogSliders;
         public bool GyroHoldToggle;
-        public bool GyroMouseLeftHanded;
+        public bool GyroLeftHanded;
         public int GyroMouseSensitivityX;
         public int GyroMouseSensitivityY;
         public float GyroStickReduction;
@@ -117,7 +117,7 @@ namespace BetterJoy
             GyroAnalogSensitivity = config.GyroAnalogSensitivity;
             GyroAnalogSliders = config.GyroAnalogSliders;
             GyroHoldToggle = config.GyroHoldToggle;
-            GyroMouseLeftHanded = config.GyroMouseLeftHanded;
+            GyroLeftHanded = config.GyroLeftHanded;
             GyroMouseSensitivityX = config.GyroMouseSensitivityX;
             GyroMouseSensitivityY = config.GyroMouseSensitivityY;
             GyroStickReduction = config.GyroStickReduction;
@@ -155,7 +155,7 @@ namespace BetterJoy
             UpdateSetting("GyroAnalogSensitivity", ref GyroAnalogSensitivity, 400);
             UpdateSetting("GyroAnalogSliders", ref GyroAnalogSliders, false);
             UpdateSetting("GyroHoldToggle", ref GyroHoldToggle, true);
-            UpdateSetting("GyroMouseLeftHanded", ref GyroMouseLeftHanded, false);
+            UpdateSetting("GyroLeftHanded", ref GyroLeftHanded, false);
             UpdateSetting("GyroMouseSensitivityX", ref GyroMouseSensitivityX, 1200);
             UpdateSetting("GyroMouseSensitivityY", ref GyroMouseSensitivityY, 800);
             UpdateSetting("GyroStickReduction", ref GyroStickReduction, 1.5f);
