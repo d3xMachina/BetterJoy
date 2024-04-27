@@ -12,10 +12,10 @@ namespace BetterJoy
         private readonly IKeyboardEventSource Keyboard;
         private readonly IMouseEventSource Mouse;
 
-        private int _NbKeyboardEvents = 0;
-        private int _NbMouseEvents = 0;
+        private int _nbKeyboardEvents = 0;
+        private int _nbMouseEvents = 0;
 
-        bool disposed = false;
+        private bool _disposed = false;
 
         public InputCapture()
         {
@@ -49,7 +49,7 @@ namespace BetterJoy
 
         private void KeyboardEventCountChange(bool newEvent)
         {
-            int count = newEvent ? Interlocked.Increment(ref _NbKeyboardEvents) : Interlocked.Decrement(ref _NbKeyboardEvents);
+            int count = newEvent ? Interlocked.Increment(ref _nbKeyboardEvents) : Interlocked.Decrement(ref _nbKeyboardEvents);
             
             // The property calls invoke, so only do it if necessary
             if (count == 0)
@@ -64,7 +64,7 @@ namespace BetterJoy
 
         private void MouseEventCountChange(bool newEvent)
         {
-            int count = newEvent ? Interlocked.Increment(ref _NbMouseEvents) : Interlocked.Decrement(ref _NbMouseEvents);
+            int count = newEvent ? Interlocked.Increment(ref _nbMouseEvents) : Interlocked.Decrement(ref _nbMouseEvents);
             
             // The property calls invoke, so only do it if necessary
             if (count == 0)
@@ -79,14 +79,14 @@ namespace BetterJoy
 
         public void Dispose()
         {
-            if (disposed)
+            if (_disposed)
             {
                 return;
             }
 
             Keyboard.Dispose();
             Mouse.Dispose();
-            disposed = true;
+            _disposed = true;
         }
     }
 }
