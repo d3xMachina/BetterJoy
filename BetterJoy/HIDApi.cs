@@ -97,13 +97,13 @@ namespace BetterJoy
         public static extern IntPtr OpenPath([MarshalAs(UnmanagedType.LPStr)] string path);
 
         [DllImport(Dll, EntryPoint = "hid_write", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int Write(IntPtr device, ref byte data, UIntPtr length);
+        private static extern int Write(IntPtr device, ref byte data, UIntPtr length);
 
         [DllImport(Dll, EntryPoint = "hid_read_timeout", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int ReadTimeout(IntPtr dev, ref byte data, UIntPtr length, int milliseconds);
+        private static extern int ReadTimeout(IntPtr dev, ref byte data, UIntPtr length, int milliseconds);
 
         [DllImport(Dll, EntryPoint = "hid_read", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int Read(IntPtr device, ref byte data, UIntPtr length);
+        private static extern int Read(IntPtr device, ref byte data, UIntPtr length);
 
         [DllImport(Dll, EntryPoint = "hid_set_nonblocking", CallingConvention = CallingConvention.Cdecl)]
         public static extern int SetNonBlocking(IntPtr device, int nonblock);
@@ -118,40 +118,52 @@ namespace BetterJoy
         public static extern void Close(IntPtr device);
 
         [DllImport(Dll, EntryPoint = "hid_get_manufacturer_string", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetManufacturerString(
+        private static extern int GetManufacturerString(
             IntPtr device,
-            [MarshalAs(UnmanagedType.LPWStr)] string @string,
+            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder str,
             UIntPtr maxlen
         );
 
         [DllImport(Dll, EntryPoint = "hid_get_product_string", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetProductString(
+        private static extern int GetProductString(
             IntPtr device,
-            [MarshalAs(UnmanagedType.LPWStr)] string @string,
+            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder str,
             UIntPtr maxlen
         );
 
         [DllImport(Dll, EntryPoint = "hid_get_serial_number_string", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetSerialNumberString(
+        private static extern int GetSerialNumberString(
             IntPtr device,
-            [MarshalAs(UnmanagedType.LPWStr)] string @string,
+            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder str,
             UIntPtr maxlen
         );
 
         [DllImport(Dll, EntryPoint = "hid_get_indexed_string", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetIndexedString(
+        private static extern int GetIndexedString(
             IntPtr device,
             int stringIndex,
-            [MarshalAs(UnmanagedType.LPWStr)] string @string,
+            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder str,
             UIntPtr maxlen
         );
 
         [DllImport(Dll, EntryPoint = "hid_error", CallingConvention = CallingConvention.Cdecl)]
-        [return: MarshalAs(UnmanagedType.LPWStr)]
-        public static extern string Error(IntPtr device);
+        private static extern IntPtr ErrorPtr(IntPtr device);
 
         [DllImport(Dll, EntryPoint = "hid_winapi_get_container_id", CallingConvention = CallingConvention.Cdecl)]
         public static extern int GetContainerId(IntPtr device, out Guid containerId);
+
+        private static string GetStringHelper(Func<StringBuilder, int> getStringFunc)
+        {
+            var bufferInstance = new StringBuilder(MaxStringLength);
+            var ret = getStringFunc(bufferInstance);
+
+            if (ret < 0)
+            {
+                return string.Empty;
+            }
+
+            return bufferInstance.ToString();
+        }
 
         // Added in my fork of HIDapi at https://github.com/d3xMachina/hidapi (needed for HIDHide to work correctly)
         #region HIDAPI_MYFORK
@@ -159,18 +171,34 @@ namespace BetterJoy
         [DllImport(Dll, EntryPoint = "hid_winapi_get_instance_string", CallingConvention = CallingConvention.Cdecl)]
         private static extern int GetInstanceString(
             IntPtr device,
-            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder @string,
+            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder str,
             UIntPtr maxlen
         );
 
         [DllImport(Dll, EntryPoint = "hid_winapi_get_parent_instance_string", CallingConvention = CallingConvention.Cdecl)]
         private static extern int GetParentInstanceString(
             IntPtr device,
-            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder @string,
+            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder str,
             UIntPtr maxlen
         );
 
+        public static string GetInstance(IntPtr device)
+        {
+            return GetStringHelper(bufferInstance => GetInstanceString(device, bufferInstance, MaxStringLength));
+        }
+
+        public static string GetParentInstance(IntPtr device)
+        {
+            return GetStringHelper(bufferInstance => GetParentInstanceString(device, bufferInstance, MaxStringLength));
+        }
+
         #endregion
+
+        public static string Error(IntPtr device)
+        {
+            var ptr = ErrorPtr(device);
+            return Marshal.PtrToStringUni(ptr);
+        }
 
         public static int Write(IntPtr device, ReadOnlySpan<byte> data, int length)
         {
@@ -187,42 +215,24 @@ namespace BetterJoy
             return Read(device, ref MemoryMarshal.GetReference(data), (nuint)length);
         }
 
-        public static string GetInstance(IntPtr device)
+        public static string GetManufacturer(IntPtr device)
         {
-            var bufferInstance = new StringBuilder(MaxStringLength);
-
-            var ret = GetInstanceString(device, bufferInstance, MaxStringLength);
-            if (ret < 0)
-            {
-                return "";
-            }
-
-            var instance = bufferInstance.ToString();
-            if (string.IsNullOrEmpty(instance))
-            {
-                return "";
-            }
-
-            return instance;
+            return GetStringHelper(bufferInstance => GetManufacturerString(device, bufferInstance, MaxStringLength));
         }
 
-        public static string GetParentInstance(IntPtr device)
+        public static string GetProduct(IntPtr device)
         {
-            var bufferInstance = new StringBuilder(MaxStringLength);
+            return GetStringHelper(bufferInstance => GetProductString(device, bufferInstance, MaxStringLength));
+        }
 
-            var ret = GetParentInstanceString(device, bufferInstance, MaxStringLength);
-            if (ret < 0)
-            {
-                return "";
-            }
+        public static string GetSerialNumber(IntPtr device)
+        {
+            return GetStringHelper(bufferInstance => GetSerialNumberString(device, bufferInstance, MaxStringLength));
+        }
 
-            var instance = bufferInstance.ToString();
-            if (string.IsNullOrEmpty(instance))
-            {
-                return "";
-            }
-
-            return instance;
+        public static string GetIndexed(IntPtr device, int stringIndex)
+        {
+            return GetStringHelper(bufferInstance => GetIndexedString(device, stringIndex, bufferInstance, MaxStringLength));
         }
     }
 }

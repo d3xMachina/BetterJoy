@@ -2056,7 +2056,7 @@ namespace BetterJoy
             bool sent = Subcommand(sc, bufParameters, print);
             if (!sent)
             {
-                DebugPrint($"Subcommand write error.", DebugType.Comms);
+                DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
                 return 0;
             }
 
@@ -2070,7 +2070,7 @@ namespace BetterJoy
                 
                 if (length < 0)
                 {
-                    DebugPrint($"Subcommand read error.", DebugType.Comms);
+                    DebugPrint($"Subcommand read error: {ErrorMessage()}", DebugType.Comms);
                 }
 
                 tries++;
@@ -2352,6 +2352,11 @@ namespace BetterJoy
             return length;
         }
 
+        private string ErrorMessage()
+        {
+            return HIDApi.Error(_handle);
+        }
+
         private bool USBCommand(byte command, bool print = true)
         {
             if (_handle == IntPtr.Zero)
@@ -2386,7 +2391,7 @@ namespace BetterJoy
         {
             if (!USBCommand(command, print))
             {
-                DebugPrint("USB command write error.", DebugType.Comms);
+                DebugPrint($"USB command write error: {ErrorMessage()}", DebugType.Comms);
                 return 0;
             }
 
@@ -2401,7 +2406,7 @@ namespace BetterJoy
 
                 if (length < 0)
                 {
-                    DebugPrint($"USB command read error.", DebugType.Comms);
+                    DebugPrint($"USB command read error: {ErrorMessage()}", DebugType.Comms);
                 }
 
                 ++tries;

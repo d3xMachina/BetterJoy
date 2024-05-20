@@ -82,7 +82,18 @@ namespace BetterJoy
                 return true;
             }
 
-            int ret = HIDApi.Init();
+            int ret;
+
+            try
+            {
+                ret = HIDApi.Init();
+            }
+            catch (BadImageFormatException)
+            {
+                _form.AppendTextBox($"Invalid hidapi.dll (32 bits VS 64 bits)");
+                return false;
+            }
+            
             if (ret != 0)
             {
                 _form.AppendTextBox("Could not initialize hidapi");
@@ -252,9 +263,7 @@ namespace BetterJoy
                 // don't show an error message when the controller was dropped without hidapi callback notification (after standby by example)
                 if (!reconnect)
                 {
-                    _form.AppendTextBox(
-                        "Unable to open path to device - device disconnected or incorrect hidapi version (32 bits vs 64 bits)"
-                    );
+                    _form.AppendTextBox($"Unable to open device: {HIDApi.Error(IntPtr.Zero)}");
                 }
 
                 return;
