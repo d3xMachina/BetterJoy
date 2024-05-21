@@ -175,9 +175,11 @@ namespace BetterJoy
             {
                 case PowerModes.Resume:
                     AppendTextBox("Resume session.");
+                    Program.SetSuspended(false);
                     break;
                 case PowerModes.Suspend:
                     AppendTextBox("Suspend session.");
+                    Program.SetSuspended(true);
                     break;
             }
         }

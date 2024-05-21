@@ -664,6 +664,7 @@ namespace BetterJoy
         private static readonly HashSet<string> BlockedDeviceInstances = new();
 
         private static bool _isRunning;
+        public static bool IsSuspended { get; private set; }
 
         private static readonly string AppGuid = "1bf709e9-c133-41df-933a-c9ff3f664c7b"; // randomly-generated
         private static Mutex _mutexInstance;
@@ -1097,6 +1098,11 @@ namespace BetterJoy
                 Mgr.ApplyConfig(controller, showErrors);
                 showErrors = false; // only show parsing errors once
             }
+        }
+
+        public static void SetSuspended(bool suspend)
+        {
+            IsSuspended = suspend;
         }
     }
 }

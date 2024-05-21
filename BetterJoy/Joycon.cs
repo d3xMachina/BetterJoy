@@ -1391,6 +1391,12 @@ namespace BetterJoy
 
             while (!_stopPolling && State > Status.Dropped)
             {
+                if (Program.IsSuspended)
+                {
+                    Thread.Sleep(10);
+                    continue;
+                }
+
                 if (Config.HomeLEDOn && (timeSinceHomeLight.ElapsedMilliseconds > sendHomeLightIntervalMs || !timeSinceHomeLight.IsRunning))
                 {
                     SetHomeLight(Config.HomeLEDOn);
@@ -1424,6 +1430,12 @@ namespace BetterJoy
 
             while (!_stopPolling && State > Status.Dropped)
             {
+                if (Program.IsSuspended)
+                {
+                    Thread.Sleep(10);
+                    continue;
+                }
+
                 var error = ReceiveRaw(buf);
 
                 if (error == ReceiveError.None && State > Status.Dropped)
