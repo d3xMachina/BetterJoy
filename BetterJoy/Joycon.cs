@@ -749,11 +749,13 @@ namespace BetterJoy
         {
             if (Config.ShowAsXInput)
             {
+                DebugPrint("Connect virtual xbox controller.", DebugType.Comms);
                 OutXbox.Connect();
             }
             
             if (Config.ShowAsDs4)
             {
+                DebugPrint("Connect virtual DS4 controller.", DebugType.Comms);
                 OutDs4.Connect();
             }
         }
