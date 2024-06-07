@@ -692,6 +692,15 @@ namespace BetterJoy
             {
                 _form.AppendTextBox("Could not connect to VIGEmBus. The installed VIGEmBus driver is not compatible. Install a newer version of VIGEmBus driver.");
             }
+            catch (VigemAllocFailedException)
+            {
+                _form.AppendTextBox("Could not connect to VIGEmBus. Allocation failed. Try restarting your computer or reinstalling VIGEmBus driver.");
+            }
+            catch (VigemAlreadyConnectedException)
+            {
+                // should not happen
+                _form.AppendTextBox("VIGEmBus is already connected.");
+            }
 
             foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
             {
