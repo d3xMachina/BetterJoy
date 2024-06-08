@@ -96,6 +96,8 @@ namespace BetterJoy
             SimpleHID = 0x3F
         }
 
+        private const int DeviceErroredCode = -100; // custom error
+
         private const int ReportLength = 49;
         private readonly int _CommandLength;
         private readonly int _MixedComsLength; // when the buffer is used for both read and write to hid
@@ -300,6 +302,10 @@ namespace BetterJoy
         public bool IsJoined => Other != null && Other != this;
         public bool IsPrimaryGyro => !IsJoined || Config.GyroLeftHanded == IsLeft;
 
+        public bool IsDeviceReady => State > Status.Dropped;
+        public bool IsDeviceError => !IsDeviceReady && State != Status.NotAttached;
+
+
         public Joycon Other;
 
         public void SetLEDByPlayerNum(int id)
@@ -434,7 +440,7 @@ namespace BetterJoy
 
         public void Attach()
         {
-            if (State > Status.Dropped)
+            if (IsDeviceReady)
             {
                 return;
             }
@@ -668,7 +674,7 @@ namespace BetterJoy
 
         public void PowerOff()
         {
-            if (State > Status.Dropped)
+            if (IsDeviceReady)
             {
                 SetHCIState(0x00);
                 State = Status.Dropped;
@@ -1430,7 +1436,7 @@ namespace BetterJoy
             _timeSinceReceive.Reset();
             Timestamp = 0;
 
-            while (!_stopPolling && State > Status.Dropped)
+            while (!_stopPolling && IsDeviceReady)
             {
                 if (Program.IsSuspended)
                 {
@@ -1440,7 +1446,7 @@ namespace BetterJoy
 
                 var error = ReceiveRaw(buf);
 
-                if (error == ReceiveError.None && State > Status.Dropped)
+                if (error == ReceiveError.None && IsDeviceReady)
                 {
                     State = Status.IMUDataOk;
                     timeSinceError.Reset();
@@ -2348,6 +2354,11 @@ namespace BetterJoy
                 throw new IndexOutOfRangeException();
             }
 
+            if (IsDeviceError)
+            {
+                return DeviceErroredCode;
+            }
+
             if (timeout >= 0)
             {
                 return HIDApi.ReadTimeout(_handle, response, ReportLength, timeout);
@@ -2362,12 +2373,21 @@ namespace BetterJoy
                 throw new IndexOutOfRangeException();
             }
 
+            if (IsDeviceError)
+            {
+                return DeviceErroredCode;
+            }
+
             int length = HIDApi.Write(_handle, command, _CommandLength);
             return length;
         }
 
         private string ErrorMessage()
         {
+            if (IsDeviceError)
+            {
+                return $"Device unavailable : {State}";
+            }
             return HIDApi.Error(_handle);
         }
 

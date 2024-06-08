@@ -373,7 +373,7 @@ namespace BetterJoy
                 return;
             }
 
-            if (controller.State > Joycon.Status.Dropped)
+            if (controller.IsDeviceReady)
             {
                 // device not in error anymore (after a reset or a reconnection from the system)
                 return;
