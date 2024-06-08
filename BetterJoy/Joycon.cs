@@ -751,6 +751,11 @@ namespace BetterJoy
             State = error ? Status.Errored : Status.Dropped;
         }
 
+        public bool IsViGEmSetup()
+        {
+            return (!Config.ShowAsXInput || OutXbox.IsConnected()) && (!Config.ShowAsDs4 || OutDs4.IsConnected());
+        }
+
         public void ConnectViGEm()
         {
             if (Config.ShowAsXInput)

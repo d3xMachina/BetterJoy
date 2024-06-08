@@ -48,7 +48,8 @@ namespace BetterJoy
                 Unknown,
                 Connected,
                 Disconnected,
-                Errored
+                Errored,
+                VirtualControllerErrored
             }
 
             public readonly Type Notification;
@@ -191,6 +192,12 @@ namespace BetterJoy
                                 OnDeviceErrored(devicePath);
                                 break;
                             }
+                            case DeviceNotification.Type.VirtualControllerErrored:
+                            {
+                                var devicePath = (string)job.Data;
+                                OnVirtualControllerErrored(devicePath);
+                                break;
+                            }
                         }
                     }
                 } while (read);
@@ -296,11 +303,10 @@ namespace BetterJoy
             try
             {
                 controller.Attach();
-                controller.ConnectViGEm();
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"[P{index + 1}] Could not connect ({e.Message}).");
+                _form.AppendTextBox($"[P{index + 1}] Could not connect ({e.HResult} - {e.Message}).");
                 return;
             }
             finally
@@ -317,6 +323,21 @@ namespace BetterJoy
             }
 
             controller.SetCalibration(_form.Config.AllowCalibration);
+
+            if (!controller.IsJoined || controller.IsLeft)
+            {
+                try
+                {
+                    controller.ConnectViGEm();
+                }
+                catch (Exception e)
+                {
+                    _form.AppendTextBox($"Could not connect the virtual controller ({e.HResult} - {e.Message}). Retrying...");
+
+                    ReconnectVirtualControllerDelayed(controller);
+                }
+            }
+
             controller.Begin();
         }
 
@@ -347,11 +368,13 @@ namespace BetterJoy
 
                 try
                 {
-                    controller.Other.ConnectViGEm();
+                    otherController.ConnectViGEm();
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    _form.AppendTextBox("Could not connect the virtual controller for the unjoined joycon.");
+                    _form.AppendTextBox($"Could not connect the virtual controller for the unjoined joycon ({e.HResult} - {e.Message}). Retrying...");
+
+                    ReconnectVirtualControllerDelayed(otherController);
                 }
             }
 
@@ -381,6 +404,46 @@ namespace BetterJoy
             
             OnDeviceDisconnected(controller);
             OnDeviceConnected(controller.Path, controller.SerialNumber, controller.Type, controller.IsUSB, controller.IsThirdParty, true);
+        }
+
+        private void OnVirtualControllerErrored(string devicePath)
+        {
+            Joycon controller = GetControllerByPath(devicePath);
+            if (controller == null)
+            {
+                return;
+            }
+
+            if (!controller.IsDeviceReady ||
+                (controller.IsJoined && !controller.IsLeft) ||
+                controller.IsViGEmSetup())
+            {
+                return;
+            }
+
+            try
+            {
+                controller.ConnectViGEm();
+                _form.AppendTextBox($"[P{controller.PadId + 1}] Virtual controller reconnected.");
+            }
+            catch (Exception e)
+            {
+                _form.AppendTextBox($"[P{controller.PadId + 1}] Could not reconnect the virtual controller ({e.HResult} - {e.Message}). Retrying...");
+
+                ReconnectVirtualControllerDelayed(controller);
+            }
+        }
+
+        private void ReconnectVirtualControllerDelayed(Joycon controller, int delayMs = 2000)
+        {
+            Task.Delay(delayMs).ContinueWith(t => ReconnectVirtualController(controller));
+        }
+
+        private void ReconnectVirtualController(Joycon controller)
+        {
+            var writer = _channelDeviceNotifications.Writer;
+            var notification = new DeviceNotification(DeviceNotification.Type.VirtualControllerErrored, controller.Path);
+            while (!writer.TryWrite(notification)) { }
         }
 
         private void OnControllerStateChanged(object sender, Joycon.StateChangedEventArgs e)
@@ -536,6 +599,8 @@ namespace BetterJoy
                 return false;
             }
 
+            var otherController = controller.Other;
+
             // Reenable vigem for the joined controller
             try
             {
@@ -543,14 +608,23 @@ namespace BetterJoy
                 {
                     controller.ConnectViGEm();
                 }
-                controller.Other.ConnectViGEm();
+                otherController.ConnectViGEm();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                _form.AppendTextBox("Could not connect the virtual controller for the split joycon.");
-            }
+                _form.AppendTextBox($"Could not connect the virtual controller for the split joycon ({e.HResult} - {e.Message}). Retrying...");
 
-            var otherController = controller.Other;
+                if (keep && !controller.IsViGEmSetup())
+                {
+                    ReconnectVirtualControllerDelayed(controller);
+                }
+
+                if (controller != otherController &&
+                    !otherController.IsViGEmSetup())
+                {
+                    ReconnectVirtualControllerDelayed(otherController);
+                }
+            }
 
             controller.Other = null;
             otherController.Other = null;

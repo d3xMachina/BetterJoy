@@ -128,6 +128,11 @@ namespace BetterJoy.Controller
             FeedbackReceived?.Invoke(e);
         }
 
+        public bool IsConnected()
+        {
+            return _connected;
+        }
+
         public void Connect()
         {
             if (_controller == null)

@@ -132,6 +132,11 @@ namespace BetterJoy.Controller
             return true;
         }
 
+        public bool IsConnected()
+        {
+            return _connected;
+        }
+
         public void Connect()
         {
             if (_xboxController == null)
