@@ -19,5 +19,5 @@ A clear and concise description of what you expected to happen.
  - Thirdparty : [e.g. Nintendo/Custom model]
 
  **Logs**
- Join your DebugLog.txt file here. It is located in the BetterJoy directory. It is cleared each time you launch BetterJoy.
+ Join your LogDebug.txt file here. It is located in the BetterJoy directory. It is cleared each time you launch BetterJoy.
  To have more informations, please set "DebugType" to all in the config.
