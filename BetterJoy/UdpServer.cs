@@ -371,12 +371,12 @@ namespace BetterJoy
             {
                 _udpSock.Bind(new IPEndPoint(ip, port));
             }
-            catch (SocketException)
+            catch (SocketException e)
             {
                 _udpSock.Close();
 
-                _form.AppendTextBox(
-                    $"Could not start motion server. Make sure that no other applications using the port {port} are running."
+                _form.Log(
+                    $"Could not start motion server. Make sure that no other applications using the port {port} are running.", e
                 );
                 return;
             }
@@ -397,7 +397,7 @@ namespace BetterJoy
             );
 
             _running = true;
-            _form.AppendTextBox($"Motion server started on {ip}:{port}.");
+            _form.Log($"Motion server started on {ip}:{port}.");
         }
 
         public async Task Stop()
@@ -413,7 +413,7 @@ namespace BetterJoy
 
             await _receiveTask;
 
-            _form.AppendTextBox($"Motion server stopped.");
+            _form.Log($"Motion server stopped.");
         }
 
         public void Dispose()

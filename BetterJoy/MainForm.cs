@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterJoy.Exceptions;
@@ -36,14 +36,15 @@ namespace BetterJoy
         private ControllerAction _currentAction = ControllerAction.None;
         private bool _selectController = false;
 
-        private const string logFilePath = "Output.txt";
-        private StreamWriter logWriter;
+        private const string _logFilePath = "LogDebug.txt";
+        private Logger _logger;
 
         public MainForm()
         {
             InitializeComponent();
             InitializeConsoleTextBox();
-            InitializeLogWriter();
+            InitializeLogger();
+            LogDebugInfos();
 
             Config = new(this);
             Config.Update();
@@ -52,6 +53,8 @@ namespace BetterJoy
             {
                 btn_calibrate.Hide();
             }
+
+            version_lbl.Text = GetProgramVersion();
 
             _con = new List<Button> { con1, con2, con3, con4, con5, con6, con7, con8 };
 
@@ -104,35 +107,35 @@ namespace BetterJoy
             });
         }
 
-        private void InitializeLogWriter()
+        private void InitializeLogger()
         {
             try
             {
-                if (File.Exists(logFilePath))
-                {
-                    File.Delete(logFilePath);
-                }
-
-                logWriter = new StreamWriter(logFilePath, append: true);
+                _logger = new Logger(_logFilePath);
             }
             catch (Exception e)
             {
-                AppendTextBox($"Error initializing log file {e.Display()}.");
+                Log($"Error initializing log file.", e);
             }
         }
 
-        private void LogToFile(string text)
+        private string GetProgramVersion()
         {
-            try
+            var programVersion = Assembly.GetExecutingAssembly().GetName().Version;
+            return $"v{programVersion.Major}.{programVersion.Minor}.{programVersion.Build}";
+        }
+
+        private void LogDebugInfos()
+        {
+            if (_logger == null)
             {
-                if (logWriter != null)
-                {
-                    string message = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {text}";
-                    logWriter.WriteLine(message);
-                    logWriter.Flush();
-                }
+                return;
             }
-            catch { } // unlucky
+
+            var programFullName = Assembly.GetExecutingAssembly().GetName();
+            var osArch = Environment.Is64BitProcess ? "x64" : "x86";
+            _logger.Log($"{programFullName.Name} {GetProgramVersion()}", Logger.LogLevel.Debug);
+            _logger.Log($"Windows version: {Environment.OSVersion} {osArch}", Logger.LogLevel.Debug);
         }
 
         private void HideToTray(bool init = false)
@@ -213,7 +216,7 @@ namespace BetterJoy
 
         private async void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            AppendTextBox("Closing...");
+            Log("Closing...");
 
             e.Cancel = true; // workaround to allow using the form until the Program is stopped
 
@@ -225,13 +228,9 @@ namespace BetterJoy
 
             base.OnFormClosing(e);
 
-            AppendTextBox($"Closed.");
+            Log($"Closed.");
 
-            if (logWriter != null)
-            {
-                logWriter.Close();
-                logWriter.Dispose();
-            }
+            _logger?.Dispose();
         }
 
         private void OnPowerChange(object s, PowerModeChangedEventArgs e)
@@ -239,11 +238,11 @@ namespace BetterJoy
             switch (e.Mode)
             {
                 case PowerModes.Resume:
-                    AppendTextBox("Resume session.");
+                    Log("Resume session.");
                     Program.SetSuspended(false);
                     break;
                 case PowerModes.Suspend:
-                    AppendTextBox("Suspend session.");
+                    Log("Suspend session.");
                     Program.SetSuspended(true);
                     break;
             }
@@ -264,17 +263,37 @@ namespace BetterJoy
             });
         }
 
-        public void AppendTextBox(string message)
+        public void Log(string message, Logger.LogLevel level = Logger.LogLevel.Info)
         {
             // https://stackoverflow.com/questions/519233/writing-to-a-textbox-from-another-thread
             if (InvokeRequired)
             {
-                BeginInvoke(new Action<string>(AppendTextBox), message);
+                BeginInvoke(new Action<string, Logger.LogLevel>(Log), message, level);
                 return;
             }
 
-            console.AppendText(message + "\r\n");
-            LogToFile(message);
+            if (level != Logger.LogLevel.Debug)
+            {
+                console.AppendText(message + Environment.NewLine);
+            }
+            
+            _logger?.Log(message, level);
+        }
+
+        public void Log(string message, Exception e, Logger.LogLevel level = Logger.LogLevel.Error)
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action<string, Exception, Logger.LogLevel>(Log), message, e, level);
+                return;
+            }
+
+            if (level != Logger.LogLevel.Debug)
+            {
+                console.AppendText($"{message} {e.Display()}{Environment.NewLine}");
+            }
+            
+            _logger?.Log(message, e, level);
         }
 
         private async Task LocateController(Joycon controller)
@@ -368,11 +387,11 @@ namespace BetterJoy
                 ConfigurationManager.RefreshSection(configFile.AppSettings.SectionInformation.Name);
 
                 await ApplyConfig();
-                AppendTextBox("Configuration applied.");
+                Log("Configuration applied.");
             }
-            catch (ConfigurationErrorsException)
+            catch (ConfigurationErrorsException ex)
             {
-                AppendTextBox("Error writing app settings.");
+                Log("Error writing app settings.", ex);
             }
         }
 
@@ -426,11 +445,11 @@ namespace BetterJoy
                 ConfigurationManager.RefreshSection(configFile.AppSettings.SectionInformation.Name);
 
                 await ApplyConfig();
-                AppendTextBox("Configuration applied.");
+                Log("Configuration applied.");
             }
-            catch (ConfigurationErrorsException)
+            catch (ConfigurationErrorsException ex)
             {
-                AppendTextBox("Error writing app settings.");
+                Log("Error writing app settings.", ex);
             }
         }
 
@@ -476,7 +495,7 @@ namespace BetterJoy
                     break;
                 default:
                     _selectController = true;
-                    AppendTextBox("Click on a controller to calibrate.");
+                    Log("Click on a controller to calibrate.");
                     break;
             }
         }
@@ -523,7 +542,7 @@ namespace BetterJoy
                     break;
                 default:
                     _selectController = true;
-                    AppendTextBox("Click on a controller to locate.");
+                    Log("Click on a controller to locate.");
                     break;
             }
         }
@@ -619,7 +638,7 @@ namespace BetterJoy
 
                 if (controller.CalibrationIMUDatas.Count == 0)
                 {
-                    AppendTextBox("No IMU data received, proceed to stick calibration anyway. Is the controller working ?");
+                    Log("No IMU data received, proceed to stick calibration anyway. Is the controller working ?", Logger.LogLevel.Warning);
                 }
                 else
                 {
@@ -722,7 +741,7 @@ namespace BetterJoy
 
                 if (controller.CalibrationStickDatas.Count == 0)
                 {
-                    AppendTextBox("No stick positions received, calibration canceled. Is the controller working ?");
+                    Log("No stick positions received, calibration canceled. Is the controller working ?", Logger.LogLevel.Warning);
                     CancelCalibrate(controller);
                     return;
                 }
@@ -819,7 +838,7 @@ namespace BetterJoy
 
                 if (controller.CalibrationStickDatas.Count == 0)
                 {
-                    AppendTextBox("No stick positions received, calibration canceled. Is the controller working ?");
+                    Log("No stick positions received, calibration canceled. Is the controller working ?", Logger.LogLevel.Warning);
                     CancelCalibrate(controller);
                     return;
                 }
@@ -876,7 +895,7 @@ namespace BetterJoy
         {
             if (disconnected)
             {
-                AppendTextBox("Controller disconnected, calibration canceled.");
+                Log("Controller disconnected, calibration canceled.");
             }
 
             SetCalibrate(false);

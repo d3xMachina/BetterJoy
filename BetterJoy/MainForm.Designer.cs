@@ -100,17 +100,17 @@
             // version_lbl
             // 
             version_lbl.AutoSize = true;
-            version_lbl.Location = new System.Drawing.Point(290, 375);
+            version_lbl.Location = new System.Drawing.Point(284, 375);
             version_lbl.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             version_lbl.Name = "version_lbl";
-            version_lbl.Size = new System.Drawing.Size(28, 15);
+            version_lbl.Size = new System.Drawing.Size(37, 15);
             version_lbl.TabIndex = 2;
-            version_lbl.Text = "v8.4";
+            version_lbl.Text = "v1.0.0";
             // 
             // lb_github
             // 
             lb_github.AutoSize = true;
-            lb_github.Location = new System.Drawing.Point(243, 375);
+            lb_github.Location = new System.Drawing.Point(237, 375);
             lb_github.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             lb_github.Name = "lb_github";
             lb_github.Size = new System.Drawing.Size(43, 15);

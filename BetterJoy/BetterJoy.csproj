@@ -4,12 +4,16 @@
         <OutputType>WinExe</OutputType>
         <TargetFramework>net8.0-windows</TargetFramework>
         <UseWindowsForms>true</UseWindowsForms>
-        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 
         <RootNamespace>BetterJoy</RootNamespace>
         <AssemblyName>BetterJoy</AssemblyName>
         <ApplicationIcon>Icons\betterjoy_icon.ico</ApplicationIcon>
         <StartupObject>BetterJoy.Program</StartupObject>
+        <AssemblyVersion>8.4.5</AssemblyVersion>
+        <FileVersion>$(AssemblyVersion)</FileVersion>
+        <Version>$(AssemblyVersion)</Version>
+        <Copyright>Copyright © 2024</Copyright>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

@@ -421,7 +421,7 @@ namespace BetterJoy
 
             if (type == DebugType.All || type == Config.DebugType || Config.DebugType == DebugType.All)
             {
-                Log(message);
+                Log(message, Logger.LogLevel.Debug, type);
             }
         }
 
@@ -1463,7 +1463,7 @@ namespace BetterJoy
                     {
                         if (reconnectAttempts >= 3)
                         {
-                            Log("Dropped.");
+                            Log("Dropped.", Logger.LogLevel.Warning);
                             State = Status.Errored;
                         }
                         else
@@ -1490,7 +1490,7 @@ namespace BetterJoy
                 else if (error == ReceiveError.InvalidHandle)
                 {
                     // should not happen
-                    Log("Dropped (invalid handle).");
+                    Log("Dropped (invalid handle).", Logger.LogLevel.Error);
                     State = Status.Errored; 
                 }
                 else
@@ -1955,7 +1955,7 @@ namespace BetterJoy
             }
             else
             {
-                Log("Poll thread cannot start!");
+                Log("Poll thread cannot start!", Logger.LogLevel.Error);
             }
         }
 
@@ -2316,7 +2316,7 @@ namespace BetterJoy
 
                 if (noCalibration)
                 {
-                    Log($"Some sensor calibrations datas are missing, fallback to default ones.");
+                    Log($"Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
                 }
 
                 PrintArray<short>(_gyrNeutral, len: 3, d: DebugType.IMU, format: "Gyro neutral position: {0:S}");
@@ -2324,7 +2324,7 @@ namespace BetterJoy
 
             if (!ok)
             {
-                Log("Error while reading calibration datas.");
+                Log("Error while reading calibration datas.", Logger.LogLevel.Error);
             }
 
             _DumpedCalibration = ok;
@@ -2504,7 +2504,7 @@ namespace BetterJoy
             }
             else
             {
-                Log("ReadSPI error");
+                Log("ReadSPI error.", Logger.LogLevel.Error);
             }
 
             return readBuf;
@@ -2944,9 +2944,16 @@ namespace BetterJoy
             }
         }
 
-        private void Log(string message)
+        private void Log(string message, Logger.LogLevel level = Logger.LogLevel.Info, DebugType type = DebugType.None)
         {
-            _form.AppendTextBox($"[P{PadId + 1}] {message}");
+            if (level == Logger.LogLevel.Debug)
+            {
+                _form.Log($"[P{PadId + 1}] [{type.ToString().ToUpper()}] {message}", level);
+            }
+            else
+            {
+                _form.Log($"[P{PadId + 1}] {message}", level);
+            }
         }
 
         public void ApplyConfig(bool showErrors = true)

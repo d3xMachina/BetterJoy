@@ -102,15 +102,15 @@ namespace BetterJoy
             {
                 ret = HIDApi.Init();
             }
-            catch (BadImageFormatException)
+            catch (BadImageFormatException e)
             {
-                _form.AppendTextBox($"Invalid hidapi.dll (32 bits VS 64 bits)");
+                _form.Log($"Invalid hidapi.dll. (32 bits VS 64 bits)", e);
                 return false;
             }
             
             if (ret != 0)
             {
-                _form.AppendTextBox("Could not initialize hidapi");
+                _form.Log("Could not initialize hidapi.", Logger.LogLevel.Error);
                 return false;
             }
 
@@ -126,7 +126,7 @@ namespace BetterJoy
 
             if (ret != 0)
             {
-                _form.AppendTextBox("Could not register hidapi callback");
+                _form.Log("Could not register hidapi callback.", Logger.LogLevel.Error);
                 HIDApi.Exit();
                 return false;
             }
@@ -283,7 +283,7 @@ namespace BetterJoy
                 // don't show an error message when the controller was dropped without hidapi callback notification (after standby by example)
                 if (!reconnect)
                 {
-                    _form.AppendTextBox($"Unable to open device: {HIDApi.Error(IntPtr.Zero)}");
+                    _form.Log($"Unable to open device: {HIDApi.Error(IntPtr.Zero)}.", Logger.LogLevel.Error);
                 }
 
                 return;
@@ -293,7 +293,7 @@ namespace BetterJoy
 
             var index = GetControllerIndex();
             var name = Joycon.GetControllerName(type);
-            _form.AppendTextBox($"[P{index + 1}] {name} connected.");
+            _form.Log($"[P{index + 1}] {name} connected.");
 
             // Add controller to block-list for HidHide
             Program.AddDeviceToBlocklist(handle);
@@ -319,7 +319,7 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"[P{index + 1}] Could not connect {e.Display()}.");
+                _form.Log($"[P{index + 1}] Could not connect.", e);
                 return;
             }
             finally
@@ -345,7 +345,7 @@ namespace BetterJoy
                 }
                 catch (Exception e)
                 {
-                    _form.AppendTextBox($"Could not connect the virtual controller {e.Display()}. Retrying...");
+                    _form.Log($"Could not connect the virtual controller. Retrying...", e);
 
                     ReconnectVirtualControllerDelayed(controller);
                 }
@@ -385,7 +385,7 @@ namespace BetterJoy
                 }
                 catch (Exception e)
                 {
-                    _form.AppendTextBox($"Could not connect the virtual controller for the unjoined joycon {e.Display()}. Retrying...");
+                    _form.Log($"Could not connect the virtual controller for the unjoined joycon. Retrying...", e);
 
                     ReconnectVirtualControllerDelayed(otherController);
                 }
@@ -398,7 +398,7 @@ namespace BetterJoy
             }
 
             var name = controller.GetControllerName();
-            _form.AppendTextBox($"[P{controller.PadId + 1}] {name} disconnected.");
+            _form.Log($"[P{controller.PadId + 1}] {name} disconnected.");
         }
 
         private void OnDeviceErrored(ControllerIdentifier deviceIdentifier)
@@ -439,11 +439,11 @@ namespace BetterJoy
             try
             {
                 controller.ConnectViGEm();
-                _form.AppendTextBox($"[P{controller.PadId + 1}] Virtual controller reconnected.");
+                _form.Log($"[P{controller.PadId + 1}] Virtual controller reconnected.");
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"[P{controller.PadId + 1}] Could not reconnect the virtual controller {e.Display()}. Retrying...");
+                _form.Log($"[P{controller.PadId + 1}] Could not reconnect the virtual controller. Retrying...", e);
 
                 ReconnectVirtualControllerDelayed(controller);
             }
@@ -642,7 +642,7 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"Could not connect the virtual controller for the split joycon {e.Display()}. Retrying...");
+                _form.Log($"Could not connect the virtual controller for the split joycon. Retrying...", e);
 
                 if (keep && !controller.IsViGEmSetup())
                 {
@@ -784,26 +784,26 @@ namespace BetterJoy
             {
                 EmClient = new ViGEmClient(); // Manages emulated XInput
             }
-            catch (VigemBusNotFoundException)
+            catch (VigemBusNotFoundException e)
             {
-                _form.AppendTextBox("Could not connect to VIGEmBus. Make sure VIGEmBus driver is installed correctly.");
+                _form.Log("Could not connect to VIGEmBus. Make sure VIGEmBus driver is installed correctly.", e);
             }
-            catch (VigemBusAccessFailedException)
+            catch (VigemBusAccessFailedException e)
             {
-                _form.AppendTextBox("Could not connect to VIGEmBus. VIGEmBus is busy. Try restarting your computer or reinstalling VIGEmBus driver.");
+                _form.Log("Could not connect to VIGEmBus. VIGEmBus is busy. Try restarting your computer or reinstalling VIGEmBus driver.", e);
             }
-            catch (VigemBusVersionMismatchException)
+            catch (VigemBusVersionMismatchException e)
             {
-                _form.AppendTextBox("Could not connect to VIGEmBus. The installed VIGEmBus driver is not compatible. Install a newer version of VIGEmBus driver.");
+                _form.Log("Could not connect to VIGEmBus. The installed VIGEmBus driver is not compatible. Install a newer version of VIGEmBus driver.", e);
             }
-            catch (VigemAllocFailedException)
+            catch (VigemAllocFailedException e)
             {
-                _form.AppendTextBox("Could not connect to VIGEmBus. Allocation failed. Try restarting your computer or reinstalling VIGEmBus driver.");
+                _form.Log("Could not connect to VIGEmBus. Allocation failed. Try restarting your computer or reinstalling VIGEmBus driver.", e);
             }
-            catch (VigemAlreadyConnectedException)
+            catch (VigemAlreadyConnectedException e)
             {
                 // should not happen
-                _form.AppendTextBox("VIGEmBus is already connected.");
+                _form.Log("VIGEmBus is already connected.", e);
             }
 
             foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
@@ -827,7 +827,7 @@ namespace BetterJoy
 
             if (!Config.MotionServer)
             {
-                _form.AppendTextBox("Motion server is OFF.");
+                _form.Log("Motion server is OFF.");
             }
             else
             {
@@ -837,7 +837,7 @@ namespace BetterJoy
             InputCapture.Global.RegisterEvent(GlobalKeyEvent);
             InputCapture.Global.RegisterEvent(GlobalMouseEvent);
 
-            _form.AppendTextBox("All systems go");
+            _form.Log("All systems go.");
             Mgr.Start();
             _isRunning = true;
         }
@@ -851,7 +851,7 @@ namespace BetterJoy
 
             if (!_hidHideService.IsInstalled)
             {
-                _form.AppendTextBox("HIDHide is not installed.");
+                _form.Log("HIDHide is not installed.", Logger.LogLevel.Warning);
                 return;
             }
 
@@ -861,7 +861,7 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"Unable to set HIDHide in whitelist mode {e.Display()}.");
+                _form.Log($"Unable to set HIDHide in whitelist mode.", e);
                 return;
             }
 
@@ -869,7 +869,7 @@ namespace BetterJoy
             //    try {
             //        hidHideService.ClearBlockedInstancesList();
             //    } catch (Exception e) {
-            //        form.AppendTextBox($"Unable to purge blacklisted devices {e.Display()}.");
+            //        form.AppendTextBox($"Unable to purge blacklisted devices.", e);
             //        return;
             //    }
             //}
@@ -885,7 +885,7 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"Unable to add program to whitelist {e.Display()}.");
+                _form.Log($"Unable to add program to whitelist.", e);
                 return;
             }
 
@@ -895,11 +895,11 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"Unable to hide devices {e.Display()}.");
+                _form.Log($"Unable to hide devices.", e);
                 return;
             }
 
-            _form.AppendTextBox("HIDHide is enabled.");
+            _form.Log("HIDHide is enabled.");
         }
 
         public static void AddDeviceToBlocklist(IntPtr handle)
@@ -916,7 +916,7 @@ namespace BetterJoy
                 var instance = HIDApi.GetInstance(handle);
                 if (instance.Length == 0)
                 {
-                    _form.AppendTextBox("Unable to get device instance.");
+                    _form.Log("Unable to get device instance.", Logger.LogLevel.Error);
                 }
                 else
                 {
@@ -926,7 +926,7 @@ namespace BetterJoy
                 var parentInstance = HIDApi.GetParentInstance(handle);
                 if (parentInstance.Length == 0)
                 {
-                    _form.AppendTextBox("Unable to get device parent instance.");
+                    _form.Log("Unable to get device parent instance.", Logger.LogLevel.Error);
                 }
                 else
                 {
@@ -942,7 +942,7 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"Unable to add controller to block-list {e.Display()}.");
+                _form.Log($"Unable to add controller to block-list.", e);
             }
         }
 
@@ -1104,7 +1104,7 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"Unable to remove program from whitelist {e.Display()}.");
+                _form.Log($"Unable to remove program from whitelist.", e);
             }
 
             if (Config.PurgeAffectedDevices)
@@ -1118,7 +1118,7 @@ namespace BetterJoy
                 }
                 catch (Exception e)
                 {
-                    _form.AppendTextBox($"Unable to purge blacklisted devices  {e.Display()}.");
+                    _form.Log($"Unable to purge blacklisted devices.", e);
                 }
             }
 
@@ -1128,11 +1128,11 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"Unable to disable HIDHide {e.Display()}.");
+                _form.Log($"Unable to disable HIDHide.", e);
                 return;
             }
 
-            _form.AppendTextBox("HIDHide is disabled.");
+            _form.Log("HIDHide is disabled.");
         }
 
         public static void UpdateThirdpartyControllers(List<SController> controllers)

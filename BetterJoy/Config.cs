@@ -53,7 +53,7 @@ namespace BetterJoy
 
             if (ShowErrors)
             {
-                _form.AppendTextBox($"Invalid value \"{value}\" for setting {key}! Using default value \"{defaultValue}\".");
+                _form.Log($"Invalid value \"{value}\" for setting {key}! Using default value \"{defaultValue}\".", Logger.LogLevel.Warning);
             }
         }
     }
