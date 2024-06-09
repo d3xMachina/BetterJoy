@@ -8,6 +8,7 @@ using System.Threading;
 using System.Windows.Forms;
 using BetterJoy.Collections;
 using BetterJoy.Controller;
+using BetterJoy.Exceptions;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 using WindowsInput.Events;
@@ -449,7 +450,7 @@ namespace BetterJoy
             {
                 if (_handle == IntPtr.Zero)
                 {
-                    throw new Exception("reset hidapi");
+                    throw new DeviceNullHandleException("reset hidapi");
                 }
 
                 // set report mode to simple HID mode (fix SPI read not working when controller is already initialized)
@@ -466,7 +467,7 @@ namespace BetterJoy
                         GetMAC();
                         USBPairing();
                     }
-                    catch (Exception)
+                    catch
                     {
                         Reset();
                         throw;
@@ -484,7 +485,7 @@ namespace BetterJoy
                 if (!ok)
                 {
                     Reset();
-                    throw new Exception("reset calibration");
+                    throw new DeviceComFailedException("reset calibration");
                 }
 
                 BlinkHomeLight();
@@ -515,7 +516,7 @@ namespace BetterJoy
                 if (USBCommandCheck(0x01, buf) < 10)
                 {
                     // can occur when USB connection isn't closed properly
-                    throw new Exception("reset mac");
+                    throw new DeviceComFailedException("reset mac");
                 }
 
                 PadMacAddress = new PhysicalAddress([buf[9], buf[8], buf[7], buf[6], buf[5], buf[4]]);
@@ -532,10 +533,7 @@ namespace BetterJoy
                     mac[n] = byte.Parse(SerialNumber.AsSpan(n * 2, 2), NumberStyles.HexNumber);
                 }
             }
-            catch (Exception)
-            {
-                // could not parse mac address
-            }
+            catch { } // could not parse mac address, ignore
 
             PadMacAddress = new PhysicalAddress(mac);
         }
@@ -545,25 +543,25 @@ namespace BetterJoy
             // Handshake
             if (USBCommandCheck(0x02) == 0)
             {
-                throw new Exception("reset handshake");
+                throw new DeviceComFailedException("reset handshake");
             }
 
             // 3Mbit baud rate
             if (USBCommandCheck(0x03) == 0)
             {
-                throw new Exception("reset baud rate");
+                throw new DeviceComFailedException("reset baud rate");
             }
 
             // Handshake at new baud rate
             if (USBCommandCheck(0x02) == 0)
             {
-                throw new Exception("reset new handshake");
+                throw new DeviceComFailedException("reset new handshake");
             }
 
             // Prevent HID timeout
             if (!USBCommand(0x04)) // does not send a response
             {
-                throw new Exception("reset new hid timeout");
+                throw new DeviceComFailedException("reset new hid timeout");
             }
         }
 
@@ -1475,7 +1473,7 @@ namespace BetterJoy
                                 SetReportMode(ReportMode.StandardFull);
                                 SetLEDByPadID();
                             }
-                            catch (Exception) { } // ignore and retry
+                            catch { } // ignore and retry
                         }
                     }
                     else

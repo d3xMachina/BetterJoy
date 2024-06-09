@@ -8,6 +8,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterJoy.Collections;
+using BetterJoy.Exceptions;
 using Nefarius.Drivers.HidHide;
 using Nefarius.ViGEm.Client;
 using Nefarius.ViGEm.Client.Exceptions;
@@ -306,7 +307,7 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"[P{index + 1}] Could not connect ({e.HResult} - {e.Message}).");
+                _form.AppendTextBox($"[P{index + 1}] Could not connect {e.Display()}.");
                 return;
             }
             finally
@@ -332,7 +333,7 @@ namespace BetterJoy
                 }
                 catch (Exception e)
                 {
-                    _form.AppendTextBox($"Could not connect the virtual controller ({e.HResult} - {e.Message}). Retrying...");
+                    _form.AppendTextBox($"Could not connect the virtual controller {e.Display()}. Retrying...");
 
                     ReconnectVirtualControllerDelayed(controller);
                 }
@@ -372,7 +373,7 @@ namespace BetterJoy
                 }
                 catch (Exception e)
                 {
-                    _form.AppendTextBox($"Could not connect the virtual controller for the unjoined joycon ({e.HResult} - {e.Message}). Retrying...");
+                    _form.AppendTextBox($"Could not connect the virtual controller for the unjoined joycon {e.Display()}. Retrying...");
 
                     ReconnectVirtualControllerDelayed(otherController);
                 }
@@ -428,7 +429,7 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"[P{controller.PadId + 1}] Could not reconnect the virtual controller ({e.HResult} - {e.Message}). Retrying...");
+                _form.AppendTextBox($"[P{controller.PadId + 1}] Could not reconnect the virtual controller {e.Display()}. Retrying...");
 
                 ReconnectVirtualControllerDelayed(controller);
             }
@@ -612,7 +613,7 @@ namespace BetterJoy
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"Could not connect the virtual controller for the split joycon ({e.HResult} - {e.Message}). Retrying...");
+                _form.AppendTextBox($"Could not connect the virtual controller for the split joycon {e.Display()}. Retrying...");
 
                 if (keep && !controller.IsViGEmSetup())
                 {
@@ -829,17 +830,17 @@ namespace BetterJoy
             {
                 _hidHideService.IsAppListInverted = false;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                _form.AppendTextBox("Unable to set HIDHide in whitelist mode.");
+                _form.AppendTextBox($"Unable to set HIDHide in whitelist mode {e.Display()}.");
                 return;
             }
 
             //if (Config.PurgeAffectedDevices) {
             //    try {
             //        hidHideService.ClearBlockedInstancesList();
-            //    } catch (Exception) {
-            //        form.AppendTextBox("Unable to purge blacklisted devices.");
+            //    } catch (Exception e) {
+            //        form.AppendTextBox($"Unable to purge blacklisted devices {e.Display()}.");
             //        return;
             //    }
             //}
@@ -853,9 +854,9 @@ namespace BetterJoy
 
                 _hidHideService.AddApplicationPath(Environment.ProcessPath);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                _form.AppendTextBox("Unable to add program to whitelist.");
+                _form.AppendTextBox($"Unable to add program to whitelist {e.Display()}.");
                 return;
             }
 
@@ -863,9 +864,9 @@ namespace BetterJoy
             {
                 _hidHideService.IsActive = true;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                _form.AppendTextBox("Unable to hide devices.");
+                _form.AppendTextBox($"Unable to hide devices {e.Display()}.");
                 return;
             }
 
@@ -905,14 +906,14 @@ namespace BetterJoy
 
                 if (devices.Count == 0)
                 {
-                    throw new Exception("hidapi error");
+                    throw new DeviceQueryFailedException("hidapi error");
                 }
 
                 BlockDeviceInstances(devices);
             }
             catch (Exception e)
             {
-                _form.AppendTextBox($"Unable to add controller to block-list ({e.Message}).");
+                _form.AppendTextBox($"Unable to add controller to block-list {e.Display()}.");
             }
         }
 
@@ -1072,9 +1073,9 @@ namespace BetterJoy
             {
                 _hidHideService.RemoveApplicationPath(Environment.ProcessPath);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                _form.AppendTextBox("Unable to remove program from whitelist.");
+                _form.AppendTextBox($"Unable to remove program from whitelist {e.Display()}.");
             }
 
             if (Config.PurgeAffectedDevices)
@@ -1086,9 +1087,9 @@ namespace BetterJoy
                         _hidHideService.RemoveBlockedInstanceId(instance);
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    _form.AppendTextBox("Unable to purge blacklisted devices.");
+                    _form.AppendTextBox($"Unable to purge blacklisted devices  {e.Display()}.");
                 }
             }
 
@@ -1096,9 +1097,10 @@ namespace BetterJoy
             {
                 _hidHideService.IsActive = false;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                _form.AppendTextBox("Unable to disable HIDHide.");
+                _form.AppendTextBox($"Unable to disable HIDHide {e.Display()}.");
+                return;
             }
 
             _form.AppendTextBox("HIDHide is disabled.");
