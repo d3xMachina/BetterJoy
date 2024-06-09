@@ -19,6 +19,18 @@ using static BetterJoy._3rdPartyControllers;
 
 namespace BetterJoy
 {
+    public struct ControllerIdentifier
+    {
+        public readonly string Path;
+        public readonly long TimestampCreation;
+
+        public ControllerIdentifier(Joycon controller)
+        {
+            Path = controller.Path;
+            TimestampCreation = controller.TimestampCreation;
+        }
+    }
+
     public class JoyconManager
     {
         private const ushort VendorId = 0x57e;
@@ -189,14 +201,14 @@ namespace BetterJoy
                             }
                             case DeviceNotification.Type.Errored:
                             {
-                                var devicePath = (string)job.Data;
-                                OnDeviceErrored(devicePath);
+                                var deviceIdentifier = (ControllerIdentifier)job.Data;
+                                OnDeviceErrored(deviceIdentifier);
                                 break;
                             }
                             case DeviceNotification.Type.VirtualControllerErrored:
                             {
-                                var devicePath = (string)job.Data;
-                                OnVirtualControllerErrored(devicePath);
+                                var deviceIdentifier = (ControllerIdentifier)job.Data;
+                                OnVirtualControllerErrored(deviceIdentifier);
                                 break;
                             }
                         }
@@ -389,10 +401,11 @@ namespace BetterJoy
             _form.AppendTextBox($"[P{controller.PadId + 1}] {name} disconnected.");
         }
 
-        private void OnDeviceErrored(string devicePath)
+        private void OnDeviceErrored(ControllerIdentifier deviceIdentifier)
         {
-            Joycon controller = GetControllerByPath(devicePath);
-            if (controller == null)
+            Joycon controller = GetControllerByPath(deviceIdentifier.Path);
+            if (controller == null ||
+                controller.TimestampCreation != deviceIdentifier.TimestampCreation)
             {
                 return;
             }
@@ -407,10 +420,11 @@ namespace BetterJoy
             OnDeviceConnected(controller.Path, controller.SerialNumber, controller.Type, controller.IsUSB, controller.IsThirdParty, true);
         }
 
-        private void OnVirtualControllerErrored(string devicePath)
+        private void OnVirtualControllerErrored(ControllerIdentifier deviceIdentifier)
         {
-            Joycon controller = GetControllerByPath(devicePath);
-            if (controller == null)
+            Joycon controller = GetControllerByPath(deviceIdentifier.Path);
+            if (controller == null ||
+                controller.TimestampCreation != deviceIdentifier.TimestampCreation)
             {
                 return;
             }
@@ -443,7 +457,8 @@ namespace BetterJoy
         private void ReconnectVirtualController(Joycon controller)
         {
             var writer = _channelDeviceNotifications.Writer;
-            var notification = new DeviceNotification(DeviceNotification.Type.VirtualControllerErrored, controller.Path);
+            var identifier = new ControllerIdentifier(controller);
+            var notification = new DeviceNotification(DeviceNotification.Type.VirtualControllerErrored, identifier);
             while (!writer.TryWrite(notification)) { }
         }
 
@@ -455,16 +470,30 @@ namespace BetterJoy
             }
 
             var controller = (Joycon)sender;
-            var writer = _channelDeviceNotifications.Writer;
+            if (controller == null)
+            {
+                return;
+            }
 
             switch (e.State)
             {
                 case Joycon.Status.AttachError:
                 case Joycon.Status.Errored:
-                    var notification = new DeviceNotification(DeviceNotification.Type.Errored, controller.Path);
-                    while (!writer.TryWrite(notification)) { }
+                    ReconnectControllerDelayed(controller);
                     break;
             }
+        }
+        private void ReconnectControllerDelayed(Joycon controller, int delayMs = 2000)
+        {
+            Task.Delay(delayMs).ContinueWith(t => ReconnectController(controller));
+        }
+
+        private void ReconnectController(Joycon controller)
+        {
+            var writer = _channelDeviceNotifications.Writer;
+            var identifier = new ControllerIdentifier(controller);
+            var notification = new DeviceNotification(DeviceNotification.Type.Errored, identifier);
+            while (!writer.TryWrite(notification)) { }
         }
 
         private int GetControllerIndex()

@@ -230,7 +230,8 @@ namespace BetterJoy
         private float[] _stick2 = { 0, 0 };
 
         private bool _stopPolling = true;
-        public ulong Timestamp;
+        public ulong Timestamp { get; private set; }
+        public readonly long TimestampCreation;
 
         private long _timestampActivity = Stopwatch.GetTimestamp();
 
@@ -288,12 +289,13 @@ namespace BetterJoy
             _CommandLength = isUSB ? 64 : 49;
             _MixedComsLength = Math.Max(ReportLength, _CommandLength);
 
-
             OutXbox = new OutputControllerXbox360();
             OutXbox.FeedbackReceived += ReceiveRumble;
 
             OutDs4 = new OutputControllerDualShock4();
             OutDs4.FeedbackReceived += Ds4_FeedbackReceived;
+
+            TimestampCreation = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
         }
 
         public bool IsPro => Type is ControllerType.Pro or ControllerType.SNES;
@@ -1488,8 +1490,8 @@ namespace BetterJoy
                 else if (error == ReceiveError.InvalidHandle)
                 {
                     // should not happen
-                    State = Status.Errored;
                     Log("Dropped (invalid handle).");
+                    State = Status.Errored; 
                 }
                 else
                 {
