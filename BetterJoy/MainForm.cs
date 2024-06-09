@@ -200,23 +200,22 @@ namespace BetterJoy
         {
             AppendTextBox("Closing...");
 
-            if (e.CloseReason == CloseReason.UserClosing)
+            e.Cancel = true; // workaround to allow using the form until the Program is stopped
+
+            await Program.Stop();
+            SystemEvents.PowerModeChanged -= OnPowerChange;
+
+            FormClosing -= MainForm_FormClosing; // don't retrigger the event with Application.Exit()
+            Application.Exit();
+
+            base.OnFormClosing(e);
+
+            AppendTextBox($"Closed.");
+
+            if (logWriter != null)
             {
-                e.Cancel = true; // workaround to allow using the form until the Program is stopped
-
-                await Program.Stop();
-                SystemEvents.PowerModeChanged -= OnPowerChange;
-
-                FormClosing -= MainForm_FormClosing; // don't retrigger the event with Application.Exit()
-                Application.Exit();
-
-                AppendTextBox($"Closed.");
-
-                if (logWriter != null)
-                {
-                    logWriter.Close();
-                    logWriter.Dispose();
-                }
+                logWriter.Close();
+                logWriter.Dispose();
             }
         }
 
