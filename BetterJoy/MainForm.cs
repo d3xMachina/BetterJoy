@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using BetterJoy.Exceptions;
 using BetterJoy.Properties;
 using Microsoft.Win32;
 
@@ -34,9 +36,14 @@ namespace BetterJoy
         private ControllerAction _currentAction = ControllerAction.None;
         private bool _selectController = false;
 
+        private const string logFilePath = "Output.txt";
+        private StreamWriter logWriter;
+
         public MainForm()
         {
             InitializeComponent();
+            InitializeConsoleTextBox();
+            InitializeLogWriter();
 
             Config = new(this);
             Config.Update();
@@ -83,6 +90,11 @@ namespace BetterJoy
                 settingsTable.Controls.Add(childControl, 1, i);
             }
 
+            Shown += MainForm_Shown;
+        }
+
+        private void InitializeConsoleTextBox()
+        {
             // Trick to have bottom padding in the console control
             console.Controls.Add(new Label()
             {
@@ -90,8 +102,37 @@ namespace BetterJoy
                 Dock = DockStyle.Bottom,
                 BackColor = console.BackColor,
             });
+        }
 
-            Shown += MainForm_Shown;
+        private void InitializeLogWriter()
+        {
+            try
+            {
+                if (File.Exists(logFilePath))
+                {
+                    File.Delete(logFilePath);
+                }
+
+                logWriter = new StreamWriter(logFilePath, append: true);
+            }
+            catch (Exception e)
+            {
+                AppendTextBox($"Error initializing log file {e.Display()}.");
+            }
+        }
+
+        private void LogToFile(string text)
+        {
+            try
+            {
+                if (logWriter != null)
+                {
+                    string message = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {text}";
+                    logWriter.WriteLine(message);
+                    logWriter.Flush();
+                }
+            }
+            catch { } // unlucky
         }
 
         private void HideToTray()
@@ -157,6 +198,8 @@ namespace BetterJoy
 
         private async void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            AppendTextBox("Closing...");
+
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 e.Cancel = true; // workaround to allow using the form until the Program is stopped
@@ -166,6 +209,14 @@ namespace BetterJoy
 
                 FormClosing -= MainForm_FormClosing; // don't retrigger the event with Application.Exit()
                 Application.Exit();
+
+                AppendTextBox($"Closed.");
+
+                if (logWriter != null)
+                {
+                    logWriter.Close();
+                    logWriter.Dispose();
+                }
             }
         }
 
@@ -199,16 +250,17 @@ namespace BetterJoy
             });
         }
 
-        public void AppendTextBox(string value)
+        public void AppendTextBox(string message)
         {
             // https://stackoverflow.com/questions/519233/writing-to-a-textbox-from-another-thread
             if (InvokeRequired)
             {
-                BeginInvoke(new Action<string>(AppendTextBox), value);
+                BeginInvoke(new Action<string>(AppendTextBox), message);
                 return;
             }
 
-            console.AppendText(value + "\r\n");
+            console.AppendText(message + "\r\n");
+            LogToFile(message);
         }
 
         private async Task LocateController(Joycon controller)
