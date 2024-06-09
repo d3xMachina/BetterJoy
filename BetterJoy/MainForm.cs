@@ -135,18 +135,33 @@ namespace BetterJoy
             catch { } // unlucky
         }
 
-        private void HideToTray()
+        private void HideToTray(bool init = false)
         {
+            if (notifyIcon.Visible && !init)
+            {
+                return;
+            }
+
             WindowState = FormWindowState.Minimized;
             notifyIcon.Visible = true;
-            notifyIcon.BalloonTipText = "Double click the tray icon to maximise!";
-            notifyIcon.ShowBalloonTip(0);
+            
+            if (!init)
+            {
+                notifyIcon.BalloonTipText = "Double click the tray icon to maximise!";
+                notifyIcon.ShowBalloonTip(0);
+            }
+
             ShowInTaskbar = false;
             Hide();
         }
 
-        private void ShowFromTray()
+        private void ShowFromTray(bool init = false)
         {
+            if (!notifyIcon.Visible && !init)
+            {
+                return;
+            }
+
             Show();
             WindowState = FormWindowState.Normal;
             ShowInTaskbar = true;
@@ -180,11 +195,11 @@ namespace BetterJoy
 
             if (Settings.IntValue("StartInTray") == 1)
             {
-                HideToTray();
+                HideToTray(true);
             }
             else
             {
-                ShowFromTray();
+                ShowFromTray(true);
             }
 
             SystemEvents.PowerModeChanged += OnPowerChange;
