@@ -12,7 +12,7 @@ using BetterJoy.Memory;
 
 namespace BetterJoy
 {
-    internal class UdpServer : IDisposable
+    internal class UdpServer
     {
         public enum ControllerState : byte
         {
@@ -65,10 +65,9 @@ namespace BetterJoy
         private readonly Dictionary<IPEndPoint, ClientRequestTimes> _clients = new();
         private readonly IList<Joycon> _controllers;
 
-        private bool _running = false;
-        private readonly CancellationTokenSource _ctsTransfers = new();
+        private volatile bool _running = false;
+        private CancellationTokenSource _ctsTransfers;
         private Task _receiveTask;
-        
 
         private uint _serverId;
         private Socket _udpSock;
@@ -345,7 +344,7 @@ namespace BetterJoy
                 }
                 catch (SocketException)
                 {
-                    if (_running)
+                    if (!token.IsCancellationRequested)
                     {
                         ResetUDPSocket();
                     }
@@ -385,16 +384,28 @@ namespace BetterJoy
             new Random().NextBytes(randomBuf);
             _serverId = BitConverter.ToUInt32(randomBuf, 0);
 
+            _ctsTransfers = new CancellationTokenSource();
+
             _receiveTask = Task.Run(
                 async () =>
                 {
                     try
                     {
                         await RunReceive(_ctsTransfers.Token);
+                        _form.Log("Task UDP receive finished.", Logger.LogLevel.Debug);
                     }
-                    catch (OperationCanceledException) when (_ctsTransfers.IsCancellationRequested) { }
+                    catch (OperationCanceledException) when (_ctsTransfers.IsCancellationRequested)
+                    {
+                        _form.Log("Task UDP receive canceled.", Logger.LogLevel.Debug);
+                    }
+                    catch (Exception e)
+                    {
+                        _form.Log("Task UDP receive error.", e);
+                        throw;
+                    }
                 }
             );
+            _form.Log("Task UDP receive started.", Logger.LogLevel.Debug);
 
             _running = true;
             _form.Log($"Motion server started on {ip}:{port}.");
@@ -412,13 +423,9 @@ namespace BetterJoy
             _udpSock.Close();
 
             await _receiveTask;
+            _ctsTransfers.Dispose();
 
             _form.Log($"Motion server stopped.");
-        }
-
-        public void Dispose()
-        {
-            _ctsTransfers.Dispose();
         }
 
         private void ResetUDPSocket()
@@ -540,8 +547,7 @@ namespace BetterJoy
 
         public void NewReportIncoming(Joycon hidReport)
         {
-            var token = _ctsTransfers.Token;
-            if (token.IsCancellationRequested)
+            if (!_running)
             {
                 return;
             }
@@ -652,9 +658,21 @@ namespace BetterJoy
             ReportToBuffer(hidReport, outputData, ref outIdx);
             FinishPacket(outputData);
 
-            foreach (var client in relevantClients)
+            try
             {
-                _udpSock.SendTo(outputData, client);
+                foreach (var client in relevantClients)
+                {
+                    _udpSock.SendTo(outputData, client);
+                }
+            }
+            // Ignore closing
+            catch (ObjectDisposedException e)
+            {
+                _form.Log("UDP socket disposed.", e, Logger.LogLevel.Warning);
+            }
+            catch (SocketException e)
+            {
+                _form.Log("UDP socket closed.", e, Logger.LogLevel.Warning);
             }
         }
 

@@ -132,17 +132,26 @@ namespace BetterJoy
             }
 
             _ctsDevicesNotifications = new CancellationTokenSource();
-
             _devicesNotificationTask = Task.Run(
                 async () =>
                 {
                     try
                     {
                         await ProcessDevicesNotifications(_ctsDevicesNotifications.Token);
+                        _form.Log("Task devices notification finished.", Logger.LogLevel.Debug);
                     }
-                    catch (OperationCanceledException) when (_ctsDevicesNotifications.IsCancellationRequested) { }
+                    catch (OperationCanceledException) when (_ctsDevicesNotifications.IsCancellationRequested)
+                    {
+                        _form.Log("Task devices notification canceled.", Logger.LogLevel.Debug);
+                    }
+                    catch (Exception e)
+                    {
+                        _form.Log("Task devices notification error.", e);
+                        throw;
+                    }
                 }
             );
+            _form.Log("Task devices notification started.", Logger.LogLevel.Debug);
 
             _isRunning = true;
             return true;
@@ -563,7 +572,6 @@ namespace BetterJoy
             }
             
             await _devicesNotificationTask;
-
             _ctsDevicesNotifications.Dispose();
 
             foreach (var controller in Controllers)
@@ -844,58 +852,38 @@ namespace BetterJoy
 
         private static void StartHIDHide()
         {
-            if (!Config.UseHIDHide || _hidHideService.IsActive)
-            {
-                return;
-            }
-
-            if (!_hidHideService.IsInstalled)
-            {
-                _form.Log("HIDHide is not installed.", Logger.LogLevel.Warning);
-                return;
-            }
-
             try
             {
+                if (!Config.UseHIDHide || _hidHideService.IsActive)
+                {
+                    return;
+                }
+
+                if (!_hidHideService.IsInstalled)
+                {
+                    _form.Log("HIDHide is not installed.", Logger.LogLevel.Warning);
+                    return;
+                }
+
                 _hidHideService.IsAppListInverted = false;
-            }
-            catch (Exception e)
-            {
-                _form.Log($"Unable to set HIDHide in whitelist mode.", e);
-                return;
-            }
 
-            //if (Config.PurgeAffectedDevices) {
-            //    try {
-            //        hidHideService.ClearBlockedInstancesList();
-            //    } catch (Exception e) {
-            //        form.AppendTextBox($"Unable to purge blacklisted devices.", e);
-            //        return;
-            //    }
-            //}
+                //if (Config.PurgeAffectedDevices)
+                //{
+                //    hidHideService.ClearBlockedInstancesList();
+                //    return;
+                //}
 
-            try
-            {
                 if (Config.PurgeWhitelist)
                 {
                     _hidHideService.ClearApplicationsList();
                 }
 
                 _hidHideService.AddApplicationPath(Environment.ProcessPath);
-            }
-            catch (Exception e)
-            {
-                _form.Log($"Unable to add program to whitelist.", e);
-                return;
-            }
-
-            try
-            {
                 _hidHideService.IsActive = true;
             }
             catch (Exception e)
             {
-                _form.Log($"Unable to hide devices.", e);
+                _form.Log($"Unable to start HIDHide.", e);
                 return;
             }
 
@@ -904,13 +892,13 @@ namespace BetterJoy
 
         public static void AddDeviceToBlocklist(IntPtr handle)
         {
-            if (!_hidHideService.IsActive)
-            {
-                return;
-            }
-
             try
             {
+                if (!_hidHideService.IsActive)
+                {
+                    return;
+                }
+
                 var devices = new List<string>();
 
                 var instance = HIDApi.GetInstance(handle);
@@ -1076,13 +1064,11 @@ namespace BetterJoy
             InputCapture.Global.Dispose();
 
             EmClient?.Dispose();
-
             StopHIDHide();
 
             if (Server != null)
             {
                 await Server.Stop();
-                Server.Dispose();
             }
         }
 
@@ -1093,37 +1079,23 @@ namespace BetterJoy
 
         public static void StopHIDHide()
         {
-            if (!_hidHideService.IsActive)
-            {
-                return;
-            }
-
             try
             {
-                _hidHideService.RemoveApplicationPath(Environment.ProcessPath);
-            }
-            catch (Exception e)
-            {
-                _form.Log($"Unable to remove program from whitelist.", e);
-            }
+                if (!_hidHideService.IsActive)
+                {
+                    return;
+                }
 
-            if (Config.PurgeAffectedDevices)
-            {
-                try
+                _hidHideService.RemoveApplicationPath(Environment.ProcessPath);
+
+                if (Config.PurgeAffectedDevices)
                 {
                     foreach (var instance in BlockedDeviceInstances)
                     {
                         _hidHideService.RemoveBlockedInstanceId(instance);
                     }
                 }
-                catch (Exception e)
-                {
-                    _form.Log($"Unable to purge blacklisted devices.", e);
-                }
-            }
 
-            try
-            {
                 _hidHideService.IsActive = false;
             }
             catch (Exception e)

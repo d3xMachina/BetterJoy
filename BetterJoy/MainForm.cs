@@ -39,6 +39,9 @@ namespace BetterJoy
         private const string _logFilePath = "LogDebug.txt";
         private Logger _logger;
 
+        private bool _closing = false;
+        private bool _close = false;
+
         public MainForm()
         {
             InitializeComponent();
@@ -216,20 +219,30 @@ namespace BetterJoy
 
         private async void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (_close)
+            {
+                // We can close now (happens after the Close() call)
+                return;
+            }
+            
+            e.Cancel = true;
+
+            if (_closing)
+            {
+                // Prevent disposing the UI thread when the user hammers the close button
+                return;
+            }
+
+            _closing = true;
+            Enabled = false;
+
             Log("Closing...");
-
-            e.Cancel = true; // workaround to allow using the form until the Program is stopped
-
-            await Program.Stop();
             SystemEvents.PowerModeChanged -= OnPowerChange;
+            await Program.Stop();
+            Log($"Closed.", Logger.LogLevel.Debug);
 
-            FormClosing -= MainForm_FormClosing; // don't retrigger the event with Application.Exit()
-            Application.Exit();
-
-            base.OnFormClosing(e);
-
-            Log($"Closed.");
-
+            _close = true;
+            Close(); // we're done with the UI thread, close it for real now
             _logger?.Dispose();
         }
 

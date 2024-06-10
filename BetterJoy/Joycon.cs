@@ -229,7 +229,7 @@ namespace BetterJoy
         private float[] _stick = { 0, 0 };
         private float[] _stick2 = { 0, 0 };
 
-        private bool _stopPolling = true;
+        private CancellationTokenSource _ctsCommunications;
         public ulong Timestamp { get; private set; }
         public readonly long TimestampCreation;
 
@@ -247,7 +247,7 @@ namespace BetterJoy
         public readonly ReaderWriterLockSlim HidapiLock = new ReaderWriterLockSlim();
 
         private Stopwatch _timeSinceReceive = new();
-        private RollingAverage _avgReceiveDeltaMs = new(100); // delta is around 10-16ms, so rolling average over 1000-1600ms 
+        private RollingAverage _avgReceiveDeltaMs = new(100); // delta is around 10-16ms, so rolling average over 1000-1600ms
 
         public Joycon(
             MainForm form,
@@ -705,10 +705,7 @@ namespace BetterJoy
                 return;
             }
 
-            _stopPolling = true;
-            _receiveReportsThread?.Join();
-            _sendCommandsThread?.Join();
-
+            WaitCommunicationThreads();
             DisconnectViGEm();
 
             if (_handle != IntPtr.Zero)
@@ -744,11 +741,18 @@ namespace BetterJoy
 
         public void Drop(bool error = false)
         {
-            _stopPolling = true;
-            _receiveReportsThread?.Join();
-            _sendCommandsThread?.Join();
+            WaitCommunicationThreads();
 
             State = error ? Status.Errored : Status.Dropped;
+        }
+
+        private void WaitCommunicationThreads()
+        {
+            _ctsCommunications?.Cancel();
+            _receiveReportsThread?.Join();
+            _sendCommandsThread?.Join();
+            _ctsCommunications?.Dispose();
+            _ctsCommunications = null;
         }
 
         public bool IsViGEmSetup()
@@ -1393,7 +1397,7 @@ namespace BetterJoy
             }
         }
 
-        private void SendCommands()
+        private void SendCommands(CancellationToken token)
         {
             Span<byte> buf = stackalloc byte[_CommandLength];
             buf.Clear();
@@ -1402,8 +1406,10 @@ namespace BetterJoy
             const int sendHomeLightIntervalMs = 1250;
             Stopwatch timeSinceHomeLight = new();
 
-            while (!_stopPolling && State > Status.Dropped)
+            while (IsDeviceReady)
             {
+                token.ThrowIfCancellationRequested();
+
                 if (Program.IsSuspended)
                 {
                     Thread.Sleep(10);
@@ -1426,8 +1432,9 @@ namespace BetterJoy
             }
         }
 
-        private void ReceiveReports()
+        private void ReceiveReports(CancellationToken token)
         {
+            var cancellationToken = _ctsCommunications.Token;
             Span<byte> buf = stackalloc byte[ReportLength];
             buf.Clear();
 
@@ -1441,8 +1448,10 @@ namespace BetterJoy
             _timeSinceReceive.Reset();
             Timestamp = 0;
 
-            while (!_stopPolling && IsDeviceReady)
+            while (IsDeviceReady)
             {
+                token.ThrowIfCancellationRequested();
+
                 if (Program.IsSuspended)
                 {
                     Thread.Sleep(10);
@@ -1935,28 +1944,70 @@ namespace BetterJoy
 
         public void Begin()
         {
-            if (_receiveReportsThread == null && _sendCommandsThread == null)
-            {
-                _receiveReportsThread = new Thread(ReceiveReports)
-                {
-                    IsBackground = true
-                };
-
-                _sendCommandsThread = new Thread(SendCommands)
-                {
-                    IsBackground = true
-                };
-
-                _stopPolling = false;
-                _sendCommandsThread.Start();
-                _receiveReportsThread.Start();
-
-                Log("Ready.");
-            }
-            else
+            if (_receiveReportsThread != null || _sendCommandsThread != null)
             {
                 Log("Poll thread cannot start!", Logger.LogLevel.Error);
+                return;
             }
+
+            if (_ctsCommunications == null)
+            {
+                _ctsCommunications = new();
+            }
+
+            _receiveReportsThread = new Thread(
+                () => 
+                {
+                    try
+                    {
+                        ReceiveReports(_ctsCommunications.Token);
+                        Log("Thread receive reports finished.", Logger.LogLevel.Debug);
+                    }
+                    catch (OperationCanceledException) when (_ctsCommunications.IsCancellationRequested)
+                    {
+                        Log("Thread receive reports canceled.", Logger.LogLevel.Debug);
+                    }
+                    catch (Exception e)
+                    {
+                        Log("Thread receive reports error.", e);
+                        throw;
+                    }
+                }
+            )
+            {
+                IsBackground = true
+            };
+
+            _sendCommandsThread = new Thread(
+                () =>
+                {
+                    try
+                    {
+                        SendCommands(_ctsCommunications.Token);
+                        Log("Thread send commands finished.", Logger.LogLevel.Debug);
+                    }
+                    catch (OperationCanceledException) when (_ctsCommunications.IsCancellationRequested)
+                    {
+                        Log("Thread send commands canceled.", Logger.LogLevel.Debug);
+                    }
+                    catch (Exception e)
+                    {
+                        Log("Thread send commands error.", e);
+                        throw;
+                    }
+                }
+            )
+            {
+                IsBackground = true
+            };
+
+            _sendCommandsThread.Start();
+            Log("Thread send commands started.", Logger.LogLevel.Debug);
+
+            _receiveReportsThread.Start();
+            Log("Thread receive reports started.", Logger.LogLevel.Debug);
+
+            Log("Ready.");
         }
 
         private void CalculateStickCenter(ushort[] vals, ushort[] cal, float deadzone, float range, float[] stick)
@@ -2946,7 +2997,7 @@ namespace BetterJoy
 
         private void Log(string message, Logger.LogLevel level = Logger.LogLevel.Info, DebugType type = DebugType.None)
         {
-            if (level == Logger.LogLevel.Debug)
+            if (level == Logger.LogLevel.Debug && type != DebugType.None)
             {
                 _form.Log($"[P{PadId + 1}] [{type.ToString().ToUpper()}] {message}", level);
             }
@@ -2954,6 +3005,11 @@ namespace BetterJoy
             {
                 _form.Log($"[P{PadId + 1}] {message}", level);
             }
+        }
+
+        private void Log(string message, Exception e, Logger.LogLevel level = Logger.LogLevel.Error)
+        {
+            _form.Log($"[P{PadId + 1}] {message}", e, level);
         }
 
         public void ApplyConfig(bool showErrors = true)
