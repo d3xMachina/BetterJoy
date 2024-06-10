@@ -250,6 +250,9 @@ namespace BetterJoy
         private Stopwatch _timeSinceReceive = new();
         private RollingAverage _avgReceiveDeltaMs = new(100); // delta is around 10-16ms, so rolling average over 1000-1600ms
 
+        private volatile bool _pauseSendCommands;
+        private volatile bool _sendCommandsPaused;
+
         public Joycon(
             MainForm form,
             IntPtr handle,
@@ -1417,6 +1420,13 @@ namespace BetterJoy
                     continue;
                 }
 
+                _sendCommandsPaused = _pauseSendCommands;
+                if (_sendCommandsPaused)
+                {
+                    Thread.Sleep(10);
+                    continue;
+                }
+
                 if (Config.HomeLEDOn && (timeSinceHomeLight.ElapsedMilliseconds > sendHomeLightIntervalMs || !timeSinceHomeLight.IsRunning))
                 {
                     SetHomeLight(Config.HomeLEDOn);
@@ -1435,7 +1445,6 @@ namespace BetterJoy
 
         private void ReceiveReports(CancellationToken token)
         {
-            var cancellationToken = _ctsCommunications.Token;
             Span<byte> buf = stackalloc byte[ReportLength];
             buf.Clear();
 
@@ -1459,34 +1468,34 @@ namespace BetterJoy
                     continue;
                 }
 
-                var error = ReceiveRaw(buf);
+                // Attempt reconnection, we interrupt the thread send commands to improve the reliability
+                // and to avoid thread safety issues with hidapi as we're doing both read/write
+                if (timeSinceError.ElapsedMilliseconds > dropAfterMs)
+                {
+                    if (IsUSB && reconnectAttempts >= 3)
+                    {
+                        Log("Dropped.", Logger.LogLevel.Warning);
+                        State = Status.Errored;
+                        continue;
+                    }
 
-                if (error == ReceiveError.None && IsDeviceReady)
-                {
-                    State = Status.IMUDataOk;
-                    timeSinceError.Reset();
-                    reconnectAttempts = 0;
-                }
-                else if (timeSinceError.ElapsedMilliseconds > dropAfterMs)
-                {
+                    _pauseSendCommands = true;
+                    if (!_sendCommandsPaused)
+                    {
+                        Thread.Sleep(10);
+                        continue;
+                    }
+
                     if (IsUSB)
                     {
-                        if (reconnectAttempts >= 3)
+                        Log("Attempt soft reconnect...");
+                        try
                         {
-                            Log("Dropped.", Logger.LogLevel.Warning);
-                            State = Status.Errored;
+                            USBPairing();
+                            SetReportMode(ReportMode.StandardFull);
+                            SetLEDByPadID();
                         }
-                        else
-                        {
-                            Log("Attempt soft reconnect...");
-                            try
-                            {
-                                USBPairing();
-                                SetReportMode(ReportMode.StandardFull);
-                                SetLEDByPadID();
-                            }
-                            catch { } // ignore and retry
-                        }
+                        catch { } // ignore and retry
                     }
                     else
                     {
@@ -1494,8 +1503,19 @@ namespace BetterJoy
                         SetReportMode(ReportMode.StandardFull, false);
                     }
 
-                    timeSinceError.Restart();
                     ++reconnectAttempts;
+                    timeSinceError.Restart();
+                }
+
+                // Receive controller data
+                var error = ReceiveRaw(buf);
+
+                if (error == ReceiveError.None && IsDeviceReady)
+                {
+                    State = Status.IMUDataOk;
+                    timeSinceError.Reset();
+                    reconnectAttempts = 0;
+                    _pauseSendCommands = false;
                 }
                 else if (error == ReceiveError.InvalidHandle)
                 {
@@ -3248,7 +3268,7 @@ namespace BetterJoy
             }
         }
 
-        class RollingAverage
+        private class RollingAverage
         {
             private Queue<int> _samples;
             private int _size;
