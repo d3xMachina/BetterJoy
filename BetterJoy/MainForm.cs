@@ -136,10 +136,10 @@ namespace BetterJoy
                 return;
             }
 
-            var programFullName = Assembly.GetExecutingAssembly().GetName();
+            var programName = Application.ProductName;
             var osArch = Environment.Is64BitProcess ? "x64" : "x86";
-            _logger.Log($"{programFullName.Name} {GetProgramVersion()}", Logger.LogLevel.Debug);
-            _logger.Log($"Windows version: {Environment.OSVersion} {osArch}", Logger.LogLevel.Debug);
+            _logger.Log($"{programName} {GetProgramVersion()}", Logger.LogLevel.Debug);
+            _logger.Log($"OS version: {Environment.OSVersion} {osArch}", Logger.LogLevel.Debug);
         }
 
         private void HideToTray(bool init = false)
@@ -207,6 +207,15 @@ namespace BetterJoy
             else
             {
                 ShowFromTray(true);
+            }
+
+            try
+            {
+                startOnBoot.Checked = IsRunOnBootSet();
+            }
+            catch (Exception ex)
+            {
+                Log("Cannot retrieve run on boot state.", ex);
             }
 
             SystemEvents.PowerModeChanged += OnPowerChange;
@@ -362,10 +371,57 @@ namespace BetterJoy
             Program.Mgr.JoinOrSplitJoycon(controller);
         }
 
-        private void startInTrayBox_CheckedChanged(object sender, EventArgs e)
+        private void startInTrayBox_Click(object sender, EventArgs e)
         {
             Settings.SetValue("StartInTray", startInTrayBox.Checked ? "1" : "0");
             Settings.Save();
+        }
+
+        private void startOnBoot_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SetRunOnBoot(startOnBoot.Checked);
+            }
+            catch (Exception ex)
+            {
+                Log("Cannot set run on boot.", ex);
+                startOnBoot.Checked = !startOnBoot.Checked;
+            }
+        }
+
+        private void SetRunOnBoot(bool enable)
+        {
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
+            {
+                if (key != null)
+                {
+                    var programPath = Application.ExecutablePath;
+                    var programName = Application.ProductName;
+
+                    if (enable)
+                    {
+                        key.SetValue(programName, programPath);
+                    }
+                    else
+                    {
+                        key.DeleteValue(programName);
+                    }
+                }
+            }
+        }
+
+        static bool IsRunOnBootSet()
+        {
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", false))
+            {
+                if (key != null)
+                {
+                    var programName = Application.ProductName;
+                    return key.GetValue(programName) != null;
+                }
+            }
+            return false;
         }
 
         private void btn_open3rdP_Click(object sender, EventArgs e)

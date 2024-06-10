@@ -56,6 +56,7 @@
             btn_calibrate = new System.Windows.Forms.Button();
             btn_reassign_open = new System.Windows.Forms.Button();
             btn_locate = new System.Windows.Forms.Button();
+            startOnBoot = new System.Windows.Forms.CheckBox();
             contextMenu.SuspendLayout();
             conCntrls.SuspendLayout();
             groupBox1.SuspendLayout();
@@ -271,11 +272,11 @@
             startInTrayBox.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             startInTrayBox.Name = "startInTrayBox";
             startInTrayBox.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
-            startInTrayBox.Size = new System.Drawing.Size(87, 19);
+            startInTrayBox.Size = new System.Drawing.Size(86, 19);
             startInTrayBox.TabIndex = 6;
-            startInTrayBox.Text = "Start in Tray";
+            startInTrayBox.Text = "Start in tray";
             startInTrayBox.UseVisualStyleBackColor = true;
-            startInTrayBox.CheckedChanged += startInTrayBox_CheckedChanged;
+            startInTrayBox.Click += startInTrayBox_Click;
             // 
             // btn_open3rdP
             // 
@@ -374,6 +375,19 @@
             btn_locate.UseVisualStyleBackColor = true;
             btn_locate.Click += StartLocate;
             // 
+            // startOnBoot
+            // 
+            startOnBoot.AutoSize = true;
+            startOnBoot.Location = new System.Drawing.Point(107, 375);
+            startOnBoot.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            startOnBoot.Name = "startOnBoot";
+            startOnBoot.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            startOnBoot.Size = new System.Drawing.Size(95, 19);
+            startOnBoot.TabIndex = 15;
+            startOnBoot.Text = "Start on boot";
+            startOnBoot.UseVisualStyleBackColor = true;
+            startOnBoot.Click += startOnBoot_Click;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -381,6 +395,7 @@
             AutoSize = true;
             AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             ClientSize = new System.Drawing.Size(718, 401);
+            Controls.Add(startOnBoot);
             Controls.Add(btn_locate);
             Controls.Add(btn_reassign_open);
             Controls.Add(foldLbl);
@@ -438,5 +453,6 @@
         private System.Windows.Forms.Button con6;
         private System.Windows.Forms.Button con5;
         private System.Windows.Forms.Button btn_locate;
+        private System.Windows.Forms.CheckBox startOnBoot;
     }
 }
