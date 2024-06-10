@@ -202,7 +202,7 @@ namespace BetterJoy
         private Thread _receiveReportsThread;
         private Thread _sendCommandsThread;
 
-        private Rumble _rumbleObj;
+        private RumbleQueue _rumbles;
 
         public readonly string SerialNumber;
 
@@ -276,7 +276,7 @@ namespace BetterJoy
             _handle = handle;
             _IMUEnabled = imu;
             _doLocalize = localize;
-            _rumbleObj = new Rumble([Config.LowFreq, Config.HighFreq, 0]);
+            _rumbles = new RumbleQueue([Config.LowFreq, Config.HighFreq, 0]);
             for (var i = 0; i < _buttonsDownTimestamp.Length; i++)
             {
                 _buttonsDownTimestamp[i] = -1;
@@ -711,6 +711,7 @@ namespace BetterJoy
 
             WaitCommunicationThreads();
             DisconnectViGEm();
+            _rumbles.Clear();
 
             if (_handle != IntPtr.Zero)
             {
@@ -1433,10 +1434,9 @@ namespace BetterJoy
                     timeSinceHomeLight.Restart();
                 }
 
-                byte[] data;
-                while ((data = _rumbleObj.GetData()) != null)
+                while (_rumbles.TryDequeue(out var rumbleData))
                 {
-                    SendRumble(buf, data);
+                    SendRumble(buf, rumbleData);
                 }
 
                 Thread.Sleep(5);
@@ -2097,7 +2097,7 @@ namespace BetterJoy
                 return;
             }
 
-            _rumbleObj.Enqueue(lowFreq, highFreq, amp);
+            _rumbles.Enqueue(lowFreq, highFreq, amp);
         }
 
         // Run from poll thread
@@ -3097,40 +3097,21 @@ namespace BetterJoy
                 SetCalibration(Config.AllowCalibration);
             }
         }
-        private struct Rumble
+        private class RumbleQueue
         {
-            private readonly Queue<float[]> _queue;
-            private SpinLock _queueLock;
+            private const int MaxRumble = 15;
+            private ConcurrentSpinQueue<float[]> _queue;
+
+            public RumbleQueue(float[] rumbleInfo)
+            {
+                _queue = new(MaxRumble);
+                _queue.Enqueue(rumbleInfo);
+            }
 
             public void Enqueue(float lowFreq, float highFreq, float amplitude)
             {
-                float[] rumbleQueue = { lowFreq, highFreq, amplitude };
-                // Keep a queue of 15 items, discard oldest item if queue is full.
-                var lockTaken = false;
-                try
-                {
-                    _queueLock.Enter(ref lockTaken);
-                    if (_queue.Count > 15)
-                    {
-                        _queue.Dequeue();
-                    }
-
-                    _queue.Enqueue(rumbleQueue);
-                }
-                finally
-                {
-                    if (lockTaken)
-                    {
-                        _queueLock.Exit();
-                    }
-                }
-            }
-
-            public Rumble(float[] rumbleInfo)
-            {
-                _queue = new Queue<float[]>();
-                _queueLock = new SpinLock();
-                _queue.Enqueue(rumbleInfo);
+                float[] rumble = { lowFreq, highFreq, amplitude };
+                _queue.Enqueue(rumble);
             }
 
             private byte EncodeAmp(float amp)
@@ -3157,32 +3138,15 @@ namespace BetterJoy
                 return enAmp;
             }
 
-            public byte[] GetData()
+            public bool TryDequeue(out Span<byte> rumbleData)
             {
-                float[] queuedData = null;
-                var lockTaken = false;
-                try
+                if (!_queue.TryDequeue(out float[] queuedData))
                 {
-                    _queueLock.Enter(ref lockTaken);
-                    if (_queue.Count > 0)
-                    {
-                        queuedData = _queue.Dequeue();
-                    }
-                }
-                finally
-                {
-                    if (lockTaken)
-                    {
-                        _queueLock.Exit();
-                    }
+                    rumbleData = null;
+                    return false;
                 }
 
-                if (queuedData == null)
-                {
-                    return null;
-                }
-
-                var rumbleData = new byte[8];
+                rumbleData = new byte[8];
 
                 if (queuedData[2] == 0.0f)
                 {
@@ -3228,7 +3192,12 @@ namespace BetterJoy
                     rumbleData[4 + i] = rumbleData[i];
                 }
 
-                return rumbleData;
+                return true;
+            }
+
+            public void Clear()
+            {
+                _queue.Clear();
             }
         }
 
