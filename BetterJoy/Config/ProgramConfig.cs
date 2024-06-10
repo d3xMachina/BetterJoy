@@ -5,6 +5,7 @@ namespace BetterJoy.Config;
 public class ProgramConfig : Config
 {
     public bool UseHIDHide;
+    public bool HIDHideAlwaysOn;
     public bool PurgeWhitelist;
     public bool PurgeAffectedDevices;
     public bool MotionServer;
@@ -16,6 +17,7 @@ public class ProgramConfig : Config
     public ProgramConfig(ProgramConfig config) : base (config._form)
     {
         UseHIDHide = config.UseHIDHide;
+        HIDHideAlwaysOn = config.HIDHideAlwaysOn;
         PurgeWhitelist = config.PurgeWhitelist;
         PurgeAffectedDevices = config.PurgeAffectedDevices;
         MotionServer = config.MotionServer;
@@ -26,6 +28,7 @@ public class ProgramConfig : Config
     public override void Update()
     {
         UpdateSetting("UseHidHide", ref UseHIDHide, true);
+        UpdateSetting("HIDHideAlwaysOn", ref HIDHideAlwaysOn, false);
         UpdateSetting("PurgeWhitelist", ref PurgeWhitelist, false);
         UpdateSetting("PurgeAffectedDevices", ref PurgeAffectedDevices, false);
         UpdateSetting("MotionServer", ref MotionServer, true);

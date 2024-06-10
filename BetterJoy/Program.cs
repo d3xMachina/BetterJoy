@@ -855,7 +855,7 @@ namespace BetterJoy
         {
             try
             {
-                if (!Config.UseHIDHide || _hidHideService.IsActive)
+                if (!Config.UseHIDHide)
                 {
                     return;
                 }
@@ -880,6 +880,7 @@ namespace BetterJoy
                 }
 
                 _hidHideService.AddApplicationPath(Environment.ProcessPath);
+
                 _hidHideService.IsActive = true;
             }
             catch (Exception e)
@@ -1082,7 +1083,7 @@ namespace BetterJoy
         {
             try
             {
-                if (!_hidHideService.IsActive)
+                if (!_hidHideService.IsInstalled)
                 {
                     return;
                 }
@@ -1095,6 +1096,11 @@ namespace BetterJoy
                     {
                         _hidHideService.RemoveBlockedInstanceId(instance);
                     }
+                }
+
+                if (Config.HIDHideAlwaysOn)
+                {
+                    return;
                 }
 
                 _hidHideService.IsActive = false;
