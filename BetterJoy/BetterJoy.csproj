@@ -31,7 +31,6 @@
             <DependentUpon>ThirdpartyControllers.cs</DependentUpon>
         </Compile>
         <Compile Update="Collections\ConcurrentList.cs" />
-        <Compile Update="Config.cs" />
         <Compile Update="Controller\OutputControllerDualShock4.cs" />
         <Compile Update="Controller\OutputControllerXbox360.cs" />
         <Compile Update="HIDapi.cs" />

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using BetterJoy.Config;
 using BetterJoy.Exceptions;
 using BetterJoy.Properties;
 using Microsoft.Win32;

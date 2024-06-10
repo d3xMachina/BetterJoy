@@ -8,6 +8,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterJoy.Collections;
+using BetterJoy.Config;
 using BetterJoy.Exceptions;
 using Nefarius.Drivers.HidHide;
 using Nefarius.ViGEm.Client;

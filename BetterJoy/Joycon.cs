@@ -7,6 +7,7 @@ using System.Numerics;
 using System.Threading;
 using System.Windows.Forms;
 using BetterJoy.Collections;
+using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
