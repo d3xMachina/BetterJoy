@@ -544,7 +544,11 @@ public class Joycon
                 mac[n] = byte.Parse(SerialNumber.AsSpan(n * 2, 2), NumberStyles.HexNumber);
             }
         }
-        catch { } // could not parse mac address, ignore
+        // could not parse mac address, ignore
+        catch (Exception e)
+        {
+            Log("Cannot parse MAC address.", e, Logger.LogLevel.Debug);
+        }
 
         PadMacAddress = new PhysicalAddress(mac);
     }
@@ -818,7 +822,11 @@ public class Joycon
             ds4.UpdateInput(MapToDualShock4Input(this));
             xbox.UpdateInput(MapToXbox360Input(this));
         }
-        catch { } // ignore
+        // ignore
+        catch (Exception e)
+        {
+            Log("Cannot update input.", e, Logger.LogLevel.Debug);
+        }
         finally
         {
             if (lockTaken)
@@ -1500,7 +1508,11 @@ public class Joycon
                         SetReportMode(ReportMode.StandardFull);
                         SetLEDByPadID();
                     }
-                    catch { } // ignore and retry
+                    // ignore and retry
+                    catch (Exception e)
+                    {
+                        Log("Soft reconnect failed.", e, Logger.LogLevel.Debug);
+                    }
                 }
                 else
                 {
