@@ -1119,6 +1119,7 @@ internal class Program
         ThirdpartyCons.Set(controllers);
     }
 
+    [STAThread]
     private static void Main(string[] args)
     {
         // Setting the culturesettings so float gets parsed correctly
