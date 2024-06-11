@@ -77,8 +77,16 @@ Check out the [wiki](https://github.com/Davidobot/BetterJoy/wiki)! There, you'll
 1. If you didn't already, install **Visual Studio Community 2022** via
    [the official guide](https://docs.microsoft.com/en-us/visualstudio/install/install-visual-studio?view=vs-2022).
    When asked about the workloads, select **.NET Desktop Development**.
-2. Get the code project via Git or by using the *Download ZIP* button.
+2. Get the code project via Git (git clone --recurse-submodules https://github.com/d3xMachina/BetterJoy.git)
 3. Open Visual Studio Community and open the solution file (*BetterJoy.sln*).
+
+### For a production build :
+
+4. Right click on "BetterJoy" in The Solution Explorer -> "Publish..." -> Click "Publish".
+5. The build is in the build\ folder
+
+### For a standard build :
+
 4. Open the NuGet manager via *Tools > NuGet Package Manager > Package Manager Settings*.
 5. You should have a warning mentioning *restoring your packages*. Click on the **Restore** button.
 6. You can now run and build BetterJoy.
@@ -91,6 +99,15 @@ Check out the [wiki](https://github.com/Davidobot/BetterJoy/wiki)! There, you'll
    You should follow the section for ***nuget.exe***.
    Verify that you can run `nuget` from your favourite terminal.
 3. Get the code project via Git (git clone --recurse-submodules https://github.com/d3xMachina/BetterJoy.git)
+
+### For a production build :
+
+4. Set the MSBUILD_PATH variable to the path of your MSBuild.exe in "Publish.bat"
+5. Run "Publish.bat"
+6. The build is in the build\ folder
+
+### For a standard build :
+
 4. Open a terminal (*cmd*, *PowerShell*, ...) and enter the folder with the source code.
 5. Restore the NuGet dependencies by running: `nuget restore`
 6. Now build the app with MSBuild:

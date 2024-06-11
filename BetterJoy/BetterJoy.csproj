@@ -78,12 +78,14 @@
         <Content Include="Icons\snes.png" />
         <None Include="Properties\app.manifest" />
         <Content Include="Icons\betterjoy_icon.ico" />
-        <Content Include="..\hidapi\windows\Win32\Release\hidapi.dll">
+        <ContentWithTargetPath Include="..\hidapi\windows\Win32\Release\hidapi.dll">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Include="..\hidapi\windows\x64\Release\hidapi.dll">
+			<TargetPath>x86\%(Filename)%(Extension)</TargetPath>
+        </ContentWithTargetPath>
+        <ContentWithTargetPath Include="..\hidapi\windows\x64\Release\hidapi.dll">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
+			<TargetPath>x64\%(Filename)%(Extension)</TargetPath>
+        </ContentWithTargetPath>
         <Content Include="Icons\cross.png" />
         <Content Include="Icons\jc_left_s.png" />
         <Content Include="Icons\jc_right_s.png" />
