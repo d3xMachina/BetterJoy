@@ -1122,6 +1122,8 @@ internal class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
         // Setting the culturesettings so float gets parsed correctly
         CultureInfo.CurrentCulture = new CultureInfo("en-US", false);
 
