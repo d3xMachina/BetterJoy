@@ -90,7 +90,7 @@ Check out the [wiki](https://github.com/Davidobot/BetterJoy/wiki)! There, you'll
    [the official guide](https://docs.microsoft.com/en-us/nuget/install-nuget-client-tools#nugetexe-cli).
    You should follow the section for ***nuget.exe***.
    Verify that you can run `nuget` from your favourite terminal.
-3. Get the code project via Git or by using the *Download ZIP* button.
+3. Get the code project via Git (git clone --recurse-submodules https://github.com/d3xMachina/BetterJoy.git)
 4. Open a terminal (*cmd*, *PowerShell*, ...) and enter the folder with the source code.
 5. Restore the NuGet dependencies by running: `nuget restore`
 6. Now build the app with MSBuild:

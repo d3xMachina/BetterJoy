@@ -1,3 +1,6 @@
 [submodule "ViGEm.NET"]
 	path = ViGEm.NET
 	url = https://github.com/d3xMachina/ViGEm.NET
+[submodule "hidapi"]
+	path = hidapi
+	url = https://github.com/d3xMachina/hidapi.git

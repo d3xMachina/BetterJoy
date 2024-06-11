@@ -78,10 +78,10 @@
         <Content Include="Icons\snes.png" />
         <None Include="Properties\app.manifest" />
         <Content Include="Icons\betterjoy_icon.ico" />
-        <Content Include="x86\hidapi.dll">
+        <Content Include="..\hidapi\windows\Win32\Release\hidapi.dll">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
-        <Content Include="x64\hidapi.dll">
+        <Content Include="..\hidapi\windows\x64\Release\hidapi.dll">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
         <Content Include="Icons\cross.png" />
