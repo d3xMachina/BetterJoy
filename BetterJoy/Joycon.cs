@@ -439,10 +439,10 @@ public class Joycon
         return _accG;
     }
 
-    public void Reset()
+    public bool Reset()
     {
         Log("Resetting connection.");
-        SetHCIState(0x01);
+        return SetHCIState(0x01) > 0;
     }
 
     public void Attach()
@@ -451,6 +451,8 @@ public class Joycon
         {
             return;
         }
+
+        bool resetSuccess = false;
 
         try
         {
@@ -475,7 +477,7 @@ public class Joycon
                 }
                 catch
                 {
-                    Reset();
+                    resetSuccess = Reset();
                     throw;
                 }
 
@@ -490,7 +492,7 @@ public class Joycon
             var ok = DumpCalibrationData();
             if (!ok)
             {
-                Reset();
+                resetSuccess = Reset();
                 throw new DeviceComFailedException("reset calibration");
             }
 
@@ -507,7 +509,10 @@ public class Joycon
         }
         catch
         {
-            State = Status.AttachError;
+            if (!resetSuccess)
+            {
+                State = Status.AttachError;
+            }
             throw;
         }
     }
@@ -639,9 +644,9 @@ public class Joycon
         Subcommand(0x38, buf); // don't wait for response
     }
 
-    private void SetHCIState(byte state)
+    private int SetHCIState(byte state)
     {
-        SubcommandCheck(0x06, [state]);
+        return SubcommandCheck(0x06, [state]);
     }
 
     private void SetIMU(bool enable)
