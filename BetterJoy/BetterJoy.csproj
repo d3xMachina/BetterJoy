@@ -86,6 +86,10 @@
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<TargetPath>x64\%(Filename)%(Extension)</TargetPath>
         </ContentWithTargetPath>
+		<ContentWithTargetPath Include="..\LICENSE">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<TargetPath>%(Filename)%(Extension)</TargetPath>
+        </ContentWithTargetPath>
         <Content Include="Icons\cross.png" />
         <Content Include="Icons\jc_left_s.png" />
         <Content Include="Icons\jc_right_s.png" />
