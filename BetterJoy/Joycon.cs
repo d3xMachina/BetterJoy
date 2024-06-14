@@ -452,8 +452,6 @@ public class Joycon
             return;
         }
 
-        bool resetSuccess = false;
-
         try
         {
             if (_handle == IntPtr.Zero)
@@ -469,18 +467,8 @@ public class Joycon
             if (IsUSB)
             {
                 Log("Using USB.");
-
-                try
-                {
-                    GetMAC();
-                    USBPairing();
-                }
-                catch
-                {
-                    resetSuccess = Reset();
-                    throw;
-                }
-
+                GetMAC();
+                USBPairing();
                 //BTManualPairing();
             }
             else
@@ -492,7 +480,6 @@ public class Joycon
             var ok = DumpCalibrationData();
             if (!ok)
             {
-                resetSuccess = Reset();
                 throw new DeviceComFailedException("reset calibration");
             }
 
@@ -507,12 +494,18 @@ public class Joycon
 
             DebugPrint("Done with init.", DebugType.Comms);
         }
-        catch
+        catch (DeviceComFailedException)
         {
+            bool resetSuccess = Reset();
             if (!resetSuccess)
             {
                 State = Status.AttachError;
             }
+            throw;
+        }
+        catch
+        {
+            State = Status.AttachError;
             throw;
         }
     }
