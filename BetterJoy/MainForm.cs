@@ -417,8 +417,13 @@ public partial class MainForm : Form
         {
             if (key != null)
             {
+                var programPath = Application.ExecutablePath;
                 var programName = Application.ProductName;
-                return key.GetValue(programName) != null;
+                var value = key.GetValue(programName);
+                if (value is string path)
+                {
+                    return path.Equals(programPath, StringComparison.OrdinalIgnoreCase);
+                }
             }
         }
         return false;
