@@ -83,6 +83,13 @@ public class Joycon
         Full
     }
 
+    public enum Orientation
+    {
+        None,
+        Horizontal,
+        Vertical
+    }
+
     private enum ReceiveError
     {
         None,

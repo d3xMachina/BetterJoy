@@ -35,7 +35,7 @@ public class ControllerConfig : Config
     public bool SwapXY;
     public bool UseFilteredIMU;
     public DebugType DebugType;
-    public bool DoNotRejoin;
+    public Orientation DoNotRejoin;
     public bool AutoPowerOff;
     public bool AllowCalibration;
 
@@ -112,7 +112,7 @@ public class ControllerConfig : Config
         UpdateSetting("SwapXY", ref SwapXY, false);
         UpdateSetting("UseFilteredIMU", ref UseFilteredIMU, true);
         UpdateSetting("DebugType", ref DebugType, DebugType.None);
-        UpdateSetting("DoNotRejoinJoycons", ref DoNotRejoin, false);
+        UpdateSetting("DoNotRejoinJoycons", ref DoNotRejoin, Orientation.None);
         UpdateSetting("AutoPowerOff", ref AutoPowerOff, false);
         UpdateSetting("AllowCalibration", ref AllowCalibration, true);
     }

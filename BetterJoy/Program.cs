@@ -340,9 +340,14 @@ public class JoyconManager
         _form.AddController(controller);
 
         // attempt to auto join-up joycons on connection
-        if (!controller.Config.DoNotRejoin && JoinJoycon(controller))
+        var doNotRejoin = controller.Config.DoNotRejoin;
+        if (doNotRejoin != Joycon.Orientation.Horizontal)
         {
-            _form.JoinJoycon(controller, controller.Other);
+            bool joinSelf = doNotRejoin != Joycon.Orientation.None;
+            if (JoinJoycon(controller, joinSelf))
+            {
+                _form.JoinJoycon(controller, controller.Other);
+            }
         }
 
         controller.SetCalibration(_form.Config.AllowCalibration);
@@ -683,7 +688,7 @@ public class JoyconManager
             int nbJoycons = Controllers.Count(j => j.IsJoycon);
 
             // when we want to have a single joycon in vertical mode
-            bool joinSelf = nbJoycons == 1 || controller.Config.DoNotRejoin;
+            bool joinSelf = nbJoycons == 1 || controller.Config.DoNotRejoin != Joycon.Orientation.None;
 
             if (JoinJoycon(controller, joinSelf))
             {

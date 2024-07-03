@@ -71,7 +71,9 @@ public partial class MainForm : Form
     {
         Control childControl;
 
-        if (key == "DebugType" || key == "GyroToJoyOrMouse")
+        if (key == "DebugType" ||
+            key == "GyroToJoyOrMouse" ||
+            key == "DoNotRejoinJoycons")
         {
             var comboBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Size = size };
             var items = new List<string>();
@@ -84,6 +86,11 @@ public partial class MainForm : Form
             else if (key == "GyroToJoyOrMouse")
             {
                 items.AddRange(["none", "joy_left", "joy_right", "mouse"]);
+            }
+            else if (key == "DoNotRejoinJoycons")
+            {
+                var enumValues = Enum.GetValues(typeof(Joycon.Orientation));
+                items.AddRange(enumValues.Cast<Joycon.Orientation>().Select(e => e.ToString().ToLower()).ToList());
             }
 
             int index = 0;
