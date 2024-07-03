@@ -62,7 +62,61 @@ public partial class MainForm : Form
 
         _con = new List<Button> { con1, con2, con3, con4, con5, con6, con7, con8 };
 
-        //list all options
+        InitializeConfigPanel();
+
+        Shown += MainForm_Shown;
+    }
+
+    private Control GenerateConfigItem(string key, string value, Size size)
+    {
+        Control childControl;
+
+        if (key == "DebugType" || key == "GyroToJoyOrMouse")
+        {
+            var comboBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Size = size };
+            var items = new List<string>();
+
+            if (key == "DebugType")
+            {
+                var enumValues = Enum.GetValues(typeof(Joycon.DebugType));
+                items.AddRange(enumValues.Cast<Joycon.DebugType>().Select(e => e.ToString().ToLower()).ToList());
+            }
+            else if (key == "GyroToJoyOrMouse")
+            {
+                items.AddRange(["none", "joy_left", "joy_right", "mouse"]);
+            }
+
+            int index = 0;
+            foreach (var item in items)
+            {
+                comboBox.Items.Add(item);
+
+                if (item == value.ToLower())
+                {
+                    comboBox.SelectedIndex = index;
+                }
+                ++index;
+            }
+                
+            comboBox.SelectedIndexChanged += ConfigItemChanged;
+            childControl = comboBox;
+        }
+        else if (value == "true" || value == "false")
+        {
+            var checkBox = new CheckBox { Checked = bool.Parse(value), Size = size };
+            checkBox.CheckedChanged += ConfigItemChanged;
+            childControl = checkBox;
+        }
+        else
+        {
+            childControl = new TextBox { Text = value, Size = size };
+        }
+
+        return childControl;
+    }
+
+    private void InitializeConfigPanel()
+    {
         var myConfigs = ConfigurationManager.AppSettings.AllKeys;
         var childSize = new Size(180, 20);
         for (var i = 0; i != myConfigs.Length; i++)
@@ -81,23 +135,12 @@ public partial class MainForm : Form
                 i
             );
 
-            var value = ConfigurationManager.AppSettings[myConfigs[i]];
-            Control childControl;
-            if (value == "true" || value == "false")
-            {
-                var checkBox = new CheckBox { Checked = bool.Parse(value), Size = childSize };
-                checkBox.CheckedChanged += checkBox_Changed;
-                childControl = checkBox;
-            }
-            else
-            {
-                childControl = new TextBox { Text = value, Size = childSize };
-            }
+            var key = myConfigs[i];
+            var value = ConfigurationManager.AppSettings[key];
+            var childControl = GenerateConfigItem(key, value, childSize);
 
             settingsTable.Controls.Add(childControl, 1, i);
         }
-
-        Shown += MainForm_Shown;
     }
 
     private void InitializeConsoleTextBox()
@@ -446,13 +489,24 @@ public partial class MainForm : Form
             var valCtl = settingsTable.GetControlFromPosition(1, row);
             var keyCtl = settingsTable.GetControlFromPosition(0, row).Text;
 
-            if (valCtl.GetType() == typeof(CheckBox) && settings[keyCtl] != null)
+            if (settings[keyCtl] != null)
             {
-                settings[keyCtl].Value = ((CheckBox)valCtl).Checked.ToString().ToLower();
-            }
-            else if (valCtl.GetType() == typeof(TextBox) && settings[keyCtl] != null)
-            {
-                settings[keyCtl].Value = ((TextBox)valCtl).Text.ToLower();
+                if (valCtl is CheckBox checkBox)
+                {
+                    settings[keyCtl].Value = checkBox.Checked.ToString().ToLower();
+                }
+                else if (valCtl is ComboBox comboBox)
+                {
+                    settings[keyCtl].Value = comboBox.SelectedItem.ToString().ToLower();
+                }
+                else if (valCtl is TextBox textBox)
+                {
+                    settings[keyCtl].Value = textBox.Text.ToLower();
+                }
+                else
+                {
+                    throw new NotImplementedException("control not implemented");
+                }
             }
         }
 
@@ -501,10 +555,10 @@ public partial class MainForm : Form
         foldLbl.Text = rightPanel.Visible ? "<" : ">";
     }
 
-    private async void checkBox_Changed(object sender, EventArgs e)
+    private async void ConfigItemChanged(object sender, EventArgs e)
     {
-        var checkBox = sender as CheckBox;
-        var coord = settingsTable.GetPositionFromControl(checkBox);
+        var control = sender as Control;
+        var coord = settingsTable.GetPositionFromControl(control);
         var keyCtl = settingsTable.GetControlFromPosition(coord.Column - 1, coord.Row).Text;
 
         try
@@ -513,7 +567,18 @@ public partial class MainForm : Form
             var settings = configFile.AppSettings.Settings;
             if (settings[keyCtl] != null)
             {
-                settings[keyCtl].Value = checkBox.Checked.ToString().ToLower();
+                if (sender is CheckBox checkBox)
+                {
+                    settings[keyCtl].Value = checkBox.Checked.ToString().ToLower();
+                }
+                else if (sender is ComboBox comboBox)
+                {
+                    settings[keyCtl].Value = comboBox.SelectedItem.ToString().ToLower();
+                }
+                else
+                {
+                    throw new NotImplementedException("control not implemented");
+                }
             }
 
             configFile.Save(ConfigurationSaveMode.Modified);
