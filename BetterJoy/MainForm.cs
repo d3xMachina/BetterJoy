@@ -58,7 +58,8 @@ public partial class MainForm : Form
             btn_calibrate.Hide();
         }
 
-        Icon = new Icon(Resources.betterjoy_icon, SystemInformation.SmallIconSize);
+        SetIcon();
+        SetTaskbarIcon();
         version_lbl.Text = GetProgramVersion();
 
         _con = new List<Button> { con1, con2, con3, con4, con5, con6, con7, con8 };
@@ -66,6 +67,20 @@ public partial class MainForm : Form
         InitializeConfigPanel();
 
         Shown += MainForm_Shown;
+    }
+
+    private void SetIcon()
+    {
+        var oldIcon = Icon;
+        Icon = Resources.betterjoy_icon;
+        oldIcon?.Dispose();
+    }
+
+    private void SetTaskbarIcon()
+    {
+        var oldIcon = notifyIcon.Icon;
+        notifyIcon.Icon = Resources.betterjoy_icon;
+        oldIcon?.Dispose();
     }
 
     private Control GenerateConfigItem(string key, string value)
@@ -280,6 +295,7 @@ public partial class MainForm : Form
         }
 
         SystemEvents.PowerModeChanged += OnPowerChange;
+        SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         Refresh();
     }
 
@@ -330,6 +346,12 @@ public partial class MainForm : Form
                 Program.SetSuspended(true);
                 break;
         }
+    }
+
+    private void OnDisplaySettingsChanged(object sender, EventArgs e)
+    {
+        // avoid blurry icon after resolution/dpi changes
+        SetTaskbarIcon();
     }
 
     private void exitToolStripMenuItem_Click(object sender, EventArgs e)
