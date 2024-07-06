@@ -58,6 +58,7 @@ public partial class MainForm : Form
             btn_calibrate.Hide();
         }
 
+        Icon = new Icon(Resources.betterjoy_icon, SystemInformation.SmallIconSize);
         version_lbl.Text = GetProgramVersion();
 
         _con = new List<Button> { con1, con2, con3, con4, con5, con6, con7, con8 };
@@ -67,7 +68,7 @@ public partial class MainForm : Form
         Shown += MainForm_Shown;
     }
 
-    private Control GenerateConfigItem(string key, string value, Size size)
+    private Control GenerateConfigItem(string key, string value)
     {
         Control childControl;
 
@@ -75,7 +76,7 @@ public partial class MainForm : Form
             key == "GyroToJoyOrMouse" ||
             key == "DoNotRejoinJoycons")
         {
-            var comboBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Size = size };
+            var comboBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
             var items = new List<string>();
 
             if (key == "DebugType")
@@ -110,13 +111,13 @@ public partial class MainForm : Form
         }
         else if (value == "true" || value == "false")
         {
-            var checkBox = new CheckBox { Checked = bool.Parse(value), Size = size };
+            var checkBox = new CheckBox { Checked = bool.Parse(value) };
             checkBox.CheckedChanged += ConfigItemChanged;
             childControl = checkBox;
         }
         else
         {
-            childControl = new TextBox { Text = value, Size = size };
+            childControl = new TextBox { Text = value };
         }
 
         return childControl;
@@ -125,18 +126,25 @@ public partial class MainForm : Form
     private void InitializeConfigPanel()
     {
         var myConfigs = ConfigurationManager.AppSettings.AllKeys;
-        var childSize = new Size(180, 20);
+        settingsTable.RowStyles.Clear();
+
         for (var i = 0; i != myConfigs.Length; i++)
         {
             settingsTable.RowCount++;
+            settingsTable.RowStyles.Add(
+                new RowStyle
+                {
+                    SizeType = SizeType.Absolute, Height = 30 * settingsTable.DeviceDpi / 100
+                }
+            );
             settingsTable.Controls.Add(
                 new Label
                 {
                     Text = myConfigs[i],
-                    TextAlign = ContentAlignment.BottomLeft,
+                    TextAlign = ContentAlignment.MiddleLeft,
                     AutoEllipsis = true,
-                    Size = childSize,
-                    AutoSize = false
+                    AutoSize = true,
+                    Anchor = AnchorStyles.Left
                 },
                 0,
                 i
@@ -144,7 +152,9 @@ public partial class MainForm : Form
 
             var key = myConfigs[i];
             var value = ConfigurationManager.AppSettings[key];
-            var childControl = GenerateConfigItem(key, value, childSize);
+            var childControl = GenerateConfigItem(key, value);
+            childControl.AutoSize = true;
+            childControl.Anchor = AnchorStyles.Left;
 
             settingsTable.Controls.Add(childControl, 1, i);
         }
@@ -222,8 +232,6 @@ public partial class MainForm : Form
         Show();
         WindowState = FormWindowState.Normal;
         ShowInTaskbar = true;
-        FormBorderStyle = FormBorderStyle.FixedSingle;
-        Icon = Resources.betterjoy_icon;
         notifyIcon.Visible = false;
 
         // Scroll to end

@@ -143,7 +143,7 @@
             // 
             con8.BackColor = System.Drawing.SystemColors.Control;
             con8.BackgroundImage = Properties.Resources.cross;
-            con8.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+            con8.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             con8.Enabled = false;
             con8.Location = new System.Drawing.Point(230, 98);
             con8.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
@@ -157,7 +157,7 @@
             // 
             con7.BackColor = System.Drawing.SystemColors.Control;
             con7.BackgroundImage = Properties.Resources.cross;
-            con7.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+            con7.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             con7.Enabled = false;
             con7.Location = new System.Drawing.Point(155, 98);
             con7.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
@@ -171,7 +171,7 @@
             // 
             con6.BackColor = System.Drawing.SystemColors.Control;
             con6.BackgroundImage = Properties.Resources.cross;
-            con6.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+            con6.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             con6.Enabled = false;
             con6.Location = new System.Drawing.Point(81, 98);
             con6.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
@@ -185,7 +185,7 @@
             // 
             con5.BackColor = System.Drawing.SystemColors.Control;
             con5.BackgroundImage = Properties.Resources.cross;
-            con5.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+            con5.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             con5.Enabled = false;
             con5.Location = new System.Drawing.Point(6, 98);
             con5.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
@@ -200,7 +200,7 @@
             // 
             con4.BackColor = System.Drawing.SystemColors.Control;
             con4.BackgroundImage = Properties.Resources.cross;
-            con4.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+            con4.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             con4.Enabled = false;
             con4.Location = new System.Drawing.Point(231, 23);
             con4.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
@@ -214,7 +214,7 @@
             // 
             con3.BackColor = System.Drawing.SystemColors.Control;
             con3.BackgroundImage = Properties.Resources.cross;
-            con3.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+            con3.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             con3.Enabled = false;
             con3.Location = new System.Drawing.Point(156, 23);
             con3.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
@@ -228,7 +228,7 @@
             // 
             con2.BackColor = System.Drawing.SystemColors.Control;
             con2.BackgroundImage = Properties.Resources.cross;
-            con2.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+            con2.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             con2.Enabled = false;
             con2.Location = new System.Drawing.Point(82, 23);
             con2.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
@@ -242,7 +242,7 @@
             // 
             con1.BackColor = System.Drawing.SystemColors.Control;
             con1.BackgroundImage = Properties.Resources.cross;
-            con1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+            con1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             con1.Enabled = false;
             con1.Location = new System.Drawing.Point(7, 23);
             con1.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
@@ -306,10 +306,11 @@
             settingsTable.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             settingsTable.AutoScroll = true;
             settingsTable.ColumnCount = 2;
-            settingsTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 58.90411F));
-            settingsTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 41.09589F));
+            settingsTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60F));
+            settingsTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 40F));
             settingsTable.Location = new System.Drawing.Point(5, 20);
             settingsTable.Margin = new System.Windows.Forms.Padding(2);
+            settingsTable.MinimumSize = new System.Drawing.Size(350, 0);
             settingsTable.Name = "settingsTable";
             settingsTable.RowCount = 1;
             settingsTable.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -390,8 +391,8 @@
             // 
             // MainForm
             // 
-            AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             AutoSize = true;
             AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             ClientSize = new System.Drawing.Size(718, 401);
@@ -411,7 +412,7 @@
             Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
             Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             MaximizeBox = false;
-            MinimumSize = new System.Drawing.Size(0, 376);
+            MinimumSize = new System.Drawing.Size(0, 430);
             Name = "MainForm";
             Text = "BetterJoy LTS";
             FormClosing += MainForm_FormClosing;

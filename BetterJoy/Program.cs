@@ -1143,6 +1143,7 @@ internal class Program
                 return;
             }
 
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             _form = new MainForm();
