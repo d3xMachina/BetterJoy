@@ -125,6 +125,7 @@ public partial class MainForm : Form
 
     private void InitializeConfigPanel()
     {
+        const float defaultDpi = 96f;
         var myConfigs = ConfigurationManager.AppSettings.AllKeys;
         settingsTable.RowStyles.Clear();
 
@@ -134,7 +135,8 @@ public partial class MainForm : Form
             settingsTable.RowStyles.Add(
                 new RowStyle
                 {
-                    SizeType = SizeType.Absolute, Height = 30 * settingsTable.DeviceDpi / 100
+                    SizeType = SizeType.Absolute,
+                    Height = MathF.Round(30f * AutoScaleDimensions.Height / defaultDpi)
                 }
             );
             settingsTable.Controls.Add(
@@ -155,6 +157,7 @@ public partial class MainForm : Form
             var childControl = GenerateConfigItem(key, value);
             childControl.AutoSize = true;
             childControl.Anchor = AnchorStyles.Left;
+            childControl.Size = new Size(settingsTable.Size.Width, 0); // the control won't take more space than available thanks to AutoSize
 
             settingsTable.Controls.Add(childControl, 1, i);
         }
