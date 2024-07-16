@@ -685,13 +685,19 @@ public class Joycon
         USBCommand(0x06);
     }
 
-    public void PowerOff()
+    public bool PowerOff()
     {
         if (IsDeviceReady)
         {
-            SetHCIState(0x00);
-            State = Status.Dropped;
+            Log("Powering off.");
+            if (SetHCIState(0x00) > 0)
+            {
+                State = Status.Dropped;
+                return true;
+            }
         }
+
+        return false;
     }
 
     private void BatteryChanged()
@@ -724,7 +730,7 @@ public class Joycon
 
         if (_handle != IntPtr.Zero)
         {
-            if (State > Status.Dropped)
+            if (IsDeviceReady)
             {
                 //SetIMU(false);
                 //SetRumble(false);
