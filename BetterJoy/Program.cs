@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -1153,10 +1154,20 @@ internal class Program
 
     private static void SetupDlls()
     {
-        var archPath = $"{AppDomain.CurrentDomain.BaseDirectory}{(Environment.Is64BitProcess ? "x64" : "x86")}\\";
-        var pathVariable = Environment.GetEnvironmentVariable("PATH");
-        pathVariable = $"{archPath};{pathVariable}";
-        Environment.SetEnvironmentVariable("PATH", pathVariable);
+        var ok = NativeMethods.SetDefaultDllDirectories(NativeMethods.LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        if (!ok)
+        {
+            var errorCode = Marshal.GetLastWin32Error();
+            Console.WriteLine($"SetDefaultDllDirectories failed with error code: {errorCode}");
+        }
+
+        var archPath = $"{AppDomain.CurrentDomain.BaseDirectory}{(Environment.Is64BitProcess ? "x64" : "x86")}";
+        var ret = NativeMethods.AddDllDirectory(archPath);
+        if (ret == IntPtr.Zero)
+        {
+            var errorCode = Marshal.GetLastWin32Error();
+            Console.WriteLine($"AddDllDirectory failed with error code: {errorCode}");
+        }
     }
 
     public static async Task ApplyConfig()
