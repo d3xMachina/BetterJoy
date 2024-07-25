@@ -439,67 +439,63 @@ internal class UdpServer
 
     private void ReportToBuffer(Joycon hidReport, Span<byte> outputData, ref int outIdx)
     {
-        /* Commented because we only care about the gyroscope and accelerometer
         var ds4 = Joycon.MapToDualShock4Input(hidReport);
 
         outputData[outIdx] = 0;
 
-        if (ds4.dPad == Controller.DpadDirection.West || ds4.dPad == Controller.DpadDirection.Northwest || ds4.dPad == Controller.DpadDirection.Southwest) outputData[outIdx] |= 0x80;
-        if (ds4.dPad == Controller.DpadDirection.South || ds4.dPad == Controller.DpadDirection.Southwest || ds4.dPad == Controller.DpadDirection.Southeast) outputData[outIdx] |= 0x40;
-        if (ds4.dPad == Controller.DpadDirection.East || ds4.dPad == Controller.DpadDirection.Northeast || ds4.dPad == Controller.DpadDirection.Southeast) outputData[outIdx] |= 0x20;
-        if (ds4.dPad == Controller.DpadDirection.North || ds4.dPad == Controller.DpadDirection.Northwest || ds4.dPad == Controller.DpadDirection.Northeast) outputData[outIdx] |= 0x10;
+        if (ds4.DPad == Controller.DpadDirection.West || ds4.DPad == Controller.DpadDirection.Northwest || ds4.DPad == Controller.DpadDirection.Southwest) outputData[outIdx] |= 0x80;
+        if (ds4.DPad == Controller.DpadDirection.South || ds4.DPad == Controller.DpadDirection.Southwest || ds4.DPad == Controller.DpadDirection.Southeast) outputData[outIdx] |= 0x40;
+        if (ds4.DPad == Controller.DpadDirection.East || ds4.DPad == Controller.DpadDirection.Northeast || ds4.DPad == Controller.DpadDirection.Southeast) outputData[outIdx] |= 0x20;
+        if (ds4.DPad == Controller.DpadDirection.North || ds4.DPad == Controller.DpadDirection.Northwest || ds4.DPad == Controller.DpadDirection.Northeast) outputData[outIdx] |= 0x10;
 
-        if (ds4.options) outputData[outIdx] |= 0x08;
-        if (ds4.thumb_right) outputData[outIdx] |= 0x04;
-        if (ds4.thumb_left) outputData[outIdx] |= 0x02;
-        if (ds4.share) outputData[outIdx] |= 0x01;
+        if (ds4.Options) outputData[outIdx] |= 0x08;
+        if (ds4.ThumbRight) outputData[outIdx] |= 0x04;
+        if (ds4.ThumbLeft) outputData[outIdx] |= 0x02;
+        if (ds4.Share) outputData[outIdx] |= 0x01;
 
         outputData[++outIdx] = 0;
 
-        if (ds4.square) outputData[outIdx] |= 0x80;
-        if (ds4.cross) outputData[outIdx] |= 0x40;
-        if (ds4.circle) outputData[outIdx] |= 0x20;
-        if (ds4.triangle) outputData[outIdx] |= 0x10;
+        if (ds4.Square) outputData[outIdx] |= 0x80;
+        if (ds4.Cross) outputData[outIdx] |= 0x40;
+        if (ds4.Circle) outputData[outIdx] |= 0x20;
+        if (ds4.Triangle) outputData[outIdx] |= 0x10;
 
-        if (ds4.shoulder_right) outputData[outIdx] |= 0x08;
-        if (ds4.shoulder_left) outputData[outIdx] |= 0x04;
-        if (ds4.trigger_right_value == Byte.MaxValue) outputData[outIdx] |= 0x02;
-        if (ds4.trigger_left_value == Byte.MaxValue) outputData[outIdx] |= 0x01;
+        if (ds4.ShoulderRight) outputData[outIdx] |= 0x08;
+        if (ds4.ShoulderLeft) outputData[outIdx] |= 0x04;
+        if (ds4.TriggerRightValue == Byte.MaxValue) outputData[outIdx] |= 0x02;
+        if (ds4.TriggerLeftValue == Byte.MaxValue) outputData[outIdx] |= 0x01;
 
-        outputData[++outIdx] = ds4.ps ? (byte)1 : (byte)0;
-        outputData[++outIdx] = ds4.touchpad ? (byte)1 : (byte)0;
+        outputData[++outIdx] = ds4.Ps ? (byte)1 : (byte)0;
+        outputData[++outIdx] = ds4.Touchpad ? (byte)1 : (byte)0;
 
-        outputData[++outIdx] = ds4.thumb_left_x;
-        outputData[++outIdx] = ds4.thumb_left_y;
-        outputData[++outIdx] = ds4.thumb_right_x;
-        outputData[++outIdx] = ds4.thumb_right_y;
+        outputData[++outIdx] = ds4.ThumbLeftX;
+        outputData[++outIdx] = ds4.ThumbLeftY;
+        outputData[++outIdx] = ds4.ThumbRightX;
+        outputData[++outIdx] = ds4.ThumbRightY;
 
         //we don't have analog buttons so just use the Button enums (which give either 0 or 0xFF)
-        outputData[++outIdx] = (ds4.dPad == Controller.DpadDirection.West || ds4.dPad == Controller.DpadDirection.Northwest || ds4.dPad == Controller.DpadDirection.Southwest) ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = (ds4.dPad == Controller.DpadDirection.South || ds4.dPad == Controller.DpadDirection.Southwest || ds4.dPad == Controller.DpadDirection.Southeast) ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = (ds4.dPad == Controller.DpadDirection.East || ds4.dPad == Controller.DpadDirection.Northeast || ds4.dPad == Controller.DpadDirection.Southeast) ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = (ds4.dPad == Controller.DpadDirection.North || ds4.dPad == Controller.DpadDirection.Northwest || ds4.dPad == Controller.DpadDirection.Northeast) ? (byte)0xFF : (byte)0; ;
+        outputData[++outIdx] = (ds4.DPad == Controller.DpadDirection.West || ds4.DPad == Controller.DpadDirection.Northwest || ds4.DPad == Controller.DpadDirection.Southwest) ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = (ds4.DPad == Controller.DpadDirection.South || ds4.DPad == Controller.DpadDirection.Southwest || ds4.DPad == Controller.DpadDirection.Southeast) ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = (ds4.DPad == Controller.DpadDirection.East || ds4.DPad == Controller.DpadDirection.Northeast || ds4.DPad == Controller.DpadDirection.Southeast) ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = (ds4.DPad == Controller.DpadDirection.North || ds4.DPad == Controller.DpadDirection.Northwest || ds4.DPad == Controller.DpadDirection.Northeast) ? (byte)0xFF : (byte)0; ;
 
-        outputData[++outIdx] = ds4.square ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = ds4.cross ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = ds4.circle ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = ds4.triangle ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = ds4.Square ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = ds4.Cross ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = ds4.Circle ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = ds4.Triangle ? (byte)0xFF : (byte)0;
 
-        outputData[++outIdx] = ds4.shoulder_right ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = ds4.shoulder_left ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = ds4.ShoulderRight ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = ds4.ShoulderLeft ? (byte)0xFF : (byte)0;
 
-        outputData[++outIdx] = ds4.trigger_right_value;
-        outputData[++outIdx] = ds4.trigger_left_value;
+        outputData[++outIdx] = ds4.TriggerRightValue;
+        outputData[++outIdx] = ds4.TriggerLeftValue;
 
-        outIdx++;
+        ++outIdx;
 
         //DS4 only: touchpad points
         for (int i = 0; i < 2; i++) {
             outIdx += 6;
         }
-        */
-
-        outIdx += 32;
 
         //motion timestamp
         BitConverter.TryWriteBytes(outputData.Slice(outIdx, 8), hidReport.Timestamp);
