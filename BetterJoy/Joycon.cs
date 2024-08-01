@@ -937,10 +937,25 @@ public class Joycon
 
     private void DetectShake()
     {
-        if (Config.ShakeInputEnabled && IsPrimaryGyro)
+        if (!Config.ShakeInputEnabled || !IsPrimaryGyro)
         {
-            var currentShakeTime = _shakeTimer.ElapsedMilliseconds;
+            return;
+        }
 
+        var currentShakeTime = _shakeTimer.ElapsedMilliseconds;
+
+        // If controller was shaked then release mapped key after a small delay to simulate a button press, then reset hasShaked
+        if (_hasShaked && currentShakeTime >= _shakedTime + 10)
+        {
+            _hasShaked = false;
+
+            // Mapped shake key up
+            Simulate(Settings.Value("shake"), false, true);
+            DebugPrint("Shake completed", DebugType.Shake);
+        }
+
+        if (!_hasShaked)
+        {
             // Shake detection logic
             var isShaking = GetAccel().LengthSquared() >= Config.ShakeSensitivity;
             if (isShaking && (currentShakeTime >= _shakedTime + Config.ShakeDelay || _shakedTime == 0))
@@ -952,19 +967,6 @@ public class Joycon
                 Simulate(Settings.Value("shake"), false);
                 DebugPrint("Shaked at time: " + _shakedTime, DebugType.Shake);
             }
-
-            // If controller was shaked then release mapped key after a small delay to simulate a button press, then reset hasShaked
-            if (_hasShaked && currentShakeTime >= _shakedTime + 10)
-            {
-                // Mapped shake key up
-                Simulate(Settings.Value("shake"), false, true);
-                DebugPrint("Shake completed", DebugType.Shake);
-                _hasShaked = false;
-            }
-        }
-        else
-        {
-            _shakeTimer.Stop();
         }
     }
 
