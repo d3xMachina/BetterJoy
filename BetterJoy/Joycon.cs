@@ -939,6 +939,7 @@ public class Joycon
     {
         if (!Config.ShakeInputEnabled || !IsPrimaryGyro)
         {
+            _hasShaked = false;
             return;
         }
 
@@ -1044,8 +1045,36 @@ public class Joycon
         if (s.StartsWith("joy_"))
         {
             var button = int.Parse(s.AsSpan(4));
+
+            if (IsJoined && !IsLeft)
+            {
+                button = FlipButton(button);
+            }
+
             _buttonsRemapped[button] |= pressed;
         }
+    }
+
+    private int FlipButton(int button)
+    {
+        return button switch
+        {
+            (int)Button.DpadDown => (int)Button.B,
+            (int)Button.DpadRight => (int)Button.A,
+            (int)Button.DpadUp => (int)Button.X,
+            (int)Button.DpadLeft => (int)Button.Y,
+            (int)Button.Stick => (int)Button.Stick2,
+            (int)Button.Shoulder1 => (int)Button.Shoulder21,
+            (int)Button.Shoulder2 => (int)Button.Shoulder22,
+            (int)Button.B => (int)Button.DpadDown,
+            (int)Button.A => (int)Button.DpadRight,
+            (int)Button.X => (int)Button.DpadUp,
+            (int)Button.Y => (int)Button.DpadLeft,
+            (int)Button.Stick2 => (int)Button.Stick,
+            (int)Button.Shoulder21 => (int)Button.Shoulder1,
+            (int)Button.Shoulder22 => (int)Button.Shoulder2,
+            _ => button
+        };
     }
 
     private void ReleaseRemappedButtons()
@@ -1134,9 +1163,6 @@ public class Joycon
             {
                 Simulate(Settings.Value("sr_l"), false, true);
             }
-
-            SimulateContinous((int)Button.SL, Settings.Value("sl_l"));
-            SimulateContinous((int)Button.SR, Settings.Value("sr_l"));
         }
         else
         {
@@ -1159,12 +1185,24 @@ public class Joycon
             {
                 Simulate(Settings.Value("sr_r"), false, true);
             }
-
-            SimulateContinous((int)Button.SL, Settings.Value("sl_r"));
-            SimulateContinous((int)Button.SR, Settings.Value("sr_r"));
         }
 
-        SimulateContinous(_hasShaked, Settings.Value("shake"));
+        if (IsLeft || IsJoined)
+        {
+            var controller = IsLeft ? this : Other;
+            SimulateContinous(controller._buttons[(int)Button.SL], Settings.Value("sl_l"));
+            SimulateContinous(controller._buttons[(int)Button.SR], Settings.Value("sr_l"));
+        }
+        
+        if (!IsLeft || IsJoined)
+        {
+            var controller = !IsLeft ? this : Other;
+            SimulateContinous(controller._buttons[(int)Button.SL], Settings.Value("sl_r"));
+            SimulateContinous(controller._buttons[(int)Button.SR], Settings.Value("sr_r"));
+        }
+
+        bool hasShaked = IsPrimaryGyro ? _hasShaked : Other._hasShaked;
+        SimulateContinous(hasShaked, Settings.Value("shake"));
     }
 
     private void RemapButtons()
