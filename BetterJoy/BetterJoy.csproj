@@ -10,7 +10,7 @@
         <AssemblyName>BetterJoy</AssemblyName>
         <ApplicationIcon>Icons\betterjoy_icon.ico</ApplicationIcon>
         <StartupObject>BetterJoy.Program</StartupObject>
-        <AssemblyVersion>8.4.6</AssemblyVersion>
+        <AssemblyVersion>8.4.7</AssemblyVersion>
         <FileVersion>$(AssemblyVersion)</FileVersion>
         <Version>$(AssemblyVersion)</Version>
         <Copyright>Copyright © 2024</Copyright>
