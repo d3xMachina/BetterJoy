@@ -252,13 +252,13 @@ public class Joycon
     private bool _calibrateSticks = false;
     private bool _calibrateIMU = false;
 
-    public readonly ReaderWriterLockSlim HidapiLock = new ReaderWriterLockSlim();
-
     private Stopwatch _timeSinceReceive = new();
     private RollingAverage _avgReceiveDeltaMs = new(100); // delta is around 10-16ms, so rolling average over 1000-1600ms
 
     private volatile bool _pauseSendCommands;
     private volatile bool _sendCommandsPaused;
+    private volatile bool _requestPowerOff;
+    private volatile bool _requestSetLEDByPadID;
 
     public Joycon(
         MainForm form,
@@ -322,7 +322,7 @@ public class Joycon
 
     public Joycon Other;
 
-    public void SetLEDByPlayerNum(int id)
+    public bool SetLEDByPlayerNum(int id)
     {
         if (id >= LedById.Length)
         {
@@ -332,22 +332,29 @@ public class Joycon
 
         byte led = LedById[id];
 
-        SetPlayerLED(led);
+        return SetPlayerLED(led);
     }
 
-    public void SetLEDByPadID()
+    public bool SetLEDByPadID()
     {
+        int id;
         if (!IsJoined)
         {
             // Set LED to current Pad ID
-            SetLEDByPlayerNum(PadId);
+            id = PadId;
         }
         else
         {
             // Set LED to current Joycon Pair
-            var lowestPadId = Math.Min(Other.PadId, PadId);
-            SetLEDByPlayerNum(lowestPadId);
+            id = Math.Min(Other.PadId, PadId);
         }
+
+        return SetLEDByPlayerNum(id);
+    }
+
+    public void RequestSetLEDByPadID()
+    {
+        _requestSetLEDByPadID = true;
     }
 
     public void GetActiveIMUData()
@@ -593,9 +600,9 @@ public class Joycon
         SubcommandCheck(0x01, [0x03], buf); // save pairing info
     }
 
-    public void SetPlayerLED(byte leds = 0x00)
+    public bool SetPlayerLED(byte leds = 0x00)
     {
-        SubcommandCheck(0x30, [leds]);
+        return SubcommandCheck(0x30, [leds]) > 0;
     }
 
     public void BlinkHomeLight()
@@ -663,14 +670,14 @@ public class Joycon
         SubcommandCheck(0x48, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
-    private void SetReportMode(ReportMode reportMode, bool checkResponse = true)
+    private bool SetReportMode(ReportMode reportMode, bool checkResponse = true)
     {
         if (checkResponse)
         {
-            SubcommandCheck(0x03, [(byte)reportMode]);
-            return;
+            return SubcommandCheck(0x03, [(byte)reportMode]) > 0;
         }
         Subcommand(0x03, [(byte)reportMode]);
+        return true;
     }
 
     private void BTActivate()
@@ -690,14 +697,27 @@ public class Joycon
         if (IsDeviceReady)
         {
             Log("Powering off.");
-            if (SetHCIState(0x00) > 0)
+
+            // < 0 = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
+            var length = SetHCIState(0x00);
+            if (length != 0)
             {
-                State = Status.Dropped;
+                Drop(false, false);
                 return true;
             }
         }
 
         return false;
+    }
+
+    public void RequestPowerOff()
+    {
+        _requestPowerOff = true;
+    }
+
+    public void WaitPowerOff(int timeoutMs)
+    {
+        _receiveReportsThread?.Join(timeoutMs);
     }
 
     private void BatteryChanged()
@@ -717,6 +737,23 @@ public class Joycon
         _form.SetCharging(this, Charging);
     }
 
+    private static bool Retry(Func<bool> func, int waitMs = 500, int nbAttempt = 3)
+    {
+        bool success = false;
+
+        for (int attempt = 0; attempt < nbAttempt && !success; ++attempt)
+        {
+            if (attempt > 0)
+            {
+                Thread.Sleep(waitMs);
+            }
+
+            success = func();
+        }
+
+        return success;
+    }
+
     public void Detach(bool close = true)
     {
         if (State == Status.NotAttached)
@@ -734,8 +771,8 @@ public class Joycon
             {
                 //SetIMU(false);
                 //SetRumble(false);
-                SetReportMode(ReportMode.SimpleHID);
-                SetPlayerLED(0);
+                Retry(() => SetReportMode(ReportMode.SimpleHID));
+                Retry(() => SetPlayerLED(0));
 
                 // Commented because you need to restart the controller to reconnect in usb again with the following
                 //BTActivate();
@@ -743,36 +780,37 @@ public class Joycon
 
             if (close)
             {
-                HidapiLock.EnterWriteLock();
-                try
-                {
-                    HIDApi.Close(_handle);
-                    _handle = IntPtr.Zero;
-                }
-                finally
-                {
-                    HidapiLock.ExitWriteLock();
-                }
+                HIDApi.Close(_handle);
+                _handle = IntPtr.Zero;
             }
         }
 
         State = Status.NotAttached;
     }
 
-    public void Drop(bool error = false)
+    public void Drop(bool error = false, bool waitThreads = true)
     {
-        WaitCommunicationThreads();
+        // when waitThreads is false, doesn't dispose the cancellation token
+        // so you have to call WaitCommunicationThreads again with waitThreads to true
+        WaitCommunicationThreads(waitThreads);
 
         State = error ? Status.Errored : Status.Dropped;
     }
 
-    private void WaitCommunicationThreads()
+    private void WaitCommunicationThreads(bool waitThreads = true)
     {
-        _ctsCommunications?.Cancel();
-        _receiveReportsThread?.Join();
-        _sendCommandsThread?.Join();
-        _ctsCommunications?.Dispose();
-        _ctsCommunications = null;
+        if (_ctsCommunications != null && !_ctsCommunications.IsCancellationRequested)
+        {
+            _ctsCommunications.Cancel();
+        }
+
+        if (waitThreads)
+        {
+            _receiveReportsThread?.Join();
+            _sendCommandsThread?.Join();
+            _ctsCommunications?.Dispose();
+            _ctsCommunications = null;
+        }
     }
 
     public bool IsViGEmSetup()
@@ -1272,9 +1310,9 @@ public class Joycon
             {
                 if (IsJoined)
                 {
-                    Program.Mgr.PowerOff(Other);
+                    Other.RequestPowerOff();
                 }
-                PowerOff();
+                RequestPowerOff();
                 return;
             }
         }
@@ -1469,6 +1507,7 @@ public class Joycon
         // the home light stays on for 2625ms, set to less than half in case of packet drop
         const int sendHomeLightIntervalMs = 1250;
         Stopwatch timeSinceHomeLight = new();
+        bool oldHomeLEDOn = false;
 
         while (IsDeviceReady)
         {
@@ -1487,10 +1526,13 @@ public class Joycon
                 continue;
             }
 
-            if (Config.HomeLEDOn && (timeSinceHomeLight.ElapsedMilliseconds > sendHomeLightIntervalMs || !timeSinceHomeLight.IsRunning))
+            bool homeLEDOn = Config.HomeLEDOn;
+            if ((oldHomeLEDOn != homeLEDOn) ||
+                (homeLEDOn && timeSinceHomeLight.ElapsedMilliseconds > sendHomeLightIntervalMs))
             {
                 SetHomeLight(Config.HomeLEDOn);
                 timeSinceHomeLight.Restart();
+                oldHomeLEDOn = homeLEDOn;
             }
 
             while (_rumbles.TryDequeue(out var rumbleData))
@@ -1509,6 +1551,7 @@ public class Joycon
 
         int dropAfterMs = IsUSB ? 1500 : 3000;
         Stopwatch timeSinceError = new();
+        Stopwatch timeSinceRequest = new();
         int reconnectAttempts = 0;
 
         // For IMU timestamp calculation
@@ -1527,14 +1570,64 @@ public class Joycon
                 continue;
             }
 
+            // Requests here since we need to read and write, otherwise not thread safe
+            bool requestPowerOff = _requestPowerOff;
+            bool requestSetLEDByPadID = _requestSetLEDByPadID;
+
+            if (requestPowerOff || requestSetLEDByPadID)
+            {
+                if (!timeSinceRequest.IsRunning || timeSinceRequest.ElapsedMilliseconds > 500)
+                {
+                    _pauseSendCommands = true;
+                    if (!_sendCommandsPaused)
+                    {
+                        Thread.Sleep(10);
+                        continue;
+                    }
+
+                    bool requestSuccess = false;
+
+                    if (requestPowerOff)
+                    {
+                        requestSuccess = PowerOff();
+                        DebugPrint($"Request PowerOff: ok={requestSuccess}", DebugType.Comms);
+
+                        if (requestSuccess)
+                        {
+                            // exit
+                            continue;
+                        }
+                    }
+                    else if (requestSetLEDByPadID)
+                    {
+                        requestSuccess = SetLEDByPadID();
+                        DebugPrint($"Request SetLEDByPadID: ok={requestSuccess}", DebugType.Comms);
+
+                        if (requestSuccess)
+                        {
+                            _requestSetLEDByPadID = false;
+                        }
+                    }
+
+                    if (requestSuccess)
+                    {
+                        timeSinceRequest.Reset();
+                    }
+                    else
+                    {
+                        timeSinceRequest.Restart();
+                    }
+                }
+            }
+
             // Attempt reconnection, we interrupt the thread send commands to improve the reliability
             // and to avoid thread safety issues with hidapi as we're doing both read/write
             if (timeSinceError.ElapsedMilliseconds > dropAfterMs)
             {
-                if (IsUSB && reconnectAttempts >= 3)
+                if (requestPowerOff || (IsUSB && reconnectAttempts >= 3))
                 {
                     Log("Dropped.", Logger.LogLevel.Warning);
-                    State = Status.Errored;
+                    Drop(!requestPowerOff, false);
                     continue;
                 }
 
@@ -1552,7 +1645,7 @@ public class Joycon
                     {
                         USBPairing();
                         SetReportMode(ReportMode.StandardFull);
-                        SetLEDByPadID();
+                        RequestSetLEDByPadID();
                     }
                     // ignore and retry
                     catch (Exception e)
@@ -1563,7 +1656,7 @@ public class Joycon
                 else
                 {
                     //Log("Attempt soft reconnect...");
-                    SetReportMode(ReportMode.StandardFull, false);
+                    SetReportMode(ReportMode.StandardFull);
                 }
 
                 ++reconnectAttempts;
@@ -1584,7 +1677,7 @@ public class Joycon
             {
                 // should not happen
                 Log("Dropped (invalid handle).", Logger.LogLevel.Error);
-                State = Status.Errored; 
+                Drop(true, false);
             }
             else
             {
@@ -2177,11 +2270,11 @@ public class Joycon
         Write(buf);
     }
 
-    private bool Subcommand(byte sc, ReadOnlySpan<byte> bufParameters, bool print = true)
+    private int Subcommand(byte sc, ReadOnlySpan<byte> bufParameters, bool print = true)
     {
         if (_handle == IntPtr.Zero)
         {
-            return false;
+            return DeviceErroredCode;
         }
 
         Span<byte> buf = stackalloc byte[_CommandLength];
@@ -2201,7 +2294,7 @@ public class Joycon
 
         int length = Write(buf);
 
-        return length > 0;
+        return length;
     }
 
     private int SubcommandCheck(byte sc, ReadOnlySpan<byte> bufParameters, bool print = true)
@@ -2213,15 +2306,14 @@ public class Joycon
 
     private int SubcommandCheck(byte sc, ReadOnlySpan<byte> bufParameters, Span<byte> response, bool print = true)
     {
-        bool sent = Subcommand(sc, bufParameters, print);
-        if (!sent)
+        int length = Subcommand(sc, bufParameters, print);
+        if (length <= 0)
         {
             DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
-            return 0;
+            return length;
         }
 
         int tries = 0;
-        int length;
         bool responseFound;
         do
         {
@@ -2239,7 +2331,7 @@ public class Joycon
         if (!responseFound)
         {
             DebugPrint("No response.", DebugType.Comms);
-            return 0;
+            return length;
         }
 
         if (print)
@@ -2528,6 +2620,12 @@ public class Joycon
         {
             return $"Device unavailable : {State}";
         }
+
+        if (_handle ==  IntPtr.Zero)
+        {
+            return "Null handle";
+        }
+
         return HIDApi.Error(_handle);
     }
 
@@ -3124,11 +3222,6 @@ public class Joycon
             {
                 OutDs4.Disconnect();
             }
-        }
-
-        if (oldConfig.HomeLEDOn != Config.HomeLEDOn)
-        {
-            SetHomeLight(Config.HomeLEDOn);
         }
 
         if (oldConfig.DefaultDeadzone != Config.DefaultDeadzone)

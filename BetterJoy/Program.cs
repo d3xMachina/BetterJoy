@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
@@ -63,6 +64,7 @@ public class JoyconManager
             Unknown,
             Connected,
             Disconnected,
+            ForceDisconnected,
             Errored,
             VirtualControllerErrored
         }
@@ -208,6 +210,12 @@ public class JoyconManager
                         {
                             var deviceInfos = (HIDApi.HIDDeviceInfo)job.Data;
                             OnDeviceDisconnected(deviceInfos);
+                            break;
+                        }
+                        case DeviceNotification.Type.ForceDisconnected:
+                        {
+                            var deviceIdentifier = (ControllerIdentifier)job.Data;
+                            OnDeviceDisconnected(deviceIdentifier);
                             break;
                         }
                         case DeviceNotification.Type.Errored:
@@ -386,6 +394,13 @@ public class JoyconManager
 
         Joycon.Status oldState = controller.State;
         controller.StateChanged -= OnControllerStateChanged;
+
+        if (controller.IsDeviceReady)
+        {
+            // change the controller state to avoid trying to send command to it
+            controller.Drop(false, false);
+        }
+        
         controller.Detach();
 
         var otherController = controller.Other;
@@ -393,7 +408,7 @@ public class JoyconManager
         if (otherController != null && otherController != controller)
         {
             otherController.Other = null; // The other of the other is the joycon itself
-            SetLEDByPadID(otherController);
+            otherController.RequestSetLEDByPadID();
 
             try
             {
@@ -415,6 +430,24 @@ public class JoyconManager
 
         var name = controller.GetControllerName();
         _form.Log($"[P{controller.PadId + 1}] {name} disconnected.");
+    }
+
+    private void OnDeviceDisconnected(ControllerIdentifier deviceIdentifier)
+    {
+        Joycon controller = GetControllerByPath(deviceIdentifier.Path);
+        if (controller == null ||
+            controller.TimestampCreation != deviceIdentifier.TimestampCreation)
+        {
+            return;
+        }
+
+        if (controller.IsDeviceReady)
+        {
+            // device not dropped anymore (after a reset or a reconnection from the system)
+            return;
+        }
+        
+        OnDeviceDisconnected(controller);
     }
 
     private void OnDeviceErrored(ControllerIdentifier deviceIdentifier)
@@ -480,7 +513,7 @@ public class JoyconManager
 
     private void OnControllerStateChanged(object sender, Joycon.StateChangedEventArgs e)
     {
-        if (sender == null)
+        if (sender == null || _ctsDevicesNotifications.IsCancellationRequested)
         {
             return;
         }
@@ -497,6 +530,9 @@ public class JoyconManager
             case Joycon.Status.Errored:
                 ReconnectControllerDelayed(controller);
                 break;
+            case Joycon.Status.Dropped:
+                DisconnectController(controller);
+                break;
         }
     }
     private void ReconnectControllerDelayed(Joycon controller, int delayMs = 2000)
@@ -509,6 +545,14 @@ public class JoyconManager
         var writer = _channelDeviceNotifications.Writer;
         var identifier = new ControllerIdentifier(controller);
         var notification = new DeviceNotification(DeviceNotification.Type.Errored, identifier);
+        while (!writer.TryWrite(notification)) { }
+    }
+
+    private void DisconnectController(Joycon controller)
+    {
+        var writer = _channelDeviceNotifications.Writer;
+        var identifier = new ControllerIdentifier(controller);
+        var notification = new DeviceNotification(DeviceNotification.Type.ForceDisconnected, identifier);
         while (!writer.TryWrite(notification)) { }
     }
 
@@ -579,19 +623,37 @@ public class JoyconManager
         }
         
         await _devicesNotificationTask;
-        _ctsDevicesNotifications.Dispose();
-
+        
         foreach (var controller in Controllers)
         {
             controller.StateChanged -= OnControllerStateChanged;
 
             if (controller.Config.AutoPowerOff && !controller.IsUSB)
             {
-                controller.PowerOff();
+                controller.RequestPowerOff();
             }
+        }
+        
+        Stopwatch timeSincePowerOff = Stopwatch.StartNew();
+        int timeoutPowerOff = 1800; // a bit of extra time to have 3 attempts
 
+        foreach (var controller in Controllers)
+        {
+            if (controller.Config.AutoPowerOff && !controller.IsUSB)
+            {
+                controller.WaitPowerOff(timeoutPowerOff);
+
+                timeoutPowerOff -= (int)timeSincePowerOff.ElapsedMilliseconds;
+                if (timeoutPowerOff < 0)
+                {
+                    timeoutPowerOff = 0;
+                }
+            }
+            
             controller.Detach();
         }
+        
+        _ctsDevicesNotifications.Dispose();
 
         HIDApi.Exit();
     }
@@ -625,8 +687,8 @@ public class JoyconManager
             controller.Other = otherController;
             otherController.Other = controller;
 
-            SetLEDByPadID(controller);
-            SetLEDByPadID(otherController);
+            controller.RequestSetLEDByPadID();
+            otherController.RequestSetLEDByPadID();
 
             var rightController = controller.IsLeft ? otherController : controller;
             rightController.DisconnectViGEm();
@@ -674,8 +736,8 @@ public class JoyconManager
         controller.Other = null;
         otherController.Other = null;
 
-        SetLEDByPadID(controller);
-        SetLEDByPadID(otherController);
+        controller.RequestSetLEDByPadID();
+        otherController.RequestSetLEDByPadID();
 
         return true;
     }
@@ -711,56 +773,9 @@ public class JoyconManager
         return change;
     }
 
-    public void SetLEDByPadID(Joycon controller)
-    {
-        controller.HidapiLock.EnterReadLock();
-        try
-        {
-            controller.SetLEDByPadID();
-        }
-        finally
-        {
-            controller.HidapiLock.ExitReadLock();
-        }
-    }
-
-    public void SetHomeLight(Joycon controller, bool on)
-    {
-        controller.HidapiLock.EnterReadLock();
-        try
-        {
-            controller.SetHomeLight(on);
-        }
-        finally
-        {
-            controller.HidapiLock.ExitReadLock();
-        }
-    }
-
-    public void PowerOff(Joycon controller)
-    {
-        controller.HidapiLock.EnterReadLock();
-        try
-        {
-            controller.PowerOff();
-        }
-        finally
-        {
-            controller.HidapiLock.ExitReadLock();
-        }
-    }
-
     public void ApplyConfig(Joycon controller, bool showErrors = true)
     {
-        controller.HidapiLock.EnterReadLock();
-        try
-        {
-            controller.ApplyConfig(showErrors);
-        }
-        finally
-        {
-            controller.HidapiLock.ExitReadLock();
-        }
+        controller.ApplyConfig(showErrors);
     }
 }
 
