@@ -197,6 +197,7 @@ public class Joycon
     public OutputControllerDualShock4 OutDs4;
     public OutputControllerXbox360 OutXbox;
     private readonly object _updateInputLock = new object();
+    private readonly object _ctsCommunicationsLock = new object();
 
     public int PacketCounter;
 
@@ -761,7 +762,7 @@ public class Joycon
             return;
         }
 
-        WaitCommunicationThreads();
+        AbortCommunicationThreads();
         DisconnectViGEm();
         _rumbles.Clear();
 
@@ -791,25 +792,35 @@ public class Joycon
     public void Drop(bool error = false, bool waitThreads = true)
     {
         // when waitThreads is false, doesn't dispose the cancellation token
-        // so you have to call WaitCommunicationThreads again with waitThreads to true
-        WaitCommunicationThreads(waitThreads);
+        // so you have to call AbortCommunicationThreads again with waitThreads to true
+        AbortCommunicationThreads(waitThreads);
 
         State = error ? Status.Errored : Status.Dropped;
     }
 
-    private void WaitCommunicationThreads(bool waitThreads = true)
+    private void AbortCommunicationThreads(bool waitThreads = true)
     {
-        if (_ctsCommunications != null && !_ctsCommunications.IsCancellationRequested)
+        lock (_ctsCommunicationsLock)
         {
-            _ctsCommunications.Cancel();
+            if (_ctsCommunications != null && !_ctsCommunications.IsCancellationRequested)
+            {
+                _ctsCommunications.Cancel();
+            }
         }
 
         if (waitThreads)
         {
             _receiveReportsThread?.Join();
             _sendCommandsThread?.Join();
-            _ctsCommunications?.Dispose();
-            _ctsCommunications = null;
+
+            lock (_ctsCommunicationsLock)
+            {
+                if (_ctsCommunications != null)
+                {
+                    _ctsCommunications.Dispose();
+                    _ctsCommunications = null;
+                }
+            }
         }
     }
 
@@ -1628,6 +1639,8 @@ public class Joycon
                 {
                     Log("Dropped.", Logger.LogLevel.Warning);
                     Drop(!requestPowerOff, false);
+
+                    // exit
                     continue;
                 }
 
