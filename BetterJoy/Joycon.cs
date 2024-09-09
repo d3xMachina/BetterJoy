@@ -310,7 +310,7 @@ public class Joycon
         TimestampCreation = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
     }
 
-    public bool IsPro => Type is ControllerType.Pro or ControllerType.SNES;
+    public bool IsPro => Type is ControllerType.Pro;
     public bool IsSNES => Type == ControllerType.SNES;
     public bool IsJoycon => Type is ControllerType.JoyconRight or ControllerType.JoyconLeft;
     public bool IsLeft => Type != ControllerType.JoyconRight;
@@ -1292,7 +1292,7 @@ public class Joycon
 
     private void DoThingsWithButtons()
     {
-        var powerOffButton = (int)(IsPro || !IsLeft || IsJoined ? Button.Home : Button.Capture);
+        var powerOffButton = (int)(!IsJoycon || !IsLeft || IsJoined ? Button.Home : Button.Capture);
         var timestampNow = Stopwatch.GetTimestamp();
 
         if (!IsUSB)
@@ -1387,12 +1387,12 @@ public class Joycon
         _AHRS.GetEulerAngles(_curRotation);
         float dt = _avgReceiveDeltaMs.GetAverage() / 1000;
 
-        if (Config.GyroAnalogSliders && (Other != null || IsPro))
+        if (Config.GyroAnalogSliders && IMUSupported() && (!IsJoycon || Other != null))
         {
             var leftT = IsLeft ? Button.Shoulder2 : Button.Shoulder22;
             var rightT = IsLeft ? Button.Shoulder22 : Button.Shoulder2;
-            var left = IsLeft || IsPro ? this : Other;
-            var right = !IsLeft || IsPro ? this : Other;
+            var left = IsLeft || !IsJoycon ? this : Other;
+            var right = !IsLeft || !IsJoycon ? this : Other;
 
             int ldy, rdy;
             if (Config.UseFilteredIMU)
@@ -1714,6 +1714,11 @@ public class Joycon
 
     private void ExtractSticksValues(ReadOnlySpan<byte> reportBuf)
     {
+        if (!SticksSupported())
+        {
+            return;
+        }
+
         byte reportType = reportBuf[0];
 
         if (reportType == (byte)ReportMode.StandardFull)
@@ -1814,16 +1819,17 @@ public class Joycon
             _buttons[(int)Button.SR] = (reportBuf[3 + offset] & 0x10) != 0;
             _buttons[(int)Button.SL] = (reportBuf[3 + offset] & 0x20) != 0;
 
-            if (IsPro)
+            if (IsPro || IsSNES)
             {
                 _buttons[(int)Button.B] = (reportBuf[3] & 0x04) != 0;
                 _buttons[(int)Button.A] = (reportBuf[3] & 0x08) != 0;
                 _buttons[(int)Button.X] = (reportBuf[3] & 0x02) != 0;
                 _buttons[(int)Button.Y] = (reportBuf[3] & 0x01) != 0;
 
-                _buttons[(int)Button.Stick2] = (reportBuf[4] & 0x04) != 0;
                 _buttons[(int)Button.Shoulder21] = (reportBuf[3] & 0x40) != 0;
                 _buttons[(int)Button.Shoulder22] = (reportBuf[3] & 0x80) != 0;
+
+                _buttons[(int)Button.Stick2] = (reportBuf[4] & 0x04) != 0;
             }
         }
         else if (reportType == (byte)ReportMode.SimpleHID)
@@ -1834,7 +1840,7 @@ public class Joycon
             _buttons[(int)Button.Plus] = (reportBuf[2] & 0x02) != 0;
             _buttons[(int)Button.Stick] = (reportBuf[2] & (IsLeft ? 0x04 : 0x08)) != 0;
             
-            if (IsPro)
+            if (IsPro || IsSNES)
             {
                 byte stickHat = reportBuf[3];
 
@@ -1848,11 +1854,12 @@ public class Joycon
                 _buttons[(int)Button.X] = (reportBuf[1] & 0x08) != 0;
                 _buttons[(int)Button.Y] = (reportBuf[1] & 0x04) != 0;
 
-                _buttons[(int)Button.Stick2] = (reportBuf[2] & 0x08) != 0;
                 _buttons[(int)Button.Shoulder1] = (reportBuf[1] & 0x10) != 0;
                 _buttons[(int)Button.Shoulder2] = (reportBuf[1] & 0x40) != 0;
                 _buttons[(int)Button.Shoulder21] = (reportBuf[1] & 0x20) != 0;
                 _buttons[(int)Button.Shoulder22] = (reportBuf[1] & 0x80) != 0;
+
+                _buttons[(int)Button.Stick2] = (reportBuf[2] & 0x08) != 0;
             }
             else
             {
@@ -1879,7 +1886,7 @@ public class Joycon
         var activity = false;
         var timestamp = Stopwatch.GetTimestamp();
 
-        if (!IsSNES)
+        if (SticksSupported())
         {
             ExtractSticksValues(reportBuf);
 
@@ -2030,7 +2037,7 @@ public class Joycon
     // Get Gyro/Accel data
     private bool ExtractIMUValues(ReadOnlySpan<byte> reportBuf, int n = 0)
     {
-        if (IsSNES || reportBuf[0] != (byte)ReportMode.StandardFull)
+        if (!IMUSupported() || reportBuf[0] != (byte)ReportMode.StandardFull)
         {
             return false;
         }
@@ -2374,6 +2381,16 @@ public class Joycon
     private bool CalibrationDataSupported()
     {
         return !IsSNES && !IsThirdParty;
+    }
+
+    private bool SticksSupported()
+    {
+        return !IsSNES;
+    }
+
+    private bool IMUSupported()
+    {
+        return !IsSNES;
     }
 
     private bool DumpCalibrationData()
@@ -2863,7 +2880,7 @@ public class Joycon
             swapXY = other.Config.SwapXY;
         }
 
-        if (isPro)
+        if (isPro || isSNES)
         {
             output.A = buttons[(int)(!swapAB ? Button.B : Button.A)];
             output.B = buttons[(int)(!swapAB ? Button.A : Button.B)];
@@ -2944,9 +2961,9 @@ public class Joycon
             }
         }
 
-        if (!isSNES)
+        if (input.SticksSupported())
         {
-            if (other != null || isPro)
+            if (isPro || other != null)
             {
                 // no need for && other != this
                 output.AxisLeftX = CastStickValue(other == input && !isLeft ? stick2[0] : stick[0]);
@@ -2963,7 +2980,7 @@ public class Joycon
             }
         }
 
-        if (isPro || other != null)
+        if (isPro || isSNES || other != null)
         {
             var lval = gyroAnalogSliders ? sliderVal[0] : byte.MaxValue;
             var rval = gyroAnalogSliders ? sliderVal[1] : byte.MaxValue;
@@ -3017,7 +3034,7 @@ public class Joycon
             swapXY = other.Config.SwapXY;
         }
 
-        if (isPro)
+        if (isPro || isSNES)
         {
             output.Cross = buttons[(int)(!swapAB ? Button.B : Button.A)];
             output.Circle = buttons[(int)(!swapAB ? Button.A : Button.B)];
@@ -3100,9 +3117,9 @@ public class Joycon
             }
         }
 
-        if (!isSNES)
+        if (input.SticksSupported())
         {
-            if (other != null || isPro)
+            if (isPro || other != null)
             {
                 // no need for && other != this
                 output.ThumbLeftX = CastStickValueByte(other == input && !isLeft ? stick2[0] : stick[0]);
@@ -3121,7 +3138,7 @@ public class Joycon
             }
         }
 
-        if (isPro || other != null)
+        if (isPro || isSNES || other != null)
         {
             var lval = gyroAnalogSliders ? sliderVal[0] : byte.MaxValue;
             var rval = gyroAnalogSliders ? sliderVal[1] : byte.MaxValue;
