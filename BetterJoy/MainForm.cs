@@ -751,10 +751,20 @@ public partial class MainForm : Form
 
         _countDown = new Timer();
         _count = 4;
-        _countDown.Tick += CountDownIMU;
         _countDown.Interval = 1000;
         _countDown.Tag = controller;
-        CountDownIMU(null, null);
+
+        if (controller.IMUSupported())
+        {
+            _countDown.Tick += CountDownIMU;
+            CountDownIMU(null, null);
+        }
+        else
+        {
+            _countDown.Tick += CountDownSticksCenter;
+            CountDownSticksCenter(null, null);
+        }
+       
         _countDown.Start();
     }
 
@@ -1274,6 +1284,9 @@ public partial class MainForm : Form
                 break;
             case Joycon.ControllerType.SNES:
                 temp = charging ? Resources.snes_charging : Resources.snes;
+                break;
+            case Joycon.ControllerType.N64:
+                temp = charging ? Resources.n64_charging : Resources.n64;
                 break;
             default:
                 temp = Resources.cross;

@@ -41,6 +41,7 @@ public class JoyconManager
     private const ushort ProductR = 0x2007;
     private const ushort ProductPro = 0x2009;
     private const ushort ProductSNES = 0x2017;
+    private const ushort ProductN64 = 0x2019;
 
     public readonly bool EnableIMU = true;
     public readonly bool EnableLocalize = false;
@@ -244,7 +245,8 @@ public class JoyconManager
         }
 
         var validController = (info.ProductId == ProductL || info.ProductId == ProductR ||
-                               info.ProductId == ProductPro || info.ProductId == ProductSNES) &&
+                               info.ProductId == ProductPro || info.ProductId == ProductSNES ||
+                               info.ProductId == ProductN64) &&
                               info.VendorId == VendorId;
 
         // check if it's a custom controller
@@ -288,6 +290,9 @@ public class JoyconManager
                 break;
             case ProductSNES:
                 type = Joycon.ControllerType.SNES;
+                break;
+            case ProductN64:
+                type = Joycon.ControllerType.N64;
                 break;
         }
 
@@ -602,6 +607,10 @@ public class JoyconManager
                 return ProductL;
             case 3:
                 return ProductR;
+            case 4:
+                return ProductSNES;
+            case 5:
+                return ProductN64;
         }
 
         return 0;

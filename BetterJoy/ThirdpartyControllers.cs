@@ -25,7 +25,10 @@ public partial class _3rdPartyControllers : Form
         list_allControllers.Sorted = true;
         list_customControllers.Sorted = true;
 
-        chooseType.Items.AddRange(new[] { "Pro Controller", "Left Joycon", "Right Joycon" });
+        foreach (Joycon.ControllerType type in Enum.GetValues(typeof(Joycon.ControllerType)))
+        {
+            chooseType.Items.Add(Joycon.GetControllerName(type));
+        }
 
         chooseType.FormattingEnabled = true;
         group_props.Controls.Add(chooseType);
@@ -257,7 +260,7 @@ public partial class _3rdPartyControllers : Form
         public readonly string Name;
         public readonly ushort ProductId;
         public readonly string SerialNumber;
-        public byte Type; // 1 is pro, 2 is left joy, 3 is right joy
+        public byte Type; // 1 is pro, 2 is left joy, 3 is right joy, 4 is snes, 5 is n64
         public readonly ushort VendorId;
 
         public SController(string name, ushort vendorId, ushort productId, byte type, string serialNumber)

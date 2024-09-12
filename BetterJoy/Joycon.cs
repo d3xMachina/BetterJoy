@@ -46,10 +46,11 @@ public class Joycon
 
     public enum ControllerType
     {
+        Pro,
         JoyconLeft,
         JoyconRight,
-        Pro,
-        SNES
+        SNES,
+        N64
     }
 
     public enum DebugType
@@ -312,6 +313,7 @@ public class Joycon
 
     public bool IsPro => Type is ControllerType.Pro;
     public bool IsSNES => Type == ControllerType.SNES;
+    public bool IsN64 => Type == ControllerType.N64;
     public bool IsJoycon => Type is ControllerType.JoyconRight or ControllerType.JoyconLeft;
     public bool IsLeft => Type != ControllerType.JoyconRight;
     public bool IsJoined => Other != null && Other != this;
@@ -663,6 +665,11 @@ public class Joycon
 
     private void SetIMU(bool enable)
     {
+        if (!IMUSupported())
+        {
+            return;
+        }
+
         SubcommandCheck(0x40, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
@@ -1387,7 +1394,7 @@ public class Joycon
         _AHRS.GetEulerAngles(_curRotation);
         float dt = _avgReceiveDeltaMs.GetAverage() / 1000;
 
-        if (Config.GyroAnalogSliders && IMUSupported() && (!IsJoycon || Other != null))
+        if (UseGyroAnalogSliders())
         {
             var leftT = IsLeft ? Button.Shoulder2 : Button.Shoulder22;
             var rightT = IsLeft ? Button.Shoulder22 : Button.Shoulder2;
@@ -1819,7 +1826,7 @@ public class Joycon
             _buttons[(int)Button.SR] = (reportBuf[3 + offset] & 0x10) != 0;
             _buttons[(int)Button.SL] = (reportBuf[3 + offset] & 0x20) != 0;
 
-            if (IsPro || IsSNES)
+            if (!IsJoycon)
             {
                 _buttons[(int)Button.B] = (reportBuf[3] & 0x04) != 0;
                 _buttons[(int)Button.A] = (reportBuf[3] & 0x08) != 0;
@@ -1840,7 +1847,7 @@ public class Joycon
             _buttons[(int)Button.Plus] = (reportBuf[2] & 0x02) != 0;
             _buttons[(int)Button.Stick] = (reportBuf[2] & (IsLeft ? 0x04 : 0x08)) != 0;
             
-            if (IsPro || IsSNES)
+            if (!IsJoycon)
             {
                 byte stickHat = reportBuf[3];
 
@@ -2233,13 +2240,13 @@ public class Joycon
 
             if (!Config.SticksSquared || normalizedX == 0f || normalizedY == 0f)
             {
-				    stick[0] = normalizedX;
-				    stick[1] = normalizedY;
-			    }
+				stick[0] = normalizedX;
+				stick[1] = normalizedY;
+			}
             else
             {
                 // Expand the circle to a square area
-				    if (Math.Abs(normalizedX) > Math.Abs(normalizedY))
+				if (Math.Abs(normalizedX) > Math.Abs(normalizedY))
                 {
                     stick[0] = Math.Sign(normalizedX) * normalizedMagnitude;
                     stick[1] = stick[0] * normalizedY / normalizedX;
@@ -2249,7 +2256,7 @@ public class Joycon
                     stick[1] = Math.Sign(normalizedY) * normalizedMagnitude;
                     stick[0] = stick[1] * normalizedX / normalizedY;
                 }
-			    }
+			}
 
             stick[0] = Math.Clamp(stick[0], -1.0f, 1.0f);
             stick[1] = Math.Clamp(stick[1], -1.0f, 1.0f);
@@ -2388,9 +2395,14 @@ public class Joycon
         return !IsSNES;
     }
 
-    private bool IMUSupported()
+    public bool IMUSupported()
     {
-        return !IsSNES;
+        return !IsSNES && !IsN64;
+    }
+
+    private bool UseGyroAnalogSliders()
+    {
+        return Config.GyroAnalogSliders && IMUSupported() && (!IsJoycon || Other != null);
     }
 
     private bool DumpCalibrationData()
@@ -2508,6 +2520,7 @@ public class Joycon
         }
 
         // Gyro and accelerometer
+        if (IMUSupported())
         {
             var userSensorData = ReadSPICheck(0x80, 0x26, 0x1A, ref ok);
             ReadOnlySpan<byte> sensorData = new ReadOnlySpan<byte>(userSensorData, 2, 24);
@@ -2605,8 +2618,11 @@ public class Joycon
         var calibrationType = _SticksCalibrated ? "user" : _DumpedCalibration ? "controller" : "default";
         Log($"Using {calibrationType} sticks calibration.");
 
-        calibrationType = _IMUCalibrated ? "user" : _DumpedCalibration ? "controller" : "default";
-        Log($"Using {calibrationType} sensors calibration.");
+        if (IMUSupported())
+        {
+            calibrationType = _IMUCalibrated ? "user" : _DumpedCalibration ? "controller" : "default";
+            Log($"Using {calibrationType} sensors calibration.");
+        }
     }
 
     private int Read(Span<byte> response, int timeout = 100)
@@ -2860,8 +2876,10 @@ public class Joycon
         var output = new OutputControllerXbox360InputState();
 
         var isPro = input.IsPro;
-        var isLeft = input.IsLeft;
         var isSNES = input.IsSNES;
+        var isN64 = input.IsN64;
+        var isJoycon = input.IsJoycon;
+        var isLeft = input.IsLeft;
         var other = input.Other;
 
         var buttons = input._buttonsRemapped;
@@ -2869,56 +2887,25 @@ public class Joycon
         var stick2 = input._stick2;
         var sliderVal = input._sliderVal;
 
-        var gyroAnalogSliders = input.Config.GyroAnalogSliders;
+        var gyroAnalogSliders = input.UseGyroAnalogSliders();
         var swapAB = input.Config.SwapAB;
         var swapXY = input.Config.SwapXY;
 
         if (other != null && !isLeft)
         {
-            gyroAnalogSliders = other.Config.GyroAnalogSliders;
+            gyroAnalogSliders = other.UseGyroAnalogSliders();
             swapAB = other.Config.SwapAB;
             swapXY = other.Config.SwapXY;
         }
 
-        if (isPro || isSNES)
+        if (isJoycon)
         {
-            output.A = buttons[(int)(!swapAB ? Button.B : Button.A)];
-            output.B = buttons[(int)(!swapAB ? Button.A : Button.B)];
-            output.Y = buttons[(int)(!swapXY ? Button.X : Button.Y)];
-            output.X = buttons[(int)(!swapXY ? Button.Y : Button.X)];
-
-            output.DpadUp = buttons[(int)Button.DpadUp];
-            output.DpadDown = buttons[(int)Button.DpadDown];
-            output.DpadLeft = buttons[(int)Button.DpadLeft];
-            output.DpadRight = buttons[(int)Button.DpadRight];
-
-            output.Back = buttons[(int)Button.Minus];
-            output.Start = buttons[(int)Button.Plus];
-            output.Guide = buttons[(int)Button.Home];
-
-            output.ShoulderLeft = buttons[(int)Button.Shoulder1];
-            output.ShoulderRight = buttons[(int)Button.Shoulder21];
-
-            output.ThumbStickLeft = buttons[(int)Button.Stick];
-            output.ThumbStickRight = buttons[(int)Button.Stick2];
-        }
-        else
-        {
-            // no need for && other != this
-            if (other != null)
+            if (other != null) // no need for && other != this
             {
-                output.A = !swapAB
-                        ? buttons[(int)(isLeft ? Button.B : Button.DpadDown)]
-                        : buttons[(int)(isLeft ? Button.A : Button.DpadRight)];
-                output.B = !swapAB
-                        ? buttons[(int)(isLeft ? Button.A : Button.DpadRight)]
-                        : buttons[(int)(isLeft ? Button.B : Button.DpadDown)];
-                output.X = !swapXY
-                        ? buttons[(int)(isLeft ? Button.Y : Button.DpadLeft)]
-                        : buttons[(int)(isLeft ? Button.X : Button.DpadUp)];
-                output.Y = !swapXY
-                        ? buttons[(int)(isLeft ? Button.X : Button.DpadUp)]
-                        : buttons[(int)(isLeft ? Button.Y : Button.DpadLeft)];
+                output.A = buttons[(int)(isLeft ? Button.B : Button.DpadDown)];
+                output.B = buttons[(int)(isLeft ? Button.A : Button.DpadRight)];
+                output.X = buttons[(int)(isLeft ? Button.Y : Button.DpadLeft)];
+                output.Y = buttons[(int)(isLeft ? Button.X : Button.DpadUp)];
 
                 output.DpadUp = buttons[(int)(isLeft ? Button.DpadUp : Button.X)];
                 output.DpadDown = buttons[(int)(isLeft ? Button.DpadDown : Button.B)];
@@ -2937,19 +2924,11 @@ public class Joycon
             }
             else
             {
-                // single joycon mode
-                output.A = !swapAB
-                        ? buttons[(int)(isLeft ? Button.DpadLeft : Button.DpadRight)]
-                        : buttons[(int)(isLeft ? Button.DpadDown : Button.DpadUp)];
-                output.B = !swapAB
-                        ? buttons[(int)(isLeft ? Button.DpadDown : Button.DpadUp)]
-                        : buttons[(int)(isLeft ? Button.DpadLeft : Button.DpadRight)];
-                output.X = !swapXY
-                        ? buttons[(int)(isLeft ? Button.DpadUp : Button.DpadDown)]
-                        : buttons[(int)(isLeft ? Button.DpadRight : Button.DpadLeft)];
-                output.Y = !swapXY
-                        ? buttons[(int)(isLeft ? Button.DpadRight : Button.DpadLeft)]
-                        : buttons[(int)(isLeft ? Button.DpadUp : Button.DpadDown)];
+                // single joycon in horizontal
+                output.A = buttons[(int)(isLeft ? Button.DpadLeft : Button.DpadRight)];
+                output.B = buttons[(int)(isLeft ? Button.DpadDown : Button.DpadUp)];
+                output.X = buttons[(int)(isLeft ? Button.DpadUp : Button.DpadDown)];
+                output.Y = buttons[(int)(isLeft ? Button.DpadRight : Button.DpadLeft)];
 
                 output.Back = buttons[(int)Button.Minus] | buttons[(int)Button.Home];
                 output.Start = buttons[(int)Button.Plus] | buttons[(int)Button.Capture];
@@ -2960,37 +2939,89 @@ public class Joycon
                 output.ThumbStickLeft = buttons[(int)Button.Stick];
             }
         }
+        else if (isN64)
+        {
+            // Mapping at https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/pull/133/files
+
+            output.A = buttons[(int)Button.B];
+            output.B = buttons[(int)Button.A];
+
+            output.DpadUp = buttons[(int)Button.DpadUp];
+            output.DpadDown = buttons[(int)Button.DpadDown];
+            output.DpadLeft = buttons[(int)Button.DpadLeft];
+            output.DpadRight = buttons[(int)Button.DpadRight];
+
+            output.Start = buttons[(int)Button.Plus];
+            output.Guide = buttons[(int)Button.Home];
+
+            output.ShoulderLeft = buttons[(int)Button.Shoulder1];
+            output.ShoulderRight = buttons[(int)Button.Shoulder21];
+        }
+        else
+        {
+            output.A = buttons[(int)Button.B];
+            output.B = buttons[(int)Button.A];
+            output.Y = buttons[(int)Button.X];
+            output.X = buttons[(int)Button.Y];
+
+            output.DpadUp = buttons[(int)Button.DpadUp];
+            output.DpadDown = buttons[(int)Button.DpadDown];
+            output.DpadLeft = buttons[(int)Button.DpadLeft];
+            output.DpadRight = buttons[(int)Button.DpadRight];
+
+            output.Back = buttons[(int)Button.Minus];
+            output.Start = buttons[(int)Button.Plus];
+            output.Guide = buttons[(int)Button.Home];
+
+            output.ShoulderLeft = buttons[(int)Button.Shoulder1];
+            output.ShoulderRight = buttons[(int)Button.Shoulder21];
+
+            output.ThumbStickLeft = buttons[(int)Button.Stick];
+            output.ThumbStickRight = buttons[(int)Button.Stick2];
+        }
 
         if (input.SticksSupported())
         {
-            if (isPro || other != null)
+            if (isJoycon && other == null)
             {
-                // no need for && other != this
+                output.AxisLeftY = CastStickValue((isLeft ? 1 : -1) * stick[0]);
+                output.AxisLeftX = CastStickValue((isLeft ? -1 : 1) * stick[1]);
+            }
+            else if (isN64)
+            {
+                output.AxisLeftX = CastStickValue(stick[0]);
+                output.AxisLeftY = CastStickValue(stick[1]);
+
+                // C buttons mapped to right stick
+                output.AxisRightX = CastStickValue((buttons[(int)Button.X] ? -1 : 0) + (buttons[(int)Button.Minus] ? 1 : 0));
+                output.AxisRightY = CastStickValue((buttons[(int)Button.Shoulder22] ? -1 : 0) + (buttons[(int)Button.Y] ? 1 : 0));
+            }
+            else
+            {
                 output.AxisLeftX = CastStickValue(other == input && !isLeft ? stick2[0] : stick[0]);
                 output.AxisLeftY = CastStickValue(other == input && !isLeft ? stick2[1] : stick[1]);
 
                 output.AxisRightX = CastStickValue(other == input && !isLeft ? stick[0] : stick2[0]);
                 output.AxisRightY = CastStickValue(other == input && !isLeft ? stick[1] : stick2[1]);
             }
-            else
-            {
-                // single joycon mode
-                output.AxisLeftY = CastStickValue((isLeft ? 1 : -1) * stick[0]);
-                output.AxisLeftX = CastStickValue((isLeft ? -1 : 1) * stick[1]);
-            }
         }
 
-        if (isPro || isSNES || other != null)
+        if (isJoycon && other == null)
+        {
+            output.TriggerLeft = (byte)(buttons[(int)(isLeft ? Button.Shoulder2 : Button.Shoulder1)] ? byte.MaxValue : 0);
+            output.TriggerRight = (byte)(buttons[(int)(isLeft ? Button.Shoulder1 : Button.Shoulder2)] ? byte.MaxValue : 0);
+        }
+        else if (isN64)
+        {
+            output.TriggerLeft = (byte)(buttons[(int)Button.Shoulder2] ? byte.MaxValue : 0);
+            output.TriggerRight = (byte)(buttons[(int)Button.Stick] ? byte.MaxValue : 0);
+        }
+        else
         {
             var lval = gyroAnalogSliders ? sliderVal[0] : byte.MaxValue;
             var rval = gyroAnalogSliders ? sliderVal[1] : byte.MaxValue;
             output.TriggerLeft = (byte)(buttons[(int)(isLeft ? Button.Shoulder2 : Button.Shoulder22)] ? lval : 0);
             output.TriggerRight = (byte)(buttons[(int)(isLeft ? Button.Shoulder22 : Button.Shoulder2)] ? rval : 0);
-        }
-        else
-        {
-            output.TriggerLeft = (byte)(buttons[(int)(isLeft ? Button.Shoulder2 : Button.Shoulder1)] ? byte.MaxValue : 0);
-            output.TriggerRight = (byte)(buttons[(int)(isLeft ? Button.Shoulder1 : Button.Shoulder2)] ? byte.MaxValue : 0);
         }
 
         // Avoid conflicting output
@@ -3006,6 +3037,16 @@ public class Joycon
             output.DpadRight = false;
         }
 
+        if (swapAB)
+        {
+            (output.A, output.B) = (output.B, output.A);
+        }
+
+        if (swapXY)
+        {
+            (output.X, output.Y) = (output.Y, output.X);
+        }
+
         return output;
     }
 
@@ -3014,8 +3055,10 @@ public class Joycon
         var output = new OutputControllerDualShock4InputState();
 
         var isPro = input.IsPro;
-        var isLeft = input.IsLeft;
         var isSNES = input.IsSNES;
+        var isN64 = input.IsN64;
+        var isJoycon = input.IsJoycon;
+        var isLeft = input.IsLeft;
         var other = input.Other;
 
         var buttons = input._buttonsRemapped;
@@ -3023,57 +3066,25 @@ public class Joycon
         var stick2 = input._stick2;
         var sliderVal = input._sliderVal;
 
-        var gyroAnalogSliders = input.Config.GyroAnalogSliders;
+        var gyroAnalogSliders = input.UseGyroAnalogSliders();
         var swapAB = input.Config.SwapAB;
         var swapXY = input.Config.SwapXY;
 
         if (other != null && !isLeft)
         {
-            gyroAnalogSliders = other.Config.GyroAnalogSliders;
+            gyroAnalogSliders = other.UseGyroAnalogSliders();
             swapAB = other.Config.SwapAB;
             swapXY = other.Config.SwapXY;
         }
 
-        if (isPro || isSNES)
+        if (isJoycon)
         {
-            output.Cross = buttons[(int)(!swapAB ? Button.B : Button.A)];
-            output.Circle = buttons[(int)(!swapAB ? Button.A : Button.B)];
-            output.Triangle = buttons[(int)(!swapXY ? Button.X : Button.Y)];
-            output.Square = buttons[(int)(!swapXY ? Button.Y : Button.X)];
-
-            output.DPad = GetDirection(
-                buttons[(int)Button.DpadUp],
-                buttons[(int)Button.DpadDown],
-                buttons[(int)Button.DpadLeft],
-                buttons[(int)Button.DpadRight]
-            );
-
-            output.Share = buttons[(int)Button.Capture];
-            output.Options = buttons[(int)Button.Plus];
-            output.Ps = buttons[(int)Button.Home];
-            output.Touchpad = buttons[(int)Button.Minus];
-            output.ShoulderLeft = buttons[(int)Button.Shoulder1];
-            output.ShoulderRight = buttons[(int)Button.Shoulder21];
-            output.ThumbLeft = buttons[(int)Button.Stick];
-            output.ThumbRight = buttons[(int)Button.Stick2];
-        }
-        else
-        {
-            if (other != null)
+            if (other != null) // no need for && other != this
             {
-                // no need for && other != this
-                output.Cross = !swapAB
-                        ? buttons[(int)(isLeft ? Button.B : Button.DpadDown)]
-                        : buttons[(int)(isLeft ? Button.A : Button.DpadRight)];
-                output.Circle = swapAB
-                        ? buttons[(int)(isLeft ? Button.B : Button.DpadDown)]
-                        : buttons[(int)(isLeft ? Button.A : Button.DpadRight)];
-                output.Triangle = !swapXY
-                        ? buttons[(int)(isLeft ? Button.X : Button.DpadUp)]
-                        : buttons[(int)(isLeft ? Button.Y : Button.DpadLeft)];
-                output.Square = swapXY
-                        ? buttons[(int)(isLeft ? Button.X : Button.DpadUp)]
-                        : buttons[(int)(isLeft ? Button.Y : Button.DpadLeft)];
+                output.Cross = buttons[(int)(isLeft ? Button.B : Button.DpadDown)];
+                output.Circle = buttons[(int)(isLeft ? Button.A : Button.DpadRight)];
+                output.Square = buttons[(int)(isLeft ? Button.Y : Button.DpadLeft)];
+                output.Triangle = buttons[(int)(isLeft ? Button.X : Button.DpadUp)];
 
                 output.DPad = GetDirection(
                     buttons[(int)(isLeft ? Button.DpadUp : Button.X)],
@@ -3086,26 +3097,20 @@ public class Joycon
                 output.Options = buttons[(int)Button.Plus];
                 output.Ps = buttons[(int)Button.Home];
                 output.Touchpad = buttons[(int)Button.Minus];
+
                 output.ShoulderLeft = buttons[(int)(isLeft ? Button.Shoulder1 : Button.Shoulder21)];
                 output.ShoulderRight = buttons[(int)(isLeft ? Button.Shoulder21 : Button.Shoulder1)];
+
                 output.ThumbLeft = buttons[(int)(isLeft ? Button.Stick : Button.Stick2)];
                 output.ThumbRight = buttons[(int)(isLeft ? Button.Stick2 : Button.Stick)];
             }
             else
             {
-                // single joycon mode
-                output.Cross = !swapAB
-                        ? buttons[(int)(isLeft ? Button.DpadLeft : Button.DpadRight)]
-                        : buttons[(int)(isLeft ? Button.DpadDown : Button.DpadUp)];
-                output.Circle = swapAB
-                        ? buttons[(int)(isLeft ? Button.DpadLeft : Button.DpadRight)]
-                        : buttons[(int)(isLeft ? Button.DpadDown : Button.DpadUp)];
-                output.Triangle = !swapXY
-                        ? buttons[(int)(isLeft ? Button.DpadRight : Button.DpadLeft)]
-                        : buttons[(int)(isLeft ? Button.DpadUp : Button.DpadDown)];
-                output.Square = swapXY
-                        ? buttons[(int)(isLeft ? Button.DpadRight : Button.DpadLeft)]
-                        : buttons[(int)(isLeft ? Button.DpadUp : Button.DpadDown)];
+                // single joycon in horizontal
+                output.Cross = buttons[(int)(isLeft ? Button.DpadLeft : Button.DpadRight)];
+                output.Circle = buttons[(int)(isLeft ? Button.DpadDown : Button.DpadUp)];
+                output.Square = buttons[(int)(isLeft ? Button.DpadUp : Button.DpadDown)];
+                output.Triangle = buttons[(int)(isLeft ? Button.DpadRight : Button.DpadLeft)]; 
 
                 output.Ps = buttons[(int)Button.Minus] | buttons[(int)Button.Home];
                 output.Options = buttons[(int)Button.Plus] | buttons[(int)Button.Capture];
@@ -3116,44 +3121,111 @@ public class Joycon
                 output.ThumbLeft = buttons[(int)Button.Stick];
             }
         }
+        else if (isN64)
+        {
+            output.Cross = buttons[(int)Button.B];
+            output.Circle = buttons[(int)Button.A];
+
+            output.DPad = GetDirection(
+                buttons[(int)Button.DpadUp],
+                buttons[(int)Button.DpadDown],
+                buttons[(int)Button.DpadLeft],
+                buttons[(int)Button.DpadRight]
+            );
+
+            output.Share = buttons[(int)Button.Capture];
+            output.Options = buttons[(int)Button.Plus];
+            output.Ps = buttons[(int)Button.Home];
+
+            output.ShoulderLeft = buttons[(int)Button.Shoulder1];
+            output.ShoulderRight = buttons[(int)Button.Shoulder21];
+        }
+        else
+        {
+            output.Cross = buttons[(int)Button.B];
+            output.Circle = buttons[(int)Button.A];
+            output.Square = buttons[(int)Button.Y];
+            output.Triangle = buttons[(int)Button.X];
+
+            output.DPad = GetDirection(
+                buttons[(int)Button.DpadUp],
+                buttons[(int)Button.DpadDown],
+                buttons[(int)Button.DpadLeft],
+                buttons[(int)Button.DpadRight]
+            );
+
+            output.Share = buttons[(int)Button.Capture];
+            output.Options = buttons[(int)Button.Plus];
+            output.Ps = buttons[(int)Button.Home];
+            output.Touchpad = buttons[(int)Button.Minus];
+
+            output.ShoulderLeft = buttons[(int)Button.Shoulder1];
+            output.ShoulderRight = buttons[(int)Button.Shoulder21];
+
+            output.ThumbLeft = buttons[(int)Button.Stick];
+            output.ThumbRight = buttons[(int)Button.Stick2];
+        }
 
         if (input.SticksSupported())
         {
-            if (isPro || other != null)
+            if (isJoycon && other == null)
             {
-                // no need for && other != this
+                output.ThumbLeftY = CastStickValueByte((isLeft ? 1 : -1) * -stick[0]);
+                output.ThumbLeftX = CastStickValueByte((isLeft ? 1 : -1) * -stick[1]);
+            }
+            else if (isN64)
+            {
+                output.ThumbLeftX = CastStickValueByte(stick[0]);
+                output.ThumbLeftY = CastStickValueByte(-stick[1]);
+
+                // C buttons mapped to right stick
+                output.ThumbRightX = CastStickValueByte((buttons[(int)Button.X] ? -1 : 0) + (buttons[(int)Button.Minus] ? 1 : 0));
+                output.ThumbRightY = CastStickValueByte((buttons[(int)Button.Shoulder22] ? 1 : 0) + (buttons[(int)Button.Y] ? -1 : 0));
+            }
+            else
+            {
                 output.ThumbLeftX = CastStickValueByte(other == input && !isLeft ? stick2[0] : stick[0]);
                 output.ThumbLeftY = CastStickValueByte(other == input && !isLeft ? -stick2[1] : -stick[1]);
+
                 output.ThumbRightX = CastStickValueByte(other == input && !isLeft ? stick[0] : stick2[0]);
                 output.ThumbRightY = CastStickValueByte(other == input && !isLeft ? -stick[1] : -stick2[1]);
 
                 //input.DebugPrint($"X:{-stick[0]:0.00} Y:{stick[1]:0.00}", DebugType.Threading);
                 //input.DebugPrint($"X:{output.ThumbLeftX} Y:{output.ThumbLeftY}", DebugType.Threading);
             }
-            else
-            {
-                // single joycon mode
-                output.ThumbLeftY = CastStickValueByte((isLeft ? 1 : -1) * -stick[0]);
-                output.ThumbLeftX = CastStickValueByte((isLeft ? 1 : -1) * -stick[1]);
-            }
         }
 
-        if (isPro || isSNES || other != null)
+        if (isJoycon && other == null)
+        {
+            output.TriggerLeftValue = (byte)(buttons[(int)(isLeft ? Button.Shoulder2 : Button.Shoulder1)] ? byte.MaxValue : 0);
+            output.TriggerRightValue = (byte)(buttons[(int)(isLeft ? Button.Shoulder1 : Button.Shoulder2)] ? byte.MaxValue : 0);
+        }
+        else if (isN64)
+        {
+            output.TriggerLeftValue = (byte)(buttons[(int)Button.Shoulder2] ? byte.MaxValue : 0);
+            output.TriggerRightValue = (byte)(buttons[(int)Button.Stick] ? byte.MaxValue : 0);
+        }
+        else
         {
             var lval = gyroAnalogSliders ? sliderVal[0] : byte.MaxValue;
             var rval = gyroAnalogSliders ? sliderVal[1] : byte.MaxValue;
             output.TriggerLeftValue = (byte)(buttons[(int)(isLeft ? Button.Shoulder2 : Button.Shoulder22)] ? lval : 0);
             output.TriggerRightValue = (byte)(buttons[(int)(isLeft ? Button.Shoulder22 : Button.Shoulder2)] ? rval : 0);
         }
-        else
-        {
-            output.TriggerLeftValue = (byte)(buttons[(int)(isLeft ? Button.Shoulder2 : Button.Shoulder1)] ? byte.MaxValue : 0);
-            output.TriggerRightValue = (byte)(buttons[(int)(isLeft ? Button.Shoulder1 : Button.Shoulder2)] ? byte.MaxValue : 0);
-        }
 
         // Output digital L2 / R2 in addition to analog L2 / R2
         output.TriggerLeft = output.TriggerLeftValue > 0;
         output.TriggerRight = output.TriggerRightValue > 0;
+
+        if (swapAB)
+        {
+            (output.Cross, output.Circle) = (output.Circle, output.Cross);
+        }
+
+        if (swapXY)
+        {
+            (output.Square, output.Triangle) = (output.Triangle, output.Square);
+        }
 
         return output;
     }
@@ -3166,6 +3238,7 @@ public class Joycon
             ControllerType.JoyconRight => "Right joycon",
             ControllerType.Pro         => "Pro controller",
             ControllerType.SNES        => "SNES controller",
+            ControllerType.N64         => "N64 controller",
             _                          => "Controller"
         };
     }
