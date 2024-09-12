@@ -3172,6 +3172,9 @@ public class Joycon
             {
                 output.ThumbLeftY = CastStickValueByte((isLeft ? 1 : -1) * -stick[0]);
                 output.ThumbLeftX = CastStickValueByte((isLeft ? 1 : -1) * -stick[1]);
+
+                output.ThumbRightX = CastStickValueByte(0);
+                output.ThumbRightY = CastStickValueByte(0);
             }
             else if (isN64)
             {
