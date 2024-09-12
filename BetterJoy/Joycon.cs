@@ -779,9 +779,12 @@ public class Joycon
             {
                 //SetIMU(false);
                 //SetRumble(false);
-                Retry(() => SetReportMode(ReportMode.SimpleHID));
-                Retry(() => SetPlayerLED(0));
-
+                var sent = Retry(() => SetReportMode(ReportMode.SimpleHID));
+                if (sent)
+                {
+                    Retry(() => SetPlayerLED(0));
+                }
+                
                 // Commented because you need to restart the controller to reconnect in usb again with the following
                 //BTActivate();
             }
