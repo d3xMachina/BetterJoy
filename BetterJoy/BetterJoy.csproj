@@ -67,7 +67,7 @@
         <Content Include="Drivers\ViGEmBus_1.22.0_x64_x86_arm64.exe">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
-        <Content Include="Drivers\HidHide_1.5.212_x64.exe">
+        <Content Include="Drivers\HidHide_1.5.230_x64.exe">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
