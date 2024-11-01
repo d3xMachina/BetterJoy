@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Linq;
 using System.Reflection;
 
 namespace BetterJoy.Config;
@@ -89,8 +90,17 @@ public abstract class Config
 
         if (ShowErrors)
         {
-            var defaultValueTxt = type.IsArray ? "" : $" \"{defaultValue}\""; // TODO: display array values, string.Join not working smh
-            _form.Log($"Invalid value \"{value}\" for setting {key}! Using default value{defaultValueTxt}.", Logger.LogLevel.Warning);
+            string defaultValueTxt;
+            if (defaultValue is Array array)
+            {
+                defaultValueTxt = $"{string.Join(",", array.Cast<object>())}";
+            }
+            else
+            {
+                defaultValueTxt = $"{defaultValue}";
+            }
+
+            _form.Log($"Invalid value \"{value}\" for setting {key}! Using default value \"{defaultValueTxt}\".", Logger.LogLevel.Warning);
         }
     }
 }
