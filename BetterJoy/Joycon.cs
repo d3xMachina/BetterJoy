@@ -1903,6 +1903,7 @@ public class Joycon
             var cal = _stickCal;
             var dz = _deadzone;
             var range = _range;
+            var antiDeadzone = Config.StickLeftAntiDeadzone;
 
             if (_SticksCalibrated)
             {
@@ -1911,13 +1912,14 @@ public class Joycon
                 range = _activeStick1Range;
             }
 
-            CalculateStickCenter(_stickPrecal, cal, dz, range, _stick);
+            CalculateStickCenter(_stickPrecal, cal, dz, range, antiDeadzone, _stick);
 
             if (IsPro)
             {
                 cal = _stick2Cal;
                 dz = _deadzone2;
                 range = _range2;
+                antiDeadzone = Config.StickRightAntiDeadzone;
 
                 if (_SticksCalibrated)
                 {
@@ -1926,7 +1928,7 @@ public class Joycon
                     range = _activeStick2Range;
                 }
 
-                CalculateStickCenter(_stick2Precal, cal, dz, range, _stick2);
+                CalculateStickCenter(_stick2Precal, cal, dz, range, antiDeadzone, _stick2);
             }
             // Read other Joycon's sticks
             else if (IsJoined)
@@ -2217,7 +2219,7 @@ public class Joycon
         Log("Ready.");
     }
 
-    private void CalculateStickCenter(ushort[] vals, ushort[] cal, float deadzone, float range, float[] stick)
+    private void CalculateStickCenter(ushort[] vals, ushort[] cal, float deadzone, float range, float[] antiDeadzone, float[] stick)
     {
         float dx = vals[0] - cal[2];
         float dy = vals[1] - cal[3];
@@ -2235,11 +2237,21 @@ public class Joycon
         }
         else
         {
-            float normalizedMagnitude = Math.Min(1.0f, (magnitude - deadzone) / (range - deadzone));
-            float scale = normalizedMagnitude / magnitude;
+            float normalizedMagnitudeX = Math.Min(1.0f, (magnitude - deadzone) / (range - deadzone));
+            float normalizedMagnitudeY = normalizedMagnitudeX;
             
-            normalizedX *= scale;
-            normalizedY *= scale;
+            if (antiDeadzone[0] > 0.0f)
+            {
+                normalizedMagnitudeX = antiDeadzone[0] + (1.0f - antiDeadzone[0]) * normalizedMagnitudeX;
+            }
+
+            if (antiDeadzone[1] > 0.0f)
+            {
+                normalizedMagnitudeY = antiDeadzone[1] + (1.0f - antiDeadzone[1]) * normalizedMagnitudeY;
+            }
+
+            normalizedX *= normalizedMagnitudeX / magnitude;
+            normalizedY *= normalizedMagnitudeY / magnitude;
 
             if (!Config.SticksSquared || normalizedX == 0f || normalizedY == 0f)
             {
@@ -2251,12 +2263,12 @@ public class Joycon
                 // Expand the circle to a square area
 				if (Math.Abs(normalizedX) > Math.Abs(normalizedY))
                 {
-                    stick[0] = Math.Sign(normalizedX) * normalizedMagnitude;
+                    stick[0] = Math.Sign(normalizedX) * normalizedMagnitudeX;
                     stick[1] = stick[0] * normalizedY / normalizedX;
                 }
                 else
                 {
-                    stick[1] = Math.Sign(normalizedY) * normalizedMagnitude;
+                    stick[1] = Math.Sign(normalizedY) * normalizedMagnitudeY;
                     stick[0] = stick[1] * normalizedX / normalizedY;
                 }
 			}

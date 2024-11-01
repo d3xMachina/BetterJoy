@@ -1,4 +1,5 @@
-﻿using static BetterJoy.Joycon;
+﻿using System;
+using static BetterJoy.Joycon;
 
 namespace BetterJoy.Config;
 
@@ -12,6 +13,8 @@ public class ControllerConfig : Config
     public float DefaultDeadzone;
     public float DefaultRange;
     public bool SticksSquared;
+    public float[] StickLeftAntiDeadzone = new float[2];
+    public float[] StickRightAntiDeadzone = new float[2];
     public float AHRSBeta;
     public float ShakeDelay;
     public bool ShakeInputEnabled;
@@ -51,6 +54,8 @@ public class ControllerConfig : Config
         DefaultDeadzone = config.DefaultDeadzone;
         DefaultRange = config.DefaultRange;
         SticksSquared = config.SticksSquared;
+        Array.Copy(config.StickLeftAntiDeadzone, StickLeftAntiDeadzone, StickLeftAntiDeadzone.Length);
+        Array.Copy(config.StickRightAntiDeadzone, StickRightAntiDeadzone, StickRightAntiDeadzone.Length);
         AHRSBeta = config.AHRSBeta;
         ShakeDelay = config.ShakeDelay;
         ShakeInputEnabled = config.ShakeInputEnabled;
@@ -89,6 +94,8 @@ public class ControllerConfig : Config
         UpdateSetting("SticksDeadzone", ref DefaultDeadzone, 0.15f);
         UpdateSetting("SticksRange", ref DefaultRange, 0.90f);
         UpdateSetting("SticksSquared", ref SticksSquared, false);
+        UpdateSetting("StickLeftAntiDeadzone", ref StickLeftAntiDeadzone, [0.0f, 0.0f]);
+        UpdateSetting("StickRightAntiDeadzone", ref StickRightAntiDeadzone, [0.0f, 0.0f]);
         UpdateSetting("AHRS_beta", ref AHRSBeta, 0.05f);
         UpdateSetting("ShakeInputDelay", ref ShakeDelay, 200);
         UpdateSetting("EnableShakeInput", ref ShakeInputEnabled, false);
