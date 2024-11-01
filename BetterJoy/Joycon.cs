@@ -1446,13 +1446,13 @@ public class Joycon
                     float dx, dy;
                     if (Config.UseFilteredIMU)
                     {
-                        dx = Config.GyroStickSensitivityX * (_curRotation[1] - _curRotation[4]); // yaw
-                        dy = -(Config.GyroStickSensitivityY * (_curRotation[0] - _curRotation[3])); // pitch
+                        dx = Config.GyroStickSensitivity[0] * (_curRotation[1] - _curRotation[4]); // yaw
+                        dy = -(Config.GyroStickSensitivity[1] * (_curRotation[0] - _curRotation[3])); // pitch
                     }
                     else
                     {
-                        dx = Config.GyroStickSensitivityX * (_gyrG.Z * dt); // yaw
-                        dy = -(Config.GyroStickSensitivityY * (_gyrG.Y * dt)); // pitch
+                        dx = Config.GyroStickSensitivity[0] * (_gyrG.Z * dt); // yaw
+                        dy = -(Config.GyroStickSensitivity[1] * (_gyrG.Y * dt)); // pitch
                     }
 
                     controlStick[0] = Math.Clamp(controlStick[0] / Config.GyroStickReduction + dx, -1.0f, 1.0f);
@@ -1468,13 +1468,13 @@ public class Joycon
 
                     if (Config.UseFilteredIMU)
                     {
-                        dx = (int)(Config.GyroMouseSensitivityX * (_curRotation[1] - _curRotation[4])); // yaw
-                        dy = (int)-(Config.GyroMouseSensitivityY * (_curRotation[0] - _curRotation[3])); // pitch
+                        dx = (int)(Config.GyroMouseSensitivity[0] * (_curRotation[1] - _curRotation[4])); // yaw
+                        dy = (int)-(Config.GyroMouseSensitivity[1] * (_curRotation[0] - _curRotation[3])); // pitch
                     }
                     else
                     {
-                        dx = (int)(Config.GyroMouseSensitivityX * (_gyrG.Z * dt));
-                        dy = (int)-(Config.GyroMouseSensitivityY * (_gyrG.Y * dt));
+                        dx = (int)(Config.GyroMouseSensitivity[0] * (_gyrG.Z * dt));
+                        dy = (int)-(Config.GyroMouseSensitivity[1] * (_gyrG.Y * dt));
                     }
 
                     WindowsInput.Simulate.Events().MoveBy(dx, dy).Invoke();
