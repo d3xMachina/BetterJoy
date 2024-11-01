@@ -21,7 +21,11 @@ public abstract class Config
 
     protected void ParseAs<T>(string value, Type type, ref T setting)
     {
-        if (type.IsEnum)
+        if (type.IsArray)
+        {
+            ParseArrayAs(value, type, ref setting);
+        }
+        else if (type.IsEnum)
         {
             setting = (T)Enum.Parse(type, value, true);
         }
@@ -36,7 +40,7 @@ public abstract class Config
         }
     }
 
-    protected void ParseArrayAs<T>(string value, Type type, ref T setting)
+    private void ParseArrayAs<T>(string value, Type type, ref T setting)
     {
         var elements = setting as Array;
         if (elements == null)
@@ -70,15 +74,8 @@ public abstract class Config
         {
             try
             {
-                if (type.IsArray)
-                {
-                    ParseArrayAs(value, type, ref setting);
-                }
-                else
-                {
-                    ParseAs(value, type, ref setting);
-                }
-                
+                ParseAs(value, type, ref setting);
+
                 return;
             }
             catch (FormatException) { }

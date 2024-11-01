@@ -17,7 +17,7 @@ public class InputCapture : IDisposable
 
     private bool _disposed = false;
 
-    public InputCapture()
+    private InputCapture()
     {
         Keyboard = WindowsInput.Capture.Global.KeyboardAsync(false);
         Mouse = WindowsInput.Capture.Global.MouseAsync(false);

@@ -304,7 +304,7 @@ public class JoyconManager
         var handle = HIDApi.OpenPath(path);
         if (handle == IntPtr.Zero)
         {
-            // don't show an error message when the controller was dropped without hidapi callback notification (after standby by example)
+            // don't show an error message when the controller was dropped without hidapi callback notification (after standby for example)
             if (!reconnect)
             {
                 _form.Log($"Unable to open device: {HIDApi.Error(IntPtr.Zero)}.", Logger.LogLevel.Error);
