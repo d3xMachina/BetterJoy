@@ -77,6 +77,7 @@ public class Joycon
 
     public enum BatteryLevel
     {
+        Unknown = -1,
         Empty,
         Critical,
         Low,
@@ -173,7 +174,7 @@ public class Joycon
     private float _activeStick1Range;
     private float _activeStick2Range;
 
-    public BatteryLevel Battery = BatteryLevel.Empty;
+    public BatteryLevel Battery = BatteryLevel.Unknown;
     public bool Charging = false;
 
     private float _deadzone;
@@ -1503,7 +1504,7 @@ public class Joycon
         var prevCharging = Charging;
 
         byte highNibble = (byte)(reportBuf[2] >> 4);
-        Battery = (BatteryLevel)(Math.Clamp(highNibble >> 1, (byte)BatteryLevel.Empty, (byte)BatteryLevel.Full));
+        Battery = (BatteryLevel)Math.Clamp(highNibble >> 1, (byte)BatteryLevel.Empty, (byte)BatteryLevel.Full);
         Charging = (highNibble & 0x1) == 1;
 
         if (prevBattery != Battery)
