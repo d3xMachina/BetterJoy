@@ -981,10 +981,7 @@ public class Joycon
             Timestamp += deltaPacketsMicroseconds;
             PacketCounter++;
 
-            if (IsPrimaryGyro)
-            {
-                Program.Server?.NewReportIncoming(this);
-            }
+            Program.Server?.NewReportIncoming(this);
         }
 
         UpdateInput();
