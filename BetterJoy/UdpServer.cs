@@ -224,8 +224,6 @@ internal class UdpServer
                 currIdx += 4;
                 if (numPadRequests > 0 && numPadRequests + currIdx <= localMsg.Length)
                 {
-                    var outputData = new byte[16];
-
                     lock (_controllers)
                     {
                         for (byte i = 0; i < numPadRequests; i++)
@@ -236,6 +234,7 @@ internal class UdpServer
                                 continue;
                             }
 
+                            var outputData = new byte[16];
                             var padData = _controllers[currRequest];
 
                             var outIdx = 0;
