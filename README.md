@@ -6,8 +6,8 @@
 #### Fork changes
  - fixed a good amount of bugs, crashes, controller connection/disconnection issues
  - added the calibration of the controller with the calibrate button
- - added a deadzone and a range setting
- - updated to .NET 8
+ - added deadzone, range and anti-deadzone settings
+ - updated to .NET 9
  - updated hidapi and packages
  - use HidHide instead of the outdated HIDGuardian
  - instantly connect and disconnect

@@ -3,7 +3,7 @@ set "MSBUILD_PATH=%ProgramFiles%\Microsoft Visual Studio\2022\Community\MSBuild\
 set "DOTNET_CLI_TELEMETRY_OPTOUT=1"
 set "options=--nologo --configuration Release -p:PublishSingleFile=true -p:DebugType=None -p:SelfContained=false -p:TieredPGO=true"
 set "runtime=win-x64"
-set "framework=net8.0-windows"
+set "framework=net9.0-windows"
 
 echo Restore nuget packages...
 nuget restore
