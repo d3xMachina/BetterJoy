@@ -89,12 +89,12 @@
             contextMenu.ImageScalingSize = new System.Drawing.Size(24, 24);
             contextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { exitToolStripMenuItem });
             contextMenu.Name = "contextMenu";
-            contextMenu.Size = new System.Drawing.Size(94, 26);
+            contextMenu.Size = new System.Drawing.Size(93, 26);
             // 
             // exitToolStripMenuItem
             // 
             exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            exitToolStripMenuItem.Size = new System.Drawing.Size(93, 22);
+            exitToolStripMenuItem.Size = new System.Drawing.Size(92, 22);
             exitToolStripMenuItem.Text = "Exit";
             exitToolStripMenuItem.Click += exitToolStripMenuItem_Click;
             // 
@@ -296,7 +296,7 @@
             groupBox1.Margin = new System.Windows.Forms.Padding(2);
             groupBox1.Name = "groupBox1";
             groupBox1.Padding = new System.Windows.Forms.Padding(2);
-            groupBox1.Size = new System.Drawing.Size(355, 352);
+            groupBox1.Size = new System.Drawing.Size(352, 352);
             groupBox1.TabIndex = 9;
             groupBox1.TabStop = false;
             groupBox1.Text = "Config";
@@ -310,11 +310,11 @@
             settingsTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 40F));
             settingsTable.Location = new System.Drawing.Point(5, 20);
             settingsTable.Margin = new System.Windows.Forms.Padding(2);
-            settingsTable.MinimumSize = new System.Drawing.Size(350, 0);
+            settingsTable.MinimumSize = new System.Drawing.Size(345, 0);
             settingsTable.Name = "settingsTable";
             settingsTable.RowCount = 1;
             settingsTable.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            settingsTable.Size = new System.Drawing.Size(350, 328);
+            settingsTable.Size = new System.Drawing.Size(345, 328);
             settingsTable.TabIndex = 1;
             // 
             // rightPanel
@@ -322,9 +322,9 @@
             rightPanel.Controls.Add(settingsApply);
             rightPanel.Controls.Add(groupBox1);
             rightPanel.Location = new System.Drawing.Point(337, 1);
-            rightPanel.Margin = new System.Windows.Forms.Padding(2, 2, 14, 2);
+            rightPanel.Margin = new System.Windows.Forms.Padding(2, 2, 6, 2);
             rightPanel.Name = "rightPanel";
-            rightPanel.Size = new System.Drawing.Size(364, 397);
+            rightPanel.Size = new System.Drawing.Size(364, 394);
             rightPanel.TabIndex = 11;
             rightPanel.Visible = false;
             // 
@@ -332,7 +332,7 @@
             // 
             settingsApply.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right;
             settingsApply.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F);
-            settingsApply.Location = new System.Drawing.Point(288, 367);
+            settingsApply.Location = new System.Drawing.Point(286, 367);
             settingsApply.Margin = new System.Windows.Forms.Padding(2);
             settingsApply.Name = "settingsApply";
             settingsApply.Size = new System.Drawing.Size(71, 24);
@@ -395,7 +395,7 @@
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             AutoSize = true;
             AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            ClientSize = new System.Drawing.Size(718, 401);
+            ClientSize = new System.Drawing.Size(712, 401);
             Controls.Add(startOnBoot);
             Controls.Add(btn_locate);
             Controls.Add(btn_reassign_open);
