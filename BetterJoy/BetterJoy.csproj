@@ -169,8 +169,8 @@
         <PackageReference Include="Nefarius.Drivers.HidHide" Version="2.4.1" />
         <PackageReference Include="Nefarius.ViGEm.Client" Version="2.0.1" />
         <PackageReference Include="System.IO.Hashing" Version="9.0.0" />
-        <PackageReference Include="System.Net.Http.Json" Version="8.0.1" />
-        <PackageReference Include="System.Text.Json" Version="8.0.5" />
+        <PackageReference Include="System.Net.Http.Json" Version="9.0.0" />
+        <PackageReference Include="System.Text.Json" Version="9.0.0" />
         <PackageReference Include="WindowsInput">
             <Version>6.4.1</Version>
         </PackageReference>
