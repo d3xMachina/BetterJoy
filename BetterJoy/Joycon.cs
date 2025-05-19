@@ -50,6 +50,7 @@ public class Joycon
         JoyconLeft,
         JoyconRight,
         SNES,
+        NES,
         N64
     }
 
@@ -246,7 +247,7 @@ public class Joycon
 
     private long _timestampActivity = Stopwatch.GetTimestamp();
 
-    public readonly ControllerType Type;
+    public ControllerType Type { get; private set; }
 
     public EventHandler<StateChangedEventArgs> StateChanged;
 
@@ -314,6 +315,7 @@ public class Joycon
 
     public bool IsPro => Type is ControllerType.Pro;
     public bool IsSNES => Type == ControllerType.SNES;
+    public bool IsNES => Type == ControllerType.NES;
     public bool IsN64 => Type == ControllerType.N64;
     public bool IsJoycon => Type is ControllerType.JoyconRight or ControllerType.JoyconLeft;
     public bool IsLeft => Type != ControllerType.JoyconRight;
@@ -494,6 +496,12 @@ public class Joycon
                 Log("Using Bluetooth.");
                 GetMAC();
             }
+            
+            //Make sure we're not actually a nes controller
+            if (this.Type == ControllerType.JoyconRight)
+            {
+                CheckIfRightIsNes();
+            }
 
             var ok = DumpCalibrationData();
             if (!ok)
@@ -507,7 +515,7 @@ public class Joycon
             SetIMU(_IMUEnabled);
             SetRumble(true);
             SetReportMode(ReportMode.StandardFull);
-
+            
             State = Status.Attached;
 
             DebugPrint("Done with init.", DebugType.Comms);
@@ -687,6 +695,24 @@ public class Joycon
         }
         Subcommand(0x03, [(byte)reportMode]);
         return true;
+    }
+
+    private void CheckIfRightIsNes()
+    {
+        Span<byte> resp = stackalloc byte[ReportLength];
+
+        for (int i = 0; i < 100; ++i) {
+            int respLength = SubcommandCheck(0x02, Array.Empty<byte>(), resp, false, 200);
+
+            if (respLength >= 15 && resp[15] == 0x03) {
+                this.Type = ControllerType.NES;
+                break;
+            }
+
+            if (resp[15] == 0x02) {
+                break;
+            }
+        }
     }
 
     private void BTActivate()
@@ -2344,7 +2370,7 @@ public class Joycon
         return SubcommandCheck(sc, bufParameters, response, print);
     }
 
-    private int SubcommandCheck(byte sc, ReadOnlySpan<byte> bufParameters, Span<byte> response, bool print = true)
+    private int SubcommandCheck(byte sc, ReadOnlySpan<byte> bufParameters, Span<byte> response, bool print = true, int retries = 10)
     {
         int length = Subcommand(sc, bufParameters, print);
         if (length <= 0)
@@ -2400,17 +2426,17 @@ public class Joycon
 
     private bool CalibrationDataSupported()
     {
-        return !IsSNES && !IsThirdParty;
+        return !IsSNES && !IsNES && !IsThirdParty;
     }
 
     private bool SticksSupported()
     {
-        return !IsSNES;
+        return !IsSNES && !IsNES;
     }
 
     public bool IMUSupported()
     {
-        return !IsSNES && !IsN64;
+        return !IsSNES && !IsN64 && !IsNES;
     }
 
     private bool UseGyroAnalogSliders()
@@ -2890,6 +2916,7 @@ public class Joycon
 
         var isPro = input.IsPro;
         var isSNES = input.IsSNES;
+        var isNES = input.IsNES;
         var isN64 = input.IsN64;
         var isJoycon = input.IsJoycon;
         var isLeft = input.IsLeft;
@@ -3069,6 +3096,7 @@ public class Joycon
 
         var isPro = input.IsPro;
         var isSNES = input.IsSNES;
+        var isNES = input.IsNES;
         var isN64 = input.IsN64;
         var isJoycon = input.IsJoycon;
         var isLeft = input.IsLeft;
@@ -3254,6 +3282,7 @@ public class Joycon
             ControllerType.JoyconRight => "Right joycon",
             ControllerType.Pro         => "Pro controller",
             ControllerType.SNES        => "SNES controller",
+            ControllerType.NES         => "NES controller",
             ControllerType.N64         => "N64 controller",
             _                          => "Controller"
         };
