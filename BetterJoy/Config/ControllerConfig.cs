@@ -10,8 +10,10 @@ public class ControllerConfig : Config
     public bool EnableRumble;
     public bool ShowAsXInput;
     public bool ShowAsDs4;
-    public float DefaultDeadzone;
-    public float DefaultRange;
+    public float StickLeftDeadzone;
+    public float StickRightDeadzone;
+    public float StickLeftRange;
+    public float StickRightRange;
     public bool SticksSquared;
     public float[] StickLeftAntiDeadzone = new float[2];
     public float[] StickRightAntiDeadzone = new float[2];
@@ -49,8 +51,10 @@ public class ControllerConfig : Config
         EnableRumble = config.EnableRumble;
         ShowAsXInput = config.ShowAsXInput;
         ShowAsDs4 = config.ShowAsDs4;
-        DefaultDeadzone = config.DefaultDeadzone;
-        DefaultRange = config.DefaultRange;
+        StickLeftDeadzone = config.StickLeftDeadzone;
+        StickRightDeadzone = config.StickRightDeadzone;
+        StickLeftRange = config.StickLeftRange;
+        StickRightRange = config.StickRightRange;
         SticksSquared = config.SticksSquared;
         Array.Copy(config.StickLeftAntiDeadzone, StickLeftAntiDeadzone, StickLeftAntiDeadzone.Length);
         Array.Copy(config.StickRightAntiDeadzone, StickRightAntiDeadzone, StickRightAntiDeadzone.Length);
@@ -87,8 +91,10 @@ public class ControllerConfig : Config
         UpdateSetting("EnableRumble", ref EnableRumble, true);
         UpdateSetting("ShowAsXInput", ref ShowAsXInput, true);
         UpdateSetting("ShowAsDS4", ref ShowAsDs4, false);
-        UpdateSetting("SticksDeadzone", ref DefaultDeadzone, 0.15f);
-        UpdateSetting("SticksRange", ref DefaultRange, 0.90f);
+        UpdateSetting("StickLeftDeadzone", ref StickLeftDeadzone, 0.15f);
+        UpdateSetting("StickRightDeadzone", ref StickRightDeadzone, 0.15f);
+        UpdateSetting("StickLeftRange", ref StickLeftRange, 0.90f);
+        UpdateSetting("StickRightRange", ref StickRightRange, 0.90f);
         UpdateSetting("SticksSquared", ref SticksSquared, false);
         UpdateSetting("StickLeftAntiDeadzone", ref StickLeftAntiDeadzone, [0.0f, 0.0f]);
         UpdateSetting("StickRightAntiDeadzone", ref StickRightAntiDeadzone, [0.0f, 0.0f]);

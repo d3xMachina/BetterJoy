@@ -316,7 +316,7 @@ public class JoyconManager
 
         HIDApi.SetNonBlocking(handle, 1);
 
-        var index = GetControllerIndex();
+        var index = GetControllerIndex(type);
         var name = Joycon.GetControllerName(type);
         _form.Log($"[P{index + 1}] {name} connected.");
 
@@ -562,27 +562,115 @@ public class JoyconManager
         while (!writer.TryWrite(notification)) { }
     }
 
-    private int GetControllerIndex()
+    private int GetControllerIndex(Joycon.ControllerType type)
     {
-        List<int> ids = new();
-        foreach (var controller in Controllers)
+        const int NbControllersMax = 8;
+        var controllers = Controllers.OrderBy(c => c.PadId);
+
+        // Get the ID next to a matching joycon that is not joined if possible
+        if (type == Joycon.ControllerType.JoyconLeft)
         {
-            ids.Add(controller.PadId);
+            var rightJoycons = controllers.Where(c => c.Type == Joycon.ControllerType.JoyconRight && !c.IsJoined);
+            foreach (var joycon in rightJoycons)
+            {
+                if (joycon.PadId < 1)
+                {
+                    continue;
+                }
+
+                if (joycon.PadId > NbControllersMax - 1)
+                {
+                    break;
+                }
+
+                var isIdTaken = controllers.Any(c => c.PadId == joycon.PadId - 1);
+                if (!isIdTaken)
+                {
+                    return joycon.PadId - 1;
+                }
+            }
         }
-        ids.Sort();
+        else if (type == Joycon.ControllerType.JoyconRight)
+        {
+            var leftJoycons = controllers.Where(c => c.Type == Joycon.ControllerType.JoyconLeft && !c.IsJoined);
+            foreach (var joycon in leftJoycons)
+            {
+                if (joycon.PadId >= NbControllersMax - 1)
+                {
+                    break;
+                }
+
+                var isIdTaken = controllers.Any(c => c.PadId == joycon.PadId + 1);
+                if (!isIdTaken)
+                {
+                    return joycon.PadId + 1;
+                }
+            }
+        }
 
         int freeId = 0;
+        int firstFreeId = -1;
 
-        foreach (var id in ids)
+        while (true)
         {
-            if (id != freeId)
+            var isIdTaken = controllers.Any(c => c.PadId == freeId);
+
+            // Free ID found, force joycons left/right to be next to each others in the same order if possible
+            if (!isIdTaken)
             {
-                break;
+                if (firstFreeId == -1)
+                {
+                    firstFreeId = freeId;
+                }
+
+                var isValid = true;
+                var prevController = controllers.FirstOrDefault(c => c.PadId == freeId - 1);
+                var nextController = controllers.FirstOrDefault(c => c.PadId == freeId + 1);
+
+                if (type == Joycon.ControllerType.JoyconLeft)
+                {
+                    if (// Permit filling after a disconnect when using many controllers in the case : Left Joycon - empty - Right Joycon
+                        (prevController != null && prevController.Type == Joycon.ControllerType.JoyconLeft &&
+                         (nextController == null || nextController.Type != Joycon.ControllerType.JoyconRight || prevController.IsJoined)) ||
+                        (nextController != null && (nextController.Type != Joycon.ControllerType.JoyconRight || prevController.IsJoined)))
+                    {
+                        isValid = false;
+                    }
+                }
+                else if (type == Joycon.ControllerType.JoyconRight)
+                {
+                    if (freeId < 1 ||
+                        (prevController != null && (prevController.Type != Joycon.ControllerType.JoyconLeft || prevController.IsJoined)) ||
+                        // Permit filling after a disconnect when using many controllers in the case : Left Joycon - empty - Right Joycon
+                        (nextController != null && nextController.Type == Joycon.ControllerType.JoyconRight &&
+                         (prevController == null || prevController.Type != Joycon.ControllerType.JoyconLeft || prevController.IsJoined)))
+                    {
+                        isValid = false;
+                    }
+                }
+                else
+                {
+                    if ((prevController != null && prevController.Type == Joycon.ControllerType.JoyconLeft && !prevController.IsJoined) ||
+                        (nextController != null && nextController.Type == Joycon.ControllerType.JoyconRight && !prevController.IsJoined))
+                    {
+                        isValid = false;
+                    }
+                }
+
+                if (isValid)
+                {
+                    return freeId;
+                }
+
+                // Fill a free spot even if it doesn't meet the rule of having a left and right joycon next to each others
+                if (freeId >= NbControllersMax && firstFreeId != -1 && firstFreeId < NbControllersMax)
+                {
+                    return firstFreeId;
+                }
             }
+
             ++freeId;
         }
-
-        return freeId;
     }
 
     private Joycon GetControllerByPath(string path)
@@ -670,6 +758,29 @@ public class JoyconManager
         HIDApi.Exit();
     }
 
+    private static bool TryJoinJoycon(Joycon controller, Joycon otherController)
+    {
+        if (!otherController.IsJoycon ||
+            otherController.Other != null || // already associated
+            controller.IsLeft == otherController.IsLeft ||
+            controller == otherController ||
+            otherController.State < Joycon.Status.Attached)
+        {
+            return false;
+        }
+
+        controller.Other = otherController;
+        otherController.Other = controller;
+
+        controller.RequestSetLEDByPadID();
+        otherController.RequestSetLEDByPadID();
+
+        var rightController = controller.IsLeft ? otherController : controller;
+        rightController.DisconnectViGEm();
+
+        return true;
+    }
+
     public bool JoinJoycon(Joycon controller, bool joinSelf = false)
     {
         if (!controller.IsJoycon || controller.Other != null)
@@ -685,25 +796,27 @@ public class JoyconManager
             return true;
         }
 
-        foreach (var otherController in Controllers)
+        // Join joycon with one next to it if possible
+        if (controller.IsJoycon)
         {
-            if (!otherController.IsJoycon ||
-                otherController.Other != null || // already associated
-                controller.IsLeft == otherController.IsLeft ||
-                controller == otherController ||
-                otherController.State < Joycon.Status.Attached)
+            var otherPadId = controller.IsLeft ? controller.PadId + 1 : controller.PadId - 1;
+            var otherController = Controllers.FirstOrDefault(c => c.PadId == otherPadId);
+
+            if (otherController != null)
+            {
+                if (TryJoinJoycon(controller, otherController))
+                {
+                    return true;
+                }
+            }
+        }
+
+        foreach (var otherController in Controllers.OrderBy(c => c.PadId))
+        {
+            if (!TryJoinJoycon(controller, otherController))
             {
                 continue;
             }
-
-            controller.Other = otherController;
-            otherController.Other = controller;
-
-            controller.RequestSetLEDByPadID();
-            otherController.RequestSetLEDByPadID();
-
-            var rightController = controller.IsLeft ? otherController : controller;
-            rightController.DisconnectViGEm();
 
             return true;
         }
