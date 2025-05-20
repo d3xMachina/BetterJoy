@@ -514,6 +514,7 @@ public class Joycon
             }
             
             SetRumble(true);
+            SetNFCIR(false);
             SetReportMode(ReportMode.StandardFull);
 
             State = Status.Attached;
@@ -702,6 +703,16 @@ public class Joycon
     private void SetRumble(bool enable)
     {
         SubcommandCheck(0x48, [enable ? (byte)0x01 : (byte)0x00]);
+    }
+
+    private void SetNFCIR(bool enable)
+    {
+        if (Type != ControllerType.JoyconRight)
+        {
+            return;
+        }
+
+        SubcommandCheck(0x22, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private bool SetReportMode(ReportMode reportMode, bool checkResponse = true)
