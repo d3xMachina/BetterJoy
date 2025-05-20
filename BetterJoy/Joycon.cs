@@ -507,6 +507,12 @@ public class Joycon
             SetLEDByPlayerNum(PadId);
 
             SetIMU(_IMUEnabled);
+
+            if (_IMUEnabled)
+            {
+                SetIMUSensitivity();
+            }
+            
             SetRumble(true);
             SetReportMode(ReportMode.StandardFull);
 
@@ -674,6 +680,23 @@ public class Joycon
         }
 
         SubcommandCheck(0x40, [enable ? (byte)0x01 : (byte)0x00]);
+    }
+
+    private void SetIMUSensitivity()
+    {
+        if (!IMUSupported())
+        {
+            return;
+        }
+
+        Span<byte> buf =
+        [
+            0x03, // gyroscope sensitivity : 0x00 = 250dps, 0x01 = 500dps, 0x02 = 1000dps, 0x03 = 2000dps (default)
+            0x00, // accelerometer sensitivity : 0x00 = 8G (default), 0x01 = 4G, 0x02 = 2G, 0x03 = 16G
+            0x01, // gyroscope performance rate : 0x00 = 833hz, 0x01 = 208hz (default)
+            0x01  // accelerometer anti-aliasing filter bandwidth : 0x00 = 200hz, 0x01 = 100hz (default)
+        ];
+        SubcommandCheck(0x41, buf);
     }
 
     private void SetRumble(bool enable)
