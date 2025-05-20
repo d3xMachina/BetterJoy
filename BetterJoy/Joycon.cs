@@ -477,10 +477,6 @@ public class Joycon
                 throw new DeviceNullHandleException("reset hidapi");
             }
 
-            // set report mode to simple HID mode (fix SPI read not working when controller is already initialized)
-            // do not always send a response so we don't check if there is one
-            SetReportMode(ReportMode.SimpleHID);
-
             // Connect
             if (IsUSB)
             {
@@ -494,6 +490,12 @@ public class Joycon
                 Log("Using Bluetooth.");
                 GetMAC();
             }
+
+            SetLowPowerState(false);
+
+            // set report mode to simple HID mode (fix SPI read not working when controller is already initialized)
+            // do not always send a response so we don't check if there is one
+            SetReportMode(ReportMode.SimpleHID, false);
 
             var ok = DumpCalibrationData();
             if (!ok)
@@ -687,6 +689,11 @@ public class Joycon
         }
         Subcommand(0x03, [(byte)reportMode]);
         return true;
+    }
+
+    private void SetLowPowerState(bool enable)
+    {
+        SubcommandCheck(0x08, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void BTActivate()
