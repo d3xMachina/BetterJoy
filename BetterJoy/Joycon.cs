@@ -98,13 +98,15 @@ public class Joycon
         InvalidHandle,
         ReadError,
         InvalidPacket,
-        NoData
+        NoData,
+        Disconnected
     }
 
     private enum ReportMode
     {
         StandardFull = 0x30,
-        SimpleHID = 0x3F
+        SimpleHID = 0x3F,
+        USBHID = 0x81
     }
 
     private const int DeviceErroredCode = -100; // custom error
@@ -972,6 +974,14 @@ public class Joycon
         //DebugPrint($"Received packet {buf[0]:X}", DebugType.Threading);
 
         byte packetType = buf[0];
+
+        if (packetType == (byte)ReportMode.USBHID &&
+            length > 2 &&
+            buf[1] == 0x01 && buf[2] == 0x03)
+        {
+            return ReceiveError.Disconnected;
+        }
+
         if (packetType != (byte)ReportMode.StandardFull && packetType != (byte)ReportMode.SimpleHID)
         {
             return ReceiveError.InvalidPacket;
@@ -980,7 +990,7 @@ public class Joycon
         // clear remaining of buffer just to be safe
         if (length < ReportLength)
         {
-            buf.Slice(length,  ReportLength - length).Clear();
+            buf.Slice(length, ReportLength - length).Clear();
         }
 
         const int nbPackets = 3;
@@ -1739,6 +1749,11 @@ public class Joycon
             {
                 // should not happen
                 Log("Dropped (invalid handle).", Logger.LogLevel.Error);
+                Drop(true, false);
+            }
+            else if (error == ReceiveError.Disconnected)
+            {
+                Log("Disconnected.", Logger.LogLevel.Warning);
                 Drop(true, false);
             }
             else
