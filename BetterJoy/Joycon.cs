@@ -171,10 +171,6 @@ public class Joycon
     private readonly short[] _activeIMUData = new short[6];
     private readonly ushort[] _activeStick1 = new ushort[6];
     private readonly ushort[] _activeStick2 = new ushort[6];
-    private float _activeStick1Deadzone;
-    private float _activeStick2Deadzone;
-    private float _activeStick1Range;
-    private float _activeStick2Range;
 
     public BatteryLevel Battery = BatteryLevel.Unknown;
     public bool Charging = false;
@@ -380,12 +376,6 @@ public class Joycon
 
     public void GetActiveSticksData()
     {
-        _activeStick1Deadzone = Config.DefaultDeadzone;
-        _activeStick2Deadzone = Config.DefaultDeadzone;
-
-        _activeStick1Range = Config.DefaultRange;
-        _activeStick2Range = Config.DefaultRange;
-
         var activeSticksData = _form.ActiveCaliSticksData(SerialOrMac);
         if (activeSticksData != null)
         {
@@ -1962,8 +1952,8 @@ public class Joycon
             if (_SticksCalibrated)
             {
                 cal = _activeStick1;
-                dz = _activeStick1Deadzone;
-                range = _activeStick1Range;
+                dz = Config.StickLeftDeadzone;
+                range = Config.StickLeftRange;
             }
 
             CalculateStickCenter(_stickPrecal, cal, dz, range, antiDeadzone, _stick);
@@ -1978,8 +1968,8 @@ public class Joycon
                 if (_SticksCalibrated)
                 {
                     cal = _activeStick2;
-                    dz = _activeStick2Deadzone;
-                    range = _activeStick2Range;
+                    dz = Config.StickRightDeadzone;
+                    range = Config.StickRightRange;
                 }
 
                 CalculateStickCenter(_stick2Precal, cal, dz, range, antiDeadzone, _stick2);
@@ -2488,11 +2478,11 @@ public class Joycon
             Array.Fill(_stickCal, (ushort)2048);
             Array.Fill(_stick2Cal, (ushort)2048);
 
-            _deadzone = Config.DefaultDeadzone;
-            _deadzone2 = Config.DefaultDeadzone;
+            _deadzone = Config.StickLeftDeadzone;
+            _deadzone2 = Config.StickRightDeadzone;
 
-            _range = Config.DefaultRange;
-            _range2 = Config.DefaultRange;
+            _range = Config.StickLeftRange;
+            _range2 = Config.StickRightRange;
 
             _DumpedCalibration = false;
 
@@ -3399,28 +3389,27 @@ public class Joycon
             }
         }
 
-        if (oldConfig.DefaultDeadzone != Config.DefaultDeadzone)
+        if (!CalibrationDataSupported())
         {
-            if (!CalibrationDataSupported())
+            if (oldConfig.StickLeftDeadzone != Config.StickLeftDeadzone)
             {
-                _deadzone = Config.DefaultDeadzone;
-                _deadzone2 = Config.DefaultDeadzone;
+                _deadzone = Config.StickLeftDeadzone;
             }
 
-            _activeStick1Deadzone = Config.DefaultDeadzone;
-            _activeStick2Deadzone = Config.DefaultDeadzone;
-        }
-
-        if (oldConfig.DefaultRange != Config.DefaultRange)
-        {
-            if (!CalibrationDataSupported())
+            if (oldConfig.StickRightDeadzone != Config.StickRightDeadzone)
             {
-                _range = Config.DefaultRange;
-                _range2 = Config.DefaultRange;
+                _deadzone2 = Config.StickRightDeadzone;
             }
 
-            _activeStick1Range = Config.DefaultRange;
-            _activeStick2Range = Config.DefaultRange;
+            if (oldConfig.StickLeftRange != Config.StickLeftRange)
+            {
+                _range = Config.StickLeftRange;
+            }
+
+            if (oldConfig.StickRightRange != Config.StickRightRange)
+            {
+                _range2 = Config.StickRightRange;
+            }
         }
 
         if (oldConfig.AllowCalibration != Config.AllowCalibration)
@@ -3428,6 +3417,7 @@ public class Joycon
             SetCalibration(Config.AllowCalibration);
         }
     }
+
     private class RumbleQueue
     {
         private const int MaxRumble = 15;
