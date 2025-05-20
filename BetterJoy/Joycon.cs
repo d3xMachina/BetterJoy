@@ -44,14 +44,14 @@ public class Joycon
         Shoulder22 = 19
     }
 
-    public enum ControllerType
+    public enum ControllerType : byte
     {
-        Pro,
-        JoyconLeft,
-        JoyconRight,
-        SNES,
-        NES,
-        N64
+        Pro = 0x01,
+        JoyconLeft = 0x02,
+        JoyconRight = 0x03,
+        SNES = 0x04,
+        N64 = 0x05,
+        NES = 0x06,
     }
 
     public enum DebugType
@@ -498,7 +498,7 @@ public class Joycon
             }
             
             //Make sure we're not actually a nes controller
-            if (this.Type == ControllerType.JoyconRight)
+            if (Type == ControllerType.JoyconRight)
             {
                 CheckIfRightIsNes();
             }
@@ -701,15 +701,17 @@ public class Joycon
     {
         Span<byte> resp = stackalloc byte[ReportLength];
 
-        for (int i = 0; i < 100; ++i) {
-            int respLength = SubcommandCheck(0x02, Array.Empty<byte>(), resp, false, 200);
+        for (int i = 0; i < 5; ++i) 
+        {
+            int respLength = SubcommandCheck(0x02, [], resp, false);
 
-            if (respLength >= 15 && resp[15] == 0x03) {
-                this.Type = ControllerType.NES;
-                break;
-            }
-
-            if (resp[15] == 0x02) {
+            if (respLength >= 17) 
+            {
+                if (resp[17] == 0x10)
+                {
+                    Type = ControllerType.NES;
+                }
+                
                 break;
             }
         }
@@ -2370,7 +2372,7 @@ public class Joycon
         return SubcommandCheck(sc, bufParameters, response, print);
     }
 
-    private int SubcommandCheck(byte sc, ReadOnlySpan<byte> bufParameters, Span<byte> response, bool print = true, int retries = 10)
+    private int SubcommandCheck(byte sc, ReadOnlySpan<byte> bufParameters, Span<byte> response, bool print = true)
     {
         int length = Subcommand(sc, bufParameters, print);
         if (length <= 0)

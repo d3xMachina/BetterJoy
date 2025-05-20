@@ -612,6 +612,8 @@ public class JoyconManager
                 return ProductSNES;
             case 5:
                 return ProductN64;
+            case 6:
+                return ProductNES;
         }
 
         return 0;
