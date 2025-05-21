@@ -2417,7 +2417,7 @@ public class Joycon
         if (!responseFound)
         {
             DebugPrint("No response.", DebugType.Comms);
-            return length;
+            return length <= 0 ? length : 0;
         }
 
         if (print)
@@ -2582,7 +2582,7 @@ public class Joycon
         if (IMUSupported())
         {
             var userSensorData = ReadSPICheck(0x80, 0x26, 0x1A, ref ok);
-            ReadOnlySpan<byte> sensorData = new ReadOnlySpan<byte>(userSensorData, 2, 24);
+            var sensorData = new ReadOnlySpan<byte>(userSensorData, 2, 24);
 
             if (ok)
             {
