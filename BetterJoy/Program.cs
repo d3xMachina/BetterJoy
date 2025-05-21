@@ -630,8 +630,8 @@ public class JoyconManager
                 {
                     if (// Permit filling after a disconnect when using many controllers in the case : Left Joycon - empty - Right Joycon
                         (prevController != null && prevController.Type == Joycon.ControllerType.JoyconLeft &&
-                         (nextController == null || nextController.Type != Joycon.ControllerType.JoyconRight || prevController.IsJoined)) ||
-                        (nextController != null && (nextController.Type != Joycon.ControllerType.JoyconRight || prevController.IsJoined)))
+                         (nextController == null || nextController.Type != Joycon.ControllerType.JoyconRight || nextController.IsJoined)) ||
+                        (nextController != null && (nextController.Type != Joycon.ControllerType.JoyconRight || nextController.IsJoined)))
                     {
                         isValid = false;
                     }
@@ -639,10 +639,10 @@ public class JoyconManager
                 else if (type == Joycon.ControllerType.JoyconRight)
                 {
                     if (freeId < 1 ||
-                        (prevController != null && (prevController.Type != Joycon.ControllerType.JoyconLeft || prevController.IsJoined)) ||
                         // Permit filling after a disconnect when using many controllers in the case : Left Joycon - empty - Right Joycon
                         (nextController != null && nextController.Type == Joycon.ControllerType.JoyconRight &&
-                         (prevController == null || prevController.Type != Joycon.ControllerType.JoyconLeft || prevController.IsJoined)))
+                         (prevController == null || prevController.Type != Joycon.ControllerType.JoyconLeft || prevController.IsJoined)) ||
+                        (prevController != null && (prevController.Type != Joycon.ControllerType.JoyconLeft || prevController.IsJoined)))
                     {
                         isValid = false;
                     }
@@ -650,7 +650,7 @@ public class JoyconManager
                 else
                 {
                     if ((prevController != null && prevController.Type == Joycon.ControllerType.JoyconLeft && !prevController.IsJoined) ||
-                        (nextController != null && nextController.Type == Joycon.ControllerType.JoyconRight && !prevController.IsJoined))
+                        (nextController != null && nextController.Type == Joycon.ControllerType.JoyconRight && !nextController.IsJoined))
                     {
                         isValid = false;
                     }
