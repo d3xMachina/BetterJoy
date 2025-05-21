@@ -727,15 +727,15 @@ public class Joycon
 
     private void CheckIfRightIsNes()
     {
-        Span<byte> resp = stackalloc byte[ReportLength];
+        Span<byte> response = stackalloc byte[ReportLength];
 
-        for (int i = 0; i < 5; ++i)
+        for (var i = 0; i < 5; ++i)
         {
-            int respLength = SubcommandCheck(0x02, [], resp, false);
+            var respLength = SubcommandCheck(0x02, [], response, false);
 
-            if (respLength >= 17)
+            if (respLength >= 20 && response[0] == 0x21 && response[14] == 0x02)
             {
-                if (resp[17] == 0x10)
+                if (response[17] == 0x0A || response[17] == 0x09) //NES controllers share the Right hardware ID of the right joycon, but respond here differently.
                 {
                     Type = ControllerType.NES;
                 }
