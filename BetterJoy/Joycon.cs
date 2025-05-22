@@ -485,17 +485,17 @@ public class Joycon
                 GetMAC();
             }
             
-            //Make sure we're not actually a nes controller
-            if (Type == ControllerType.JoyconRight)
-            {
-                CheckIfRightIsNes();
-            }
-
             SetLowPowerState(false);
 
             // set report mode to simple HID mode (fix SPI read not working when controller is already initialized)
             // do not always send a response so we don't check if there is one
             SetReportMode(ReportMode.SimpleHID, false);
+            
+            //Make sure we're not actually a nes controller
+            if (Type == ControllerType.JoyconRight)
+            {
+                CheckIfRightIsNes();
+            }
 
             var ok = DumpCalibrationData();
             if (!ok)
