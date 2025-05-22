@@ -484,13 +484,13 @@ public class Joycon
                 Log("Using Bluetooth.");
                 GetMAC();
             }
-            
+
             SetLowPowerState(false);
 
             // set report mode to simple HID mode (fix SPI read not working when controller is already initialized)
             // do not always send a response so we don't check if there is one
             SetReportMode(ReportMode.SimpleHID, false);
-            
+
             //Make sure we're not actually a nes controller
             if (Type == ControllerType.JoyconRight)
             {
@@ -512,11 +512,11 @@ public class Joycon
             {
                 SetIMUSensitivity();
             }
-            
+
             SetRumble(true);
             SetNFCIR(false);
             SetReportMode(ReportMode.StandardFull);
-            
+
             State = Status.Attached;
 
             DebugPrint("Done with init.", DebugType.Comms);
@@ -735,14 +735,20 @@ public class Joycon
 
             if (respLength >= 20 && response[0] == 0x21 && response[14] == 0x02)
             {
-                if (response[17] == 0x0A || response[17] == 0x09) //NES controllers share the Right hardware ID of the right joycon, but respond here differently.
+                //The NES controllers both share the hardware id of a normal right joycon
+                //To identify it, we need to query the hardware directly
+                //Right NES: 0x0A
+                //Left NES: 0x09
+                if (response[17] == 0x0A || response[17] == 0x09)
                 {
                     Type = ControllerType.NES;
                 }
 
-                break;
+                return;
             }
         }
+        
+        throw new DeviceComFailedException("reset device info");
     }
 
     private void SetLowPowerState(bool enable)
