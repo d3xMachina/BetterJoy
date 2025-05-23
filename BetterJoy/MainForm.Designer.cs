@@ -307,7 +307,7 @@
             groupBox1.Size = new System.Drawing.Size(352, 352);
             groupBox1.TabIndex = 9;
             groupBox1.TabStop = false;
-            groupBox1.Text = "Config";
+            groupBox1.Text = "Configuration";
             // 
             // settingsTable
             // 
