@@ -199,6 +199,7 @@
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "_3rdPartyControllers";
+            StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             Text = "Add 3rd-Party Controllers";
             FormClosing += _3rdPartyControllers_FormClosing;
             group_props.ResumeLayout(false);

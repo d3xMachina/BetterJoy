@@ -525,7 +525,6 @@ public partial class MainForm : Form
     private void btn_open3rdP_Click(object sender, EventArgs e)
     {
         using var partyForm = new _3rdPartyControllers();
-        partyForm.StartPosition = FormStartPosition.CenterParent;
         partyForm.ShowDialog(this);
     }
 
@@ -781,7 +780,6 @@ public partial class MainForm : Form
     private void btn_reassign_open_Click(object sender, EventArgs e)
     {
         using var mapForm = new Reassign();
-        mapForm.StartPosition = FormStartPosition.CenterParent;
         mapForm.ShowDialog(this);
     }
 

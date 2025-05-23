@@ -410,6 +410,7 @@ namespace BetterJoy {
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "Reassign";
+            StartPosition = FormStartPosition.CenterParent;
             Text = "Map Special Buttons";
             FormClosing += Reassign_FormClosing;
             Load += Reassign_Load;
