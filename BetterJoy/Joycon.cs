@@ -44,13 +44,14 @@ public class Joycon
         Shoulder22 = 19
     }
 
-    public enum ControllerType
+    public enum ControllerType : byte
     {
-        Pro,
-        JoyconLeft,
-        JoyconRight,
-        SNES,
-        N64
+        Pro = 0x01,
+        JoyconLeft = 0x02,
+        JoyconRight = 0x03,
+        SNES = 0x04,
+        N64 = 0x05,
+        NES = 0x06,
     }
 
     public enum DebugType
@@ -244,7 +245,7 @@ public class Joycon
 
     private long _timestampActivity = Stopwatch.GetTimestamp();
 
-    public readonly ControllerType Type;
+    public ControllerType Type { get; private set; }
 
     public EventHandler<StateChangedEventArgs> StateChanged;
 
@@ -312,6 +313,7 @@ public class Joycon
 
     public bool IsPro => Type is ControllerType.Pro;
     public bool IsSNES => Type == ControllerType.SNES;
+    public bool IsNES => Type == ControllerType.NES;
     public bool IsN64 => Type == ControllerType.N64;
     public bool IsJoycon => Type is ControllerType.JoyconRight or ControllerType.JoyconLeft;
     public bool IsLeft => Type != ControllerType.JoyconRight;
@@ -489,6 +491,12 @@ public class Joycon
             // do not always send a response so we don't check if there is one
             SetReportMode(ReportMode.SimpleHID, false);
 
+            //Make sure we're not actually a nes controller
+            if (Type == ControllerType.JoyconRight)
+            {
+                CheckIfRightIsNes();
+            }
+
             var ok = DumpCalibrationData();
             if (!ok)
             {
@@ -504,7 +512,7 @@ public class Joycon
             {
                 SetIMUSensitivity();
             }
-            
+
             SetRumble(true);
             SetNFCIR(false);
             SetReportMode(ReportMode.StandardFull);
@@ -715,6 +723,32 @@ public class Joycon
         }
         Subcommand(0x03, [(byte)reportMode]);
         return true;
+    }
+
+    private void CheckIfRightIsNes()
+    {
+        Span<byte> response = stackalloc byte[ReportLength];
+
+        for (var i = 0; i < 5; ++i)
+        {
+            var respLength = SubcommandCheck(0x02, [], response, false);
+
+            if (respLength > 0)
+            {
+                //The NES controllers both share the hardware id of a normal right joycon
+                //To identify it, we need to query the hardware directly
+                //Right NES: 0x0A
+                //Left NES: 0x09
+                if (response[17] == 0x0A || response[17] == 0x09)
+                {
+                    Type = ControllerType.NES;
+                }
+
+                return;
+            }
+        }
+        
+        throw new DeviceComFailedException("reset device info");
     }
 
     private void SetLowPowerState(bool enable)
@@ -2446,17 +2480,17 @@ public class Joycon
 
     private bool CalibrationDataSupported()
     {
-        return !IsSNES && !IsThirdParty;
+        return !IsSNES && !IsNES && !IsThirdParty;
     }
 
     private bool SticksSupported()
     {
-        return !IsSNES;
+        return !IsSNES && !IsNES;
     }
 
     public bool IMUSupported()
     {
-        return !IsSNES && !IsN64;
+        return !IsSNES && !IsN64 && !IsNES;
     }
 
     private bool UseGyroAnalogSliders()
@@ -2936,6 +2970,7 @@ public class Joycon
 
         var isPro = input.IsPro;
         var isSNES = input.IsSNES;
+        var isNES = input.IsNES;
         var isN64 = input.IsN64;
         var isJoycon = input.IsJoycon;
         var isLeft = input.IsLeft;
@@ -3115,6 +3150,7 @@ public class Joycon
 
         var isPro = input.IsPro;
         var isSNES = input.IsSNES;
+        var isNES = input.IsNES;
         var isN64 = input.IsN64;
         var isJoycon = input.IsJoycon;
         var isLeft = input.IsLeft;
@@ -3300,6 +3336,7 @@ public class Joycon
             ControllerType.JoyconRight => "Right joycon",
             ControllerType.Pro         => "Pro controller",
             ControllerType.SNES        => "SNES controller",
+            ControllerType.NES         => "NES controller",
             ControllerType.N64         => "N64 controller",
             _                          => "Controller"
         };

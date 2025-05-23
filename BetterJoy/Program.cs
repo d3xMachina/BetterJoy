@@ -41,6 +41,7 @@ public class JoyconManager
     private const ushort ProductR = 0x2007;
     private const ushort ProductPro = 0x2009;
     private const ushort ProductSNES = 0x2017;
+    private const ushort ProductNES = 0x2007;
     private const ushort ProductN64 = 0x2019;
 
     public readonly bool EnableIMU = true;
@@ -699,6 +700,8 @@ public class JoyconManager
                 return ProductSNES;
             case 5:
                 return ProductN64;
+            case 6:
+                return ProductNES;
         }
 
         return 0;
