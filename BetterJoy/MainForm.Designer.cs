@@ -33,6 +33,7 @@
             console = new System.Windows.Forms.TextBox();
             notifyIcon = new System.Windows.Forms.NotifyIcon(components);
             contextMenu = new System.Windows.Forms.ContextMenuStrip(components);
+            showToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             version_lbl = new System.Windows.Forms.Label();
             lb_github = new System.Windows.Forms.LinkLabel();
@@ -76,25 +77,32 @@
             // 
             // notifyIcon
             // 
-            notifyIcon.BalloonTipText = "Double click the tray icon to maximise!";
+            notifyIcon.BalloonTipText = "Click the tray icon to maximise!";
             notifyIcon.BalloonTipTitle = "BetterJoy";
             notifyIcon.ContextMenuStrip = contextMenu;
             notifyIcon.Icon = (System.Drawing.Icon)resources.GetObject("notifyIcon.Icon");
             notifyIcon.Text = "BetterJoy";
             notifyIcon.Visible = true;
-            notifyIcon.MouseDoubleClick += notifyIcon_MouseDoubleClick;
+            notifyIcon.MouseClick += notifyIcon_MouseClick;
             // 
             // contextMenu
             // 
             contextMenu.ImageScalingSize = new System.Drawing.Size(24, 24);
-            contextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { exitToolStripMenuItem });
+            contextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { showToolStripMenuItem, exitToolStripMenuItem });
             contextMenu.Name = "contextMenu";
-            contextMenu.Size = new System.Drawing.Size(93, 26);
+            contextMenu.Size = new System.Drawing.Size(104, 48);
+            // 
+            // showToolStripMenuItem
+            // 
+            showToolStripMenuItem.Name = "showToolStripMenuItem";
+            showToolStripMenuItem.Size = new System.Drawing.Size(103, 22);
+            showToolStripMenuItem.Text = "Show";
+            showToolStripMenuItem.Click += showToolStripMenuItem_Click;
             // 
             // exitToolStripMenuItem
             // 
             exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            exitToolStripMenuItem.Size = new System.Drawing.Size(92, 22);
+            exitToolStripMenuItem.Size = new System.Drawing.Size(103, 22);
             exitToolStripMenuItem.Text = "Exit";
             exitToolStripMenuItem.Click += exitToolStripMenuItem_Click;
             // 
@@ -455,5 +463,6 @@
         private System.Windows.Forms.Button con5;
         private System.Windows.Forms.Button btn_locate;
         private System.Windows.Forms.CheckBox startOnBoot;
+        private System.Windows.Forms.ToolStripMenuItem showToolStripMenuItem;
     }
 }

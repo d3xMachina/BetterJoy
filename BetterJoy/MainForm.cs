@@ -120,7 +120,7 @@ public partial class MainForm : Form
                 }
                 ++index;
             }
-                
+
             comboBox.SelectedIndexChanged += ConfigItemChanged;
             childControl = comboBox;
         }
@@ -229,10 +229,10 @@ public partial class MainForm : Form
 
         WindowState = FormWindowState.Minimized;
         notifyIcon.Visible = true;
-        
+
         if (!init)
         {
-            notifyIcon.BalloonTipText = "Double click the tray icon to maximise!";
+            notifyIcon.BalloonTipText = "Click the tray icon to maximise!";
             notifyIcon.ShowBalloonTip(0);
         }
 
@@ -265,8 +265,13 @@ public partial class MainForm : Form
         }
     }
 
-    private void notifyIcon_MouseDoubleClick(object sender, MouseEventArgs e)
+    private void notifyIcon_MouseClick(object sender, MouseEventArgs e)
     {
+        if (e.Button != MouseButtons.Left)
+        {
+            return;
+        }
+
         ShowFromTray();
     }
 
@@ -311,7 +316,7 @@ public partial class MainForm : Form
             // We can close now (happens after the Close() call)
             return;
         }
-        
+
         e.Cancel = true;
 
         if (_closing)
@@ -354,6 +359,11 @@ public partial class MainForm : Form
         SetTaskbarIcon();
     }
 
+    private void showToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        ShowFromTray();
+    }
+
     private void exitToolStripMenuItem_Click(object sender, EventArgs e)
     {
         Close();
@@ -382,7 +392,7 @@ public partial class MainForm : Form
         {
             console.AppendText(message + Environment.NewLine);
         }
-        
+
         _logger?.Log(message, level);
     }
 
@@ -398,7 +408,7 @@ public partial class MainForm : Form
         {
             console.AppendText($"{message} {e.Display()}{Environment.NewLine}");
         }
-        
+
         _logger?.Log(message, e, level);
     }
 
@@ -764,7 +774,7 @@ public partial class MainForm : Form
             _countDown.Tick += CountDownSticksCenter;
             CountDownSticksCenter(null, null);
         }
-       
+
         _countDown.Start();
     }
 
