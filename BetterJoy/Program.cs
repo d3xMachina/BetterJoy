@@ -1,4 +1,10 @@
-﻿using System;
+﻿using BetterJoy.Collections;
+using BetterJoy.Config;
+using BetterJoy.Exceptions;
+using Nefarius.Drivers.HidHide;
+using Nefarius.ViGEm.Client;
+using Nefarius.ViGEm.Client.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -9,12 +15,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using BetterJoy.Collections;
-using BetterJoy.Config;
-using BetterJoy.Exceptions;
-using Nefarius.Drivers.HidHide;
-using Nefarius.ViGEm.Client;
-using Nefarius.ViGEm.Client.Exceptions;
 using WindowsInput;
 using WindowsInput.Events;
 using WindowsInput.Events.Sources;
@@ -245,13 +245,18 @@ public class JoyconManager
             return;
         }
 
-        var validController = (info.ProductId == ProductL || info.ProductId == ProductR ||
-                               info.ProductId == ProductPro || info.ProductId == ProductSNES ||
-                               info.ProductId == ProductN64) &&
-                              info.VendorId == VendorId;
+        var validController = false;
 
-        // check if it's a custom controller
+        if (info.VendorId == VendorId &&
+            (info.ProductId is ProductL or ProductR or ProductPro or ProductSNES or ProductN64))
+        {
+            validController = true;
+        }
+
+        
         SController thirdParty = null;
+
+        // Check if it's a custom controller
         foreach (var v in Program.ThirdpartyCons)
         {
             if (info.VendorId == v.VendorId &&
@@ -269,33 +274,44 @@ public class JoyconManager
             return;
         }
 
-        var prodId = thirdParty == null ? info.ProductId : TypeToProdId(thirdParty.Type);
-        if (prodId == 0)
+        Joycon.ControllerType type;
+
+        if (thirdParty == null)
         {
-            // controller was not assigned a type
-            return;
+            switch (info.ProductId)
+            {
+                case ProductL:
+                    type = Joycon.ControllerType.JoyconLeft;
+                    break;
+                case ProductR:
+                    type = Joycon.ControllerType.JoyconRight;
+                    break;
+                case ProductPro:
+                    type = Joycon.ControllerType.Pro;
+                    break;
+                case ProductSNES:
+                    type = Joycon.ControllerType.SNES;
+                    break;
+                case ProductN64:
+                    type = Joycon.ControllerType.N64;
+                    break;
+                default:
+                    _form.Log($"Invalid product ID: {info.ProductId}.", Logger.LogLevel.Error);
+                    return;
+            };
+        }
+        else
+        {
+            if (!Enum.IsDefined(typeof(Joycon.ControllerType), thirdParty.Type))
+            {
+                _form.Log($"Invalid third-party controller type: {thirdParty.Type}.", Logger.LogLevel.Error);
+                return;
+            }
+            
+            type = (Joycon.ControllerType)thirdParty.Type;
         }
 
-        bool isUSB = info.BusType == HIDApi.BusType.USB;
-        var type = Joycon.ControllerType.JoyconLeft;
-
-        switch (prodId)
-        {
-            case ProductL:
-                break;
-            case ProductR:
-                type = Joycon.ControllerType.JoyconRight;
-                break;
-            case ProductPro:
-                type = Joycon.ControllerType.Pro;
-                break;
-            case ProductSNES:
-                type = Joycon.ControllerType.SNES;
-                break;
-            case ProductN64:
-                type = Joycon.ControllerType.N64;
-                break;
-        }
+        var isUSB = info.BusType == HIDApi.BusType.USB;
 
         OnDeviceConnected(info.Path, info.SerialNumber, type, isUSB, thirdParty != null);
     }
@@ -684,27 +700,6 @@ public class JoyconManager
         }
 
         return null;
-    }
-
-    private ushort TypeToProdId(byte type)
-    {
-        switch (type)
-        {
-            case 1:
-                return ProductPro;
-            case 2:
-                return ProductL;
-            case 3:
-                return ProductR;
-            case 4:
-                return ProductSNES;
-            case 5:
-                return ProductN64;
-            case 6:
-                return ProductNES;
-        }
-
-        return 0;
     }
 
     public async Task Stop()
