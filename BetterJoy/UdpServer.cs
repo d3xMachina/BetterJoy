@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO.Hashing;
-using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -47,14 +46,18 @@ internal class UdpServer
         Charged = 0xEF
     };
 
-    private enum MessageType
+    private enum RequestType
     {
-        DsucVersionReq = 0x100000,
-        DsusVersionRsp = 0x100000,
+        DsucVersion = 0x100000,
         DsucListPorts = 0x100001,
+        DsucPadData = 0x100002
+    }
+
+    private enum ResponseType
+    {
+        DsusVersion = 0x100000,
         DsusPortInfo = 0x100001,
-        DsucPadDataReq = 0x100002,
-        DsusPadDataRsp = 0x100002
+        DsusPadData = 0x100002
     }
 
     private const ushort MaxProtocolVersion = 1001;
@@ -62,7 +65,7 @@ internal class UdpServer
     private const int ReportSize = 100;
     private const int ControllerTimeoutSeconds = 5;
 
-    private readonly Dictionary<IPEndPoint, ClientRequestTimes> _clients = new();
+    private readonly Dictionary<SocketAddress, ClientRequestTimes> _clients = new();
     private readonly IList<Joycon> _controllers;
 
     private volatile bool _running = false;
@@ -109,8 +112,9 @@ internal class UdpServer
     }
 
     private async Task SendPacket(
-        IPEndPoint clientEp,
         byte[] usefulData,
+        SocketAddress clientSocketAddress,
+        CancellationToken cancellationToken,
         ushort reqProtocolVersion = MaxProtocolVersion
     )
     {
@@ -131,7 +135,7 @@ internal class UdpServer
 
         try
         {
-            await _udpSock.SendToAsync(clientEp, packetDataBuffer.ReadOnlyMemory);
+            await _udpSock.SendToAsync(packetDataBuffer.ReadOnlyMemory, SocketFlags.None, clientSocketAddress, cancellationToken);
         }
         catch (SocketException) { }
     }
@@ -186,7 +190,7 @@ internal class UdpServer
         return true;
     }
 
-    private List<byte[]> ProcessIncoming(Span<byte> localMsg, IPEndPoint clientEp)
+    private List<byte[]> ProcessIncoming(Span<byte> localMsg, SocketAddress clientSocketAddress)
     {
         var replies = new List<byte[]>();
 
@@ -203,11 +207,11 @@ internal class UdpServer
 
         switch (messageType)
         {
-            case (uint)MessageType.DsucVersionReq:
+            case (uint)RequestType.DsucVersion:
             {
                 var outputData = new byte[8];
                 var outIdx = 0;
-                Array.Copy(BitConverter.GetBytes((uint)MessageType.DsusVersionRsp), 0, outputData, outIdx, 4);
+                Array.Copy(BitConverter.GetBytes((uint)ResponseType.DsusVersion), 0, outputData, outIdx, 4);
                 outIdx += 4;
                 Array.Copy(BitConverter.GetBytes(MaxProtocolVersion), 0, outputData, outIdx, 2);
                 outIdx += 2;
@@ -217,7 +221,7 @@ internal class UdpServer
                 replies.Add(outputData);
                 break;
             }
-            case (uint)MessageType.DsucListPorts:
+            case (uint)RequestType.DsucListPorts:
             {
                 // Requested information on gamepads - return MAC address
                 var numPadRequests = BitConverter.ToInt32(localMsg.Slice(currIdx, 4));
@@ -239,7 +243,7 @@ internal class UdpServer
 
                             var outIdx = 0;
                             Array.Copy(
-                                BitConverter.GetBytes((uint)MessageType.DsusPortInfo),
+                                BitConverter.GetBytes((uint)ResponseType.DsusPortInfo),
                                 0,
                                 outputData,
                                 outIdx,
@@ -281,7 +285,7 @@ internal class UdpServer
                 }
                 break;
             }
-            case (uint)MessageType.DsucPadDataReq:
+            case (uint)RequestType.DsucPadData:
             {
                 if (currIdx + 8 <= localMsg.Length)
                 {
@@ -297,7 +301,7 @@ internal class UdpServer
 
                     lock (_clients)
                     {
-                        if (_clients.TryGetValue(clientEp, out var client))
+                        if (_clients.TryGetValue(clientSocketAddress, out var client))
                         {
                             client.RequestPadInfo(regFlags, idToReg, macToReg);
                         }
@@ -305,7 +309,11 @@ internal class UdpServer
                         {
                             var clientTimes = new ClientRequestTimes();
                             clientTimes.RequestPadInfo(regFlags, idToReg, macToReg);
-                            _clients[clientEp] = clientTimes;
+
+                            var socketAddress = new SocketAddress(clientSocketAddress.Family, clientSocketAddress.Size);
+                            clientSocketAddress.Buffer.CopyTo(socketAddress.Buffer);
+
+                            _clients[socketAddress] = clientTimes;
                         }
                     }
                 }
@@ -320,6 +328,7 @@ internal class UdpServer
     {
         var buffer = GC.AllocateArray<byte>(PacketSize, true);
         var bufferMem = buffer.AsMemory();
+        var receivedAddress = new SocketAddress(_udpSock.AddressFamily);
 
         // Do processing, continually receiving from the socket
         while (true)
@@ -328,29 +337,19 @@ internal class UdpServer
             {
                 token.ThrowIfCancellationRequested();
 
-                var receiveResult = await _udpSock.ReceiveFromAsync(bufferMem);
-                var client = (IPEndPoint)receiveResult.RemoteEndPoint;
+                var receivedBytes = await _udpSock.ReceiveFromAsync(bufferMem, SocketFlags.None, receivedAddress, token);
+                var repliesData = ProcessIncoming(buffer.AsSpan(0, receivedBytes), receivedAddress);
 
-                var repliesData = ProcessIncoming(buffer.AsSpan(0, receiveResult.ReceivedBytes), client);
-                if (repliesData.Count <= 0)
+                foreach (var replyData in repliesData)
                 {
-                    continue;
+                    await SendPacket(replyData, receivedAddress, token);
                 }
-
-                // We don't care in which order the replies are sent to the client
-                var tasks = repliesData.Select(async reply => { await SendPacket(client, reply); });
-                await Task.WhenAll(tasks);
             }
             catch (SocketException)
             {
                 if (!token.IsCancellationRequested)
                 {
                     ResetUDPSocket();
-                }
-                else
-                {
-                    // We're done
-                    break;
                 }
             }
         }
@@ -549,7 +548,7 @@ internal class UdpServer
 
         var nbClients = 0;
         var now = DateTime.UtcNow;
-        Span<IPEndPoint> relevantClients = null; 
+        Span<SocketAddress> relevantClients = null; 
 
         Monitor.Enter(_clients);
 
@@ -560,7 +559,7 @@ internal class UdpServer
                 return;
             }
 
-            var relevantClientsBuffer = new IPEndPoint[_clients.Count];
+            var relevantClientsBuffer = new SocketAddress[_clients.Count];
             relevantClients = relevantClientsBuffer.AsSpan();
 
             foreach (var client in _clients)
@@ -629,7 +628,7 @@ internal class UdpServer
         outputData.Clear();
 
         var outIdx = BeginPacket(outputData);
-        BitConverter.TryWriteBytes(outputData.Slice(outIdx, 4), (uint)MessageType.DsusPadDataRsp);
+        BitConverter.TryWriteBytes(outputData.Slice(outIdx, 4), (uint)ResponseType.DsusPadData);
         outIdx += 4;
 
         outputData[outIdx++] = (byte)hidReport.PadId;
@@ -657,7 +656,7 @@ internal class UdpServer
         {
             foreach (var client in relevantClients)
             {
-                _udpSock.SendTo(outputData, client);
+                _udpSock.SendTo(outputData, SocketFlags.None, client);
             }
         }
         // Ignore closing
@@ -702,6 +701,10 @@ internal class UdpServer
 
     private class ClientRequestTimes
     {
+        public DateTime AllPadsTime { get; private set; }
+        public DateTime[] PadIdsTime { get; }
+        public Dictionary<PhysicalAddress, DateTime> PadMacsTime { get; }
+
         public ClientRequestTimes()
         {
             AllPadsTime = DateTime.MinValue;
@@ -714,10 +717,6 @@ internal class UdpServer
 
             PadMacsTime = new Dictionary<PhysicalAddress, DateTime>();
         }
-
-        public DateTime AllPadsTime { get; private set; }
-        public DateTime[] PadIdsTime { get; }
-        public Dictionary<PhysicalAddress, DateTime> PadMacsTime { get; }
 
         public void RequestPadInfo(byte regFlags, byte idToReg, PhysicalAddress macToReg)
         {
