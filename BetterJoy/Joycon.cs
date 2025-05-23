@@ -733,7 +733,7 @@ public class Joycon
         {
             var respLength = SubcommandCheck(0x02, [], response, false);
 
-            if (respLength > 17)
+            if (respLength > 0)
             {
                 //The NES controllers both share the hardware id of a normal right joycon
                 //To identify it, we need to query the hardware directly
