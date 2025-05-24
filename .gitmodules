@@ -4,3 +4,6 @@
 [submodule "hidapi"]
 	path = hidapi
 	url = https://github.com/d3xMachina/hidapi.git
+[submodule "WindowsInput"]
+	path = WindowsInput
+	url = https://github.com/d3xMachina/WindowsInput
