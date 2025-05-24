@@ -20,7 +20,7 @@ public class InputCapture : IDisposable
     private InputCapture()
     {
         Keyboard = WindowsInput.Capture.Global.KeyboardAsync(false);
-        Mouse = WindowsInput.Capture.Global.MouseAsync(false);
+        Mouse = WindowsInput.Capture.Global.MouseAsync(false, false);
     }
 
     public void RegisterEvent(EventHandler<EventSourceEventArgs<KeyboardEvent>> ev)

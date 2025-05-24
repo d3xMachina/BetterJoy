@@ -25,6 +25,11 @@ echo Build ViGEm.NET...
 if %ERRORLEVEL% NEQ 0 goto :ERROR
 
 echo.
+echo Build WindowsInput...
+"%MSBUILD_PATH%" "WindowsInput\WindowsInput\WindowsInput.csproj" -p:Configuration=Release -p:Platform=x64 -t:Build
+if %ERRORLEVEL% NEQ 0 goto :ERROR
+
+echo.
 echo Publish BetterJoy...
 dotnet publish BetterJoy %options% --runtime %runtime% --framework %framework% -o build/%runtime%
 if %ERRORLEVEL% NEQ 0 goto :ERROR
