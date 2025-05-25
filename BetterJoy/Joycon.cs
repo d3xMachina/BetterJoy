@@ -618,10 +618,10 @@ public class Joycon
         return SubcommandCheck(0x30, [leds]) > 0;
     }
 
+    // Do not call after initial setup
     public void BlinkHomeLight()
     {
-        // do not call after initial setup
-        if (IsThirdParty || Type == ControllerType.JoyconLeft)
+        if (!HomeLightSupported())
         {
             return;
         }
@@ -644,7 +644,7 @@ public class Joycon
 
     public void SetHomeLight(bool on)
     {
-        if (IsThirdParty || Type == ControllerType.JoyconLeft)
+        if (!HomeLightSupported())
         {
             return;
         }
@@ -2491,6 +2491,11 @@ public class Joycon
     public bool IMUSupported()
     {
         return !IsSNES && !IsN64 && !IsNES;
+    }
+
+    public bool HomeLightSupported()
+    {
+        return Type == ControllerType.JoyconRight || IsPro;
     }
 
     private bool UseGyroAnalogSliders()
