@@ -923,6 +923,9 @@ internal class Program
     private static readonly string AppGuid = "1bf709e9-c133-41df-933a-c9ff3f664c7b"; // randomly-generated
     private static Mutex _mutexInstance;
 
+    private static bool _keyEventRegistered;
+    private static bool _mouseEventRegistered;
+
     public static void Start()
     {
         Config = new(_form);
@@ -984,8 +987,7 @@ internal class Program
             Server.Start(Config.IP, Config.Port);
         }
 
-        InputCapture.Global.RegisterEvent(GlobalKeyEvent);
-        InputCapture.Global.RegisterEvent(GlobalMouseEvent);
+        UpdateInputEvents();
 
         _form.Log("All systems go.");
         Mgr.Start();
@@ -1084,6 +1086,54 @@ internal class Program
             _hidHideService.AddBlockedInstanceId(instance);
             BlockedDeviceInstances.Add(instance);
         }
+    }
+
+    public static void UpdateInputEvents(bool remove = false)
+    {
+        // Keyboard
+        if (!remove && HasActionKM())
+        {
+            if (!_keyEventRegistered)
+            {
+                InputCapture.Global.RegisterEvent(GlobalKeyEvent);
+                _keyEventRegistered = true;
+            }
+        }
+        else if (_keyEventRegistered)
+        {
+            InputCapture.Global.UnregisterEvent(GlobalKeyEvent);
+            _keyEventRegistered = false;
+        }
+        
+        // Mouse
+        if (!remove && HasActionKM(false))
+        {
+            if (!_mouseEventRegistered)
+            {
+                InputCapture.Global.RegisterEvent(GlobalMouseEvent);
+                _mouseEventRegistered = true;
+            }
+        }
+        else if (_mouseEventRegistered)
+        {
+            InputCapture.Global.UnregisterEvent(GlobalMouseEvent);
+            _mouseEventRegistered = false;
+        }
+    }
+
+    private static bool HasActionKM(bool keyboard = true)
+    {
+        var input = keyboard ? "key_" : "mse_";
+
+        foreach (var key in Settings.GetActionsKeys())
+        {
+            if (Settings.Value(key).StartsWith(input))
+            {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     private static bool HandleMouseAction(string settingKey, ButtonCode? key)
@@ -1202,8 +1252,7 @@ internal class Program
             await Mgr.Stop();
         }
 
-        InputCapture.Global.UnregisterEvent(GlobalKeyEvent);
-        InputCapture.Global.UnregisterEvent(GlobalMouseEvent);
+        UpdateInputEvents(true);
         InputCapture.Global.Dispose();
 
         EmClient?.Dispose();

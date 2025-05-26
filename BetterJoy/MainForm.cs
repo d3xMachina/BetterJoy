@@ -780,6 +780,7 @@ public partial class MainForm : Form
     private void btn_reassign_open_Click(object sender, EventArgs e)
     {
         using var mapForm = new Reassign();
+        mapForm.ActionAssigned += (sender, e) => Program.UpdateInputEvents();
         mapForm.ShowDialog(this);
     }
 

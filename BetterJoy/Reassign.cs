@@ -8,6 +8,8 @@ namespace BetterJoy;
 
 public partial class Reassign : Form
 {
+    public event EventHandler<EventArgs> ActionAssigned;
+
     private Control _curAssignment;
 
     private enum ButtonAction
@@ -48,9 +50,7 @@ public partial class Reassign : Form
     private void Menu_joy_buttons_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
     {
         var c = sender as Control;
-
         var clickedItem = e.ClickedItem;
-
         var caller = (SplitButton)c.Tag;
 
         string value;
@@ -70,22 +70,20 @@ public partial class Reassign : Form
             value = "joy_" + (int)clickedItem.Tag;
         }
 
-        Settings.SetValue((string)caller.Tag, value);
-        GetPrettyName(caller);
+        Assign(caller, value);
     }
 
     private void Remap(object sender, MouseEventArgs e)
     {
-        var c = sender as SplitButton;
+        var control = sender as SplitButton;
         switch (e.Button)
         {
             case MouseButtons.Left:
-                c.Text = "...";
-                _curAssignment = c;
+                control.Text = "...";
+                _curAssignment = control;
                 break;
             case MouseButtons.Middle:
-                Settings.SetValue((string)c.Tag, Settings.GetDefaultValue((string)c.Tag));
-                GetPrettyName(c);
+                Assign(control, Settings.GetDefaultValue((string)control.Tag));
                 break;
             case MouseButtons.Right:
                 break;
@@ -104,8 +102,8 @@ public partial class Reassign : Form
 
         if (_curAssignment != null && button != null)
         {
-            Settings.SetValue((string)_curAssignment.Tag, "mse_" + (int)button);
-            AsyncPrettyName(_curAssignment);
+            Assign(_curAssignment, "mse_" + (int)button);
+
             _curAssignment = null;
             e.Next_Hook_Enabled = false;
         }
@@ -117,8 +115,8 @@ public partial class Reassign : Form
 
         if (_curAssignment != null && key != null)
         {
-            Settings.SetValue((string)_curAssignment.Tag, "key_" + (int)key);
-            AsyncPrettyName(_curAssignment);
+            Assign(_curAssignment, "key_" + (int)key);
+
             _curAssignment = null;
             e.Next_Hook_Enabled = false;
         }
@@ -130,19 +128,14 @@ public partial class Reassign : Form
         InputCapture.Global.UnregisterEvent(GlobalMouseEvent);
     }
 
-    private void AsyncPrettyName(Control c)
+    private void GetPrettyName(Control c)
     {
         if (InvokeRequired)
         {
-            Invoke(new Action<Control>(AsyncPrettyName), c);
+            Invoke(new Action<Control>(GetPrettyName), c);
             return;
         }
 
-        GetPrettyName(c);
-    }
-
-    private void GetPrettyName(Control c)
-    {
         string val = Settings.Value((string)c.Tag);
 
         if (val == "0")
@@ -194,5 +187,16 @@ public partial class Reassign : Form
         menuJoyButtons.ItemClicked += Menu_joy_buttons_ItemClicked;
 
         return menuJoyButtons;
+    }
+
+    private void Assign(Control control, string input)
+    {
+        Settings.SetValue((string)control.Tag, input);
+        GetPrettyName(control);
+
+        if (control.Parent == gb_actions)
+        {
+            ActionAssigned?.Invoke(this, EventArgs.Empty);
+        }
     }
 }

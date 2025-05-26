@@ -12,6 +12,7 @@ public static class Settings
     // stores dynamic configuration, including
     private static readonly string Path;
     private static readonly Dictionary<string, string> Variables = new();
+    private static readonly string[] _actionKeys = ["reset_mouse", "active_gyro", "swap_ab", "swap_xy"];
 
     static Settings()
     {
@@ -274,5 +275,10 @@ public static class Settings
         }
 
         File.WriteAllLines(Path, txt);
+    }
+
+    public static ReadOnlySpan<string> GetActionsKeys()
+    {
+        return _actionKeys;
     }
 }
