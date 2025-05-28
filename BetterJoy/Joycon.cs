@@ -739,7 +739,14 @@ public class Joycon
                 //To identify it, we need to query the hardware directly
                 //Right NES: 0x0A
                 //Left NES: 0x09
+                //Famicom II (Right): 0x08
+                //Famicom I (Left): 0x07
                 if (response[17] == 0x0A || response[17] == 0x09)
+                {
+                    Type = ControllerType.NES;
+                }
+                
+                if (response[17] == 0x08 || response[17] == 0x09)
                 {
                     Type = ControllerType.NES;
                 }
