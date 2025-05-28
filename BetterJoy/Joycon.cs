@@ -671,7 +671,7 @@ public class Joycon
 
     private int SetHCIState(byte state)
     {
-        return SubcommandCheck(SubCommand.SetHciState, [state]);
+        return SubcommandCheck(SubCommand.SetHCIState, [state]);
     }
 
     private void SetIMU(bool enable)
@@ -681,7 +681,7 @@ public class Joycon
             return;
         }
 
-        SubcommandCheck(SubCommand.EnableImu, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandCheck(SubCommand.EnableIMU, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void SetIMUSensitivity()
@@ -698,7 +698,7 @@ public class Joycon
             0x01, // gyroscope performance rate : 0x00 = 833hz, 0x01 = 208hz (default)
             0x01  // accelerometer anti-aliasing filter bandwidth : 0x00 = 200hz, 0x01 = 100hz (default)
         ];
-        SubcommandCheck(SubCommand.SetImuSensitivity, buf);
+        SubcommandCheck(SubCommand.SetIMUSensitivity, buf);
     }
 
     private void SetRumble(bool enable)
@@ -713,7 +713,7 @@ public class Joycon
             return;
         }
 
-        SubcommandCheck(SubCommand.SetMcuState, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandCheck(SubCommand.SetMCUState, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private bool SetReportMode(ReportMode reportMode, bool checkResponse = true)
@@ -732,7 +732,7 @@ public class Joycon
 
         for (var i = 0; i < 5; ++i)
         {
-            var respLength = SubcommandCheck(SubCommand.RequestDeviceInfo,[], response, false);
+            var respLength = SubcommandCheck(SubCommand.RequestDeviceInfo, [], response, false);
 
             if (respLength > 0)
             {
@@ -2864,7 +2864,7 @@ public class Joycon
         ok = false;
         for (var i = 0; i < 5; ++i)
         {
-            int length = SubcommandCheck(Hardware.Bluetooth.SubCommand.SpiFlashRead, bufSubcommand, response, false);
+            int length = SubcommandCheck(Hardware.Bluetooth.SubCommand.SPIFlashRead, bufSubcommand, response, false);
             if (length >= 20 + len && response[15] == addr2 && response[16] == addr1)
             {
                 ok = true;
