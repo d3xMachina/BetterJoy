@@ -31,7 +31,12 @@ if %ERRORLEVEL% NEQ 0 goto :ERROR
 
 echo.
 echo Publish BetterJoy...
-dotnet publish BetterJoy %options% --runtime %runtime% --framework %framework% -o build/%runtime%
+dotnet publish BetterJoy %options% --runtime %runtime% --framework %framework% -o build\
+if %ERRORLEVEL% NEQ 0 goto :ERROR
+
+echo.
+echo Zipping...
+powershell -NoProfile -Command "Get-ChildItem -Path 'build\' -Exclude 'BetterJoy.pdb', 'BetterJoy.zip' | Compress-Archive -DestinationPath 'build\BetterJoy.zip' -Force"
 if %ERRORLEVEL% NEQ 0 goto :ERROR
 
 echo.

@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net9.0-windows</TargetFramework>
@@ -14,6 +13,7 @@
         <FileVersion>$(AssemblyVersion)</FileVersion>
         <Version>$(AssemblyVersion)</Version>
         <Copyright>Copyright © 2024</Copyright>
+		<ZipFileName>$(MSBuildProjectName).zip</ZipFileName>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -23,6 +23,7 @@
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
       <NoWarn></NoWarn>
     </PropertyGroup>
+	
     <ItemGroup>
         <Compile Update="ThirdpartyControllers.cs">
             <SubType>Form</SubType>
@@ -58,26 +59,23 @@
         <Compile Update="UpdServer.cs" />
     </ItemGroup>
     <ItemGroup>
-        <None Include="! Install the drivers in the Drivers folder">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-        <None Include="App.config">
+		<None Include="Properties\app.manifest" />
+		<None Include="App.config">
             <SubType>Designer</SubType>
         </None>
+        <Content Include="! Install the drivers in the Drivers folder">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
         <Content Include="Drivers\ViGEmBus_1.22.0_x64_x86_arm64.exe">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
         <Content Include="Drivers\HidHide_1.5.230_x64.exe">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
-    </ItemGroup>
-    <ItemGroup>
         <Content Include="Drivers\README.txt">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
-        <Content Include="Icons\snes.png" />
-        <None Include="Properties\app.manifest" />
-        <Content Include="Icons\betterjoy_icon.ico" />
+
         <ContentWithTargetPath Include="..\hidapi\windows\Win32\Release\hidapi.dll">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<TargetPath>x86\%(Filename)%(Extension)</TargetPath>
@@ -90,12 +88,6 @@
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<TargetPath>%(Filename)%(Extension)</TargetPath>
         </ContentWithTargetPath>
-        <Content Include="Icons\cross.png" />
-        <Content Include="Icons\jc_left_s.png" />
-        <Content Include="Icons\jc_right_s.png" />
-        <Resource Include="Icons\jc_left.png" />
-        <Resource Include="Icons\jc_right.png" />
-        <Resource Include="Icons\pro.png" />
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Update="ThirdpartyControllers.resx">
@@ -113,58 +105,6 @@
         </EmbeddedResource>
     </ItemGroup>
     <ItemGroup>
-        <PublishFile Include="Icons\betterjoy_icon.ico">
-            <Visible>False</Visible>
-            <Group>
-            </Group>
-            <TargetPath>
-            </TargetPath>
-            <PublishState>Exclude</PublishState>
-            <IncludeHash>True</IncludeHash>
-            <FileType>File</FileType>
-        </PublishFile>
-        <PublishFile Include="Icons\cross.png">
-            <Visible>False</Visible>
-            <Group>
-            </Group>
-            <TargetPath>
-            </TargetPath>
-            <PublishState>Exclude</PublishState>
-            <IncludeHash>True</IncludeHash>
-            <FileType>File</FileType>
-        </PublishFile>
-        <PublishFile Include="Icons\jc_left_s.png">
-            <Visible>False</Visible>
-            <Group>
-            </Group>
-            <TargetPath>
-            </TargetPath>
-            <PublishState>Exclude</PublishState>
-            <IncludeHash>True</IncludeHash>
-            <FileType>File</FileType>
-        </PublishFile>
-        <PublishFile Include="Icons\jc_right_s.png">
-            <Visible>False</Visible>
-            <Group>
-            </Group>
-            <TargetPath>
-            </TargetPath>
-            <PublishState>Exclude</PublishState>
-            <IncludeHash>True</IncludeHash>
-            <FileType>File</FileType>
-        </PublishFile>
-        <PublishFile Include="Icons\snes.png">
-            <Visible>False</Visible>
-            <Group>
-            </Group>
-            <TargetPath>
-            </TargetPath>
-            <PublishState>Exclude</PublishState>
-            <IncludeHash>True</IncludeHash>
-            <FileType>File</FileType>
-        </PublishFile>
-    </ItemGroup>
-    <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="9.0.5" />
         <PackageReference Include="Nefarius.Drivers.HidHide" Version="2.4.1" />
         <PackageReference Include="Nefarius.ViGEm.Client" Version="2.0.1" />
@@ -176,4 +116,19 @@
         </PackageReference>
     </ItemGroup>
 
+	<!-- Fix subsequent publishes not copying files -->
+	
+	<!-- Custom target to zip the output after publish -->
+	<Target Name="ZipOutputAfterPublish" AfterTargets="Publish">
+		<Message Text="PublishDir: $(PublishDir)" Importance="high" />
+		<Message Text="ZipFileName: $(ZipFileName)" Importance="high" />
+
+		<Error Condition="!Exists('$(PublishDir)')" Text="PublishDir '$(PublishDir)' does not exist!" />
+
+		<!-- Create the ZIP file using PowerShell (Windows) or zip (non-Windows) -->
+		<Exec Condition="'$(OS)' == 'Windows_NT'" Command="powershell -NoProfile -Command &quot;Get-ChildItem -Path '$(PublishDir)' -Exclude '$(MSBuildProjectName).pdb', '$(ZipFileName)' | Compress-Archive -DestinationPath '$(SolutionDir)build\$(ZipFileName)' -Force&quot;" />
+		<Exec Condition="'$(OS)' != 'Windows_NT'" Command="zip -r '$(SolutionDir)build\$(ZipFileName)' '$(PublishDir)' -x '$(MSBuildProjectName).deps.json' '$(ZipFileName)'" />
+
+		<Message Text="Zipped publish output to $(ProjectDir)build\$(ZipFileName)" Importance="high" />
+	</Target>
 </Project>
