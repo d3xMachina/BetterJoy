@@ -2864,7 +2864,7 @@ public class Joycon
         ok = false;
         for (var i = 0; i < 5; ++i)
         {
-            int length = SubcommandCheck(Hardware.Bluetooth.SubCommand.SPIFlashRead, bufSubcommand, response, false);
+            int length = SubcommandCheck(SubCommand.SPIFlashRead, bufSubcommand, response, false);
             if (length >= 20 + len && response[15] == addr2 && response[16] == addr1)
             {
                 ok = true;
