@@ -63,17 +63,25 @@
 		<None Include="App.config">
             <SubType>Designer</SubType>
         </None>
-        <Content Include="! Install the drivers in the Drivers folder">
+		
+        <Content Include="..\dist\! Install the drivers in the Drivers folder">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<Visible>false</Visible>
         </Content>
-        <Content Include="Drivers\ViGEmBus_1.22.0_x64_x86_arm64.exe">
+        <Content Include="..\dist\Drivers\ViGEmBus_1.22.0_x64_x86_arm64.exe">
+			<Link>Drivers\%(Filename)%(Extension)</Link>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<Visible>false</Visible>
         </Content>
-        <Content Include="Drivers\HidHide_1.5.230_x64.exe">
+        <Content Include="..\dist\Drivers\HidHide_1.5.230_x64.exe">
+			<Link>Drivers\%(Filename)%(Extension)</Link>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<Visible>false</Visible>
         </Content>
-        <Content Include="Drivers\README.txt">
+        <Content Include="..\dist\Drivers\README.txt">
+			<Link>Drivers\%(Filename)%(Extension)</Link>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<Visible>false</Visible>
         </Content>
 
         <ContentWithTargetPath Include="..\hidapi\windows\Win32\Release\hidapi.dll">

@@ -266,6 +266,6 @@ build/
 # BetterJoy ressources
 /title.png
 /title.pdn
-/BetterJoy/Drivers/*
+/dist/Drivers/*
 
 !README.txt
