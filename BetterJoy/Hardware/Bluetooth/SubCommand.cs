@@ -1,16 +1,16 @@
 namespace BetterJoy.Hardware.Bluetooth
 {
-    public enum SubCommand
+    public enum SubCommand : byte
     {
         GetControllerState              = 0x00,
         ManualBluetoothPairing          = 0x01,
         RequestDeviceInfo               = 0x02,
         SetReportMode                   = 0x03,
-        EnableTriggersElapsedTrigger    = 0x04,
+        GetTriggerButtonsElapsedTime    = 0x04,
         GetPageListState                = 0x05,
         SetHCIState                     = 0x06,
         ErasePairingInfo                = 0x07,
-        LowPowerMode                    = 0x08,
+        EnableLowPowerMode              = 0x08,
 
         SPIFlashRead                    = 0x10,
         SPIFlashWrite                   = 0x11,

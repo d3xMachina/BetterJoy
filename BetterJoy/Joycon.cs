@@ -754,7 +754,7 @@ public class Joycon
 
     private void SetLowPowerState(bool enable)
     {
-        SubcommandCheck(SubCommand.LowPowerMode, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandCheck(SubCommand.EnableLowPowerMode, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void BTActivate()
