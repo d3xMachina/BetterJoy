@@ -124,8 +124,6 @@
         </PackageReference>
     </ItemGroup>
 
-	<!-- Fix subsequent publishes not copying files -->
-	
 	<!-- Custom target to zip the output after publish -->
 	<Target Name="ZipOutputAfterPublish" AfterTargets="Publish">
 		<Message Text="PublishDir: $(PublishDir)" Importance="high" />
@@ -134,9 +132,9 @@
 		<Error Condition="!Exists('$(PublishDir)')" Text="PublishDir '$(PublishDir)' does not exist!" />
 
 		<!-- Create the ZIP file using PowerShell (Windows) or zip (non-Windows) -->
-		<Exec Condition="'$(OS)' == 'Windows_NT'" Command="powershell -NoProfile -Command &quot;Get-ChildItem -Path '$(PublishDir)' -Exclude '$(MSBuildProjectName).pdb', '$(ZipFileName)' | Compress-Archive -DestinationPath '$(SolutionDir)build\$(ZipFileName)' -Force&quot;" />
-		<Exec Condition="'$(OS)' != 'Windows_NT'" Command="zip -r '$(SolutionDir)build\$(ZipFileName)' '$(PublishDir)' -x '$(MSBuildProjectName).deps.json' '$(ZipFileName)'" />
+		<Exec Condition="'$(OS)' == 'Windows_NT'" Command="powershell -NoProfile -Command &quot;Get-ChildItem -Path '$(PublishDir)' -Exclude '$(MSBuildProjectName).pdb', '$(ZipFileName)' | Compress-Archive -DestinationPath '$(PublishDir)$(ZipFileName)' -Force&quot;" />
+		<Exec Condition="'$(OS)' != 'Windows_NT'" Command="zip -r '$(PublishDir)$(ZipFileName)' '$(PublishDir)' -x '$(MSBuildProjectName).pdb' '$(ZipFileName)'" />
 
-		<Message Text="Zipped publish output to $(ProjectDir)build\$(ZipFileName)" Importance="high" />
+		<Message Text="Zipped publish output to $(PublishDir)$(ZipFileName)" Importance="high" />
 	</Target>
 </Project>

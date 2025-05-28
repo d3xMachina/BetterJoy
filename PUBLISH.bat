@@ -1,7 +1,7 @@
 @echo off
 set "MSBUILD_PATH=%ProgramFiles%\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
 set "DOTNET_CLI_TELEMETRY_OPTOUT=1"
-set "options=--nologo --configuration Release -p:PublishSingleFile=true -p:DebugType=None -p:SelfContained=false -p:TieredPGO=true"
+set "options=--nologo --configuration Release -p:PublishSingleFile=true -p:SelfContained=false -p:TieredPGO=true"
 set "runtime=win-x64"
 set "framework=net9.0-windows"
 
