@@ -1,9 +1,7 @@
 @echo off
 set "MSBUILD_PATH=%ProgramFiles%\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
 set "DOTNET_CLI_TELEMETRY_OPTOUT=1"
-set "options=--nologo --configuration Release -p:PublishSingleFile=true -p:SelfContained=false -p:TieredPGO=true"
-set "runtime=win-x64"
-set "framework=net9.0-windows"
+set "options=--nologo -p:PublishProfile=Properties\PublishProfiles\FolderProfile.pubxml"
 
 echo Restore nuget packages...
 nuget restore
@@ -31,7 +29,7 @@ if %ERRORLEVEL% NEQ 0 goto :ERROR
 
 echo.
 echo Publish BetterJoy...
-dotnet publish BetterJoy %options% --runtime %runtime% --framework %framework% -o build\
+dotnet publish BetterJoy %options%
 if %ERRORLEVEL% NEQ 0 goto :ERROR
 
 echo.
