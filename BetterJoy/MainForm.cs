@@ -1297,6 +1297,12 @@ public partial class MainForm : Form
             case Joycon.ControllerType.NES:
                 temp = charging ? Resources.nes_charging : Resources.nes;
                 break;
+            case Joycon.ControllerType.FamicomI:
+                temp = charging ? Resources.famicom_i_charging : Resources.famicom_i;
+                break;
+            case Joycon.ControllerType.FamicomII:
+                temp = charging ? Resources.famicom_ii_charging : Resources.famicom_ii;
+                break;
             case Joycon.ControllerType.N64:
                 temp = charging ? Resources.n64_charging : Resources.n64;
                 break;
