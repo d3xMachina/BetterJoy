@@ -52,6 +52,8 @@ public class Joycon
         SNES = 0x04,
         N64 = 0x05,
         NES = 0x06,
+        FamicomI = 0x07,
+        FamicomII = 0x08,
     }
 
     public enum DebugType
@@ -314,6 +316,8 @@ public class Joycon
     public bool IsPro => Type is ControllerType.Pro;
     public bool IsSNES => Type == ControllerType.SNES;
     public bool IsNES => Type == ControllerType.NES;
+    public bool IsFamicomI => Type == ControllerType.FamicomI;
+    public bool IsFamicomII => Type == ControllerType.FamicomII;
     public bool IsN64 => Type == ControllerType.N64;
     public bool IsJoycon => Type is ControllerType.JoyconRight or ControllerType.JoyconLeft;
     public bool IsLeft => Type != ControllerType.JoyconRight;
@@ -491,10 +495,10 @@ public class Joycon
 
             SetLowPowerState(false);
 
-            //Make sure we're not actually a nes controller
+            //Make sure we're not actually a retro controller
             if (Type == ControllerType.JoyconRight)
             {
-                CheckIfRightIsNes();
+                CheckIfRightIsRetro();
             }
 
             var ok = DumpCalibrationData();
@@ -515,6 +519,7 @@ public class Joycon
 
             SetRumble(true);
             SetNFCIR(false);
+
             SetReportMode(ReportMode.StandardFull);
 
             State = Status.Attached;
@@ -725,7 +730,7 @@ public class Joycon
         return true;
     }
 
-    private void CheckIfRightIsNes()
+    private void CheckIfRightIsRetro()
     {
         Span<byte> response = stackalloc byte[ReportLength];
 
@@ -745,10 +750,15 @@ public class Joycon
                 {
                     Type = ControllerType.NES;
                 }
-                
-                if (response[17] == 0x08 || response[17] == 0x09)
+
+                if (response[17] == 0x07)
                 {
-                    Type = ControllerType.NES;
+                    Type = ControllerType.FamicomI;
+                }
+
+                if (response[17] == 0x08)
+                {
+                    Type = ControllerType.FamicomII;
                 }
 
                 return;
@@ -2487,17 +2497,17 @@ public class Joycon
 
     private bool CalibrationDataSupported()
     {
-        return !IsSNES && !IsNES && !IsThirdParty;
+        return !IsSNES && !IsNES && !IsThirdParty && !IsFamicomI && !IsFamicomII;
     }
 
     private bool SticksSupported()
     {
-        return !IsSNES && !IsNES;
+        return !IsSNES && !IsNES && !IsFamicomI && !IsFamicomII;
     }
 
     public bool IMUSupported()
     {
-        return !IsSNES && !IsN64 && !IsNES;
+        return !IsSNES && !IsN64 && !IsNES && !IsFamicomI && !IsFamicomII;
     }
 
     public bool HomeLightSupported()
@@ -2983,6 +2993,8 @@ public class Joycon
         var isPro = input.IsPro;
         var isSNES = input.IsSNES;
         var isNES = input.IsNES;
+        var isFamicomI = input.IsFamicomI;
+        var isFamicomII = input.IsFamicomII;
         var isN64 = input.IsN64;
         var isJoycon = input.IsJoycon;
         var isLeft = input.IsLeft;
@@ -3163,6 +3175,8 @@ public class Joycon
         var isPro = input.IsPro;
         var isSNES = input.IsSNES;
         var isNES = input.IsNES;
+        var isFamicomI = input.IsFamicomI;
+        var isFamicomII = input.IsFamicomII;
         var isN64 = input.IsN64;
         var isJoycon = input.IsJoycon;
         var isLeft = input.IsLeft;
@@ -3349,6 +3363,8 @@ public class Joycon
             ControllerType.Pro         => "Pro controller",
             ControllerType.SNES        => "SNES controller",
             ControllerType.NES         => "NES controller",
+            ControllerType.FamicomI    => "Famicom I controller",
+            ControllerType.FamicomII   => "Famicom II controller",
             ControllerType.N64         => "N64 controller",
             _                          => "Controller"
         };

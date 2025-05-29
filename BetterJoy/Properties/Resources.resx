@@ -130,6 +130,12 @@
   <data name="nes" type="System.Resources.ResXFileRef, System.Windows.Forms">
 	  <value>..\Icons\nes.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="famicom_i" type="System.Resources.ResXFileRef, System.Windows.Forms">
+	  <value>..\Icons\famicom_i.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="famicom_ii" type="System.Resources.ResXFileRef, System.Windows.Forms">
+	  <value>..\Icons\famicom_ii.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="jc_left_s" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Icons\jc_left_s.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -165,6 +171,12 @@
   </data>
   <data name="nes_charging" type="System.Resources.ResXFileRef, System.Windows.Forms">
 	  <value>..\Icons\nes_charging.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="famicom_i_charging" type="System.Resources.ResXFileRef, System.Windows.Forms">
+	  <value>..\Icons\famicom_i_charging.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="famicom_ii_charging" type="System.Resources.ResXFileRef, System.Windows.Forms">
+	  <value>..\Icons\famicom_ii_charging.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="n64" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Icons\n64.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

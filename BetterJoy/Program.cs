@@ -42,6 +42,8 @@ public class JoyconManager
     private const ushort ProductPro = 0x2009;
     private const ushort ProductSNES = 0x2017;
     private const ushort ProductNES = 0x2007;
+    private const ushort ProductFamicomI = 0x2007;
+    private const ushort ProductFamicomII = 0x2007;
     private const ushort ProductN64 = 0x2019;
 
     public readonly bool EnableIMU = true;
@@ -244,15 +246,13 @@ public class JoyconManager
         {
             return;
         }
-
-        var validController = false;
-
-        if (info.VendorId == VendorId &&
-            (info.ProductId is ProductL or ProductR or ProductPro or ProductSNES or ProductN64))
+        
+        // Don't need to put NES or Famicom here because they are the same as the right Joycon
+        bool validController = info is
         {
-            validController = true;
-        }
-
+            VendorId: VendorId, 
+            ProductId: ProductL or ProductR or ProductPro or ProductSNES or ProductN64
+        };
         
         SController thirdParty = null;
 
