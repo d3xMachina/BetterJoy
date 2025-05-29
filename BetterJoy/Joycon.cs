@@ -104,7 +104,7 @@ public class Joycon
         Disconnected
     }
 
-    private enum ReportMode
+    private enum ReportMode : byte
     {
         StandardFull = 0x30,
         SimpleHID = 0x3F,

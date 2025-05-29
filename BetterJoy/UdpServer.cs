@@ -46,14 +46,14 @@ internal class UdpServer
         Charged = 0xEF
     };
 
-    private enum RequestType
+    private enum RequestType : uint
     {
         DsucVersion = 0x100000,
         DsucListPorts = 0x100001,
         DsucPadData = 0x100002
     }
 
-    private enum ResponseType
+    private enum ResponseType : uint
     {
         DsusVersion = 0x100000,
         DsusPortInfo = 0x100001,
