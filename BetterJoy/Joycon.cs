@@ -2410,7 +2410,7 @@ public class Joycon
 
         if (print)
         {
-            PrintArray<byte>(buf, DebugType.Comms, bufParameters.Length, 11, $"Subcommand {sc:X2} sent." + " Data: {0:S}");
+            PrintArray<byte>(buf, DebugType.Comms, bufParameters.Length, 11, $"Subcommand {(byte)sc:X2} sent." + " Data: {0:S}");
         }
 
         int length = Write(buf);
