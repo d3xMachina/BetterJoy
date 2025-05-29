@@ -10,6 +10,7 @@ using BetterJoy.Collections;
 using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
+using BetterJoy.Hardware.Bluetooth;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 using WindowsInput.Events;
@@ -608,14 +609,14 @@ public class Joycon
         byte[] btmac_host = Program.BtMac.GetAddressBytes();
 
         // send host MAC and acquire Joycon MAC
-        SubcommandCheck(0x01, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]], buf);
-        SubcommandCheck(0x01, [0x02], buf); // LTKhash
-        SubcommandCheck(0x01, [0x03], buf); // save pairing info
+        SubcommandCheck(SubCommand.ManualBluetoothPairing, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]], buf);
+        SubcommandCheck(SubCommand.ManualBluetoothPairing, [0x02], buf); // LTKhash
+        SubcommandCheck(SubCommand.ManualBluetoothPairing, [0x03], buf); // save pairing info
     }
 
     public bool SetPlayerLED(byte leds = 0x00)
     {
-        return SubcommandCheck(0x30, [leds]) > 0;
+        return SubcommandCheck(SubCommand.SetPlayerLights, [leds]) > 0;
     }
 
     // Do not call after initial setup
@@ -639,7 +640,7 @@ public class Joycon
             0xFF,
             0xFF,
         ];
-        SubcommandCheck(0x38, buf);
+        SubcommandCheck(SubCommand.SetHomeLight, buf);
     }
 
     public void SetHomeLight(bool on)
@@ -665,12 +666,12 @@ public class Joycon
             0x11, // transition multiplier | duration multiplier, both use the base duration
             0xFF, // not used
         ];
-        Subcommand(0x38, buf); // don't wait for response
+        Subcommand(SubCommand.SetHomeLight, buf); // don't wait for response
     }
 
     private int SetHCIState(byte state)
     {
-        return SubcommandCheck(0x06, [state]);
+        return SubcommandCheck(SubCommand.SetHCIState, [state]);
     }
 
     private void SetIMU(bool enable)
@@ -680,7 +681,7 @@ public class Joycon
             return;
         }
 
-        SubcommandCheck(0x40, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandCheck(SubCommand.EnableIMU, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void SetIMUSensitivity()
@@ -697,12 +698,12 @@ public class Joycon
             0x01, // gyroscope performance rate : 0x00 = 833hz, 0x01 = 208hz (default)
             0x01  // accelerometer anti-aliasing filter bandwidth : 0x00 = 200hz, 0x01 = 100hz (default)
         ];
-        SubcommandCheck(0x41, buf);
+        SubcommandCheck(SubCommand.SetIMUSensitivity, buf);
     }
 
     private void SetRumble(bool enable)
     {
-        SubcommandCheck(0x48, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandCheck(SubCommand.EnableVibration, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void SetNFCIR(bool enable)
@@ -712,16 +713,16 @@ public class Joycon
             return;
         }
 
-        SubcommandCheck(0x22, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandCheck(SubCommand.SetMCUState, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private bool SetReportMode(ReportMode reportMode, bool checkResponse = true)
     {
         if (checkResponse)
         {
-            return SubcommandCheck(0x03, [(byte)reportMode]) > 0;
+            return SubcommandCheck(SubCommand.SetReportMode, [(byte)reportMode]) > 0;
         }
-        Subcommand(0x03, [(byte)reportMode]);
+        Subcommand(SubCommand.SetReportMode, [(byte)reportMode]);
         return true;
     }
 
@@ -731,7 +732,7 @@ public class Joycon
 
         for (var i = 0; i < 5; ++i)
         {
-            var respLength = SubcommandCheck(0x02, [], response, false);
+            var respLength = SubcommandCheck(SubCommand.RequestDeviceInfo, [], response, false);
 
             if (respLength > 0)
             {
@@ -753,7 +754,7 @@ public class Joycon
 
     private void SetLowPowerState(bool enable)
     {
-        SubcommandCheck(0x08, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandCheck(SubCommand.EnableLowPowerMode, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void BTActivate()
@@ -2390,7 +2391,7 @@ public class Joycon
         Write(buf);
     }
 
-    private int Subcommand(byte sc, ReadOnlySpan<byte> bufParameters, bool print = true)
+    private int Subcommand(SubCommand sc, ReadOnlySpan<byte> bufParameters, bool print = true)
     {
         if (_handle == IntPtr.Zero)
         {
@@ -2402,7 +2403,7 @@ public class Joycon
 
         _defaultBuf.AsSpan(0, 8).CopyTo(buf.Slice(2));
         bufParameters.CopyTo(buf.Slice(11));
-        buf[10] = sc;
+        buf[10] = (byte)sc;
         buf[1] = (byte)(_globalCount & 0x0F);
         buf[0] = 0x01;
         ++_globalCount;
@@ -2417,14 +2418,14 @@ public class Joycon
         return length;
     }
 
-    private int SubcommandCheck(byte sc, ReadOnlySpan<byte> bufParameters, bool print = true)
+    private int SubcommandCheck(SubCommand sc, ReadOnlySpan<byte> bufParameters, bool print = true)
     {
         Span<byte> response = stackalloc byte[ReportLength];
 
         return SubcommandCheck(sc, bufParameters, response, print);
     }
 
-    private int SubcommandCheck(byte sc, ReadOnlySpan<byte> bufParameters, Span<byte> response, bool print = true)
+    private int SubcommandCheck(SubCommand sc, ReadOnlySpan<byte> bufParameters, Span<byte> response, bool print = true)
     {
         int length = Subcommand(sc, bufParameters, print);
         if (length <= 0)
@@ -2438,7 +2439,7 @@ public class Joycon
         do
         {
             length = Read(response, 100); // don't set the timeout lower than 100 or might not always work
-            responseFound = length >= 20 && response[0] == 0x21 && response[14] == sc;
+            responseFound = length >= 20 && response[0] == 0x21 && response[14] == (byte)sc;
             
             if (length < 0)
             {
@@ -2863,7 +2864,7 @@ public class Joycon
         ok = false;
         for (var i = 0; i < 5; ++i)
         {
-            int length = SubcommandCheck(0x10, bufSubcommand, response, false);
+            int length = SubcommandCheck(SubCommand.SPIFlashRead, bufSubcommand, response, false);
             if (length >= 20 + len && response[15] == addr2 && response[16] == addr1)
             {
                 ok = true;
