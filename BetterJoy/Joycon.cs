@@ -741,25 +741,29 @@ public class Joycon
 
             if (respLength > 0)
             {
-                //The NES controllers both share the hardware id of a normal right joycon
-                //To identify it, we need to query the hardware directly
-                //Right NES: 0x0A
-                //Left NES: 0x09
-                //Famicom II (Right): 0x08
-                //Famicom I (Left): 0x07
-                if (response[17] == 0x0A || response[17] == 0x09)
-                {
-                    Type = ControllerType.NES;
-                }
+                // The NES and Famicom controllers both share the hardware id of a normal right joycon.
+                // To identify them, we need to query the hardware directly.
+                // NES Left: 0x09
+                // NES Right: 0x0A
+                // Famicom I (Left): 0x07
+                // Famicom II (Right): 0x08
+                var deviceType = response[17];
 
-                if (response[17] == 0x07)
+                switch (deviceType)
                 {
-                    Type = ControllerType.FamicomI;
-                }
-
-                if (response[17] == 0x08)
-                {
-                    Type = ControllerType.FamicomII;
+                    case 0x09:
+                    case 0x0A:
+                        Type = ControllerType.NES;
+                        break;
+                    case 0x07:
+                        Type = ControllerType.FamicomI;
+                        break;
+                    case 0x08:
+                        Type = ControllerType.FamicomII;
+                        break;
+                    default:
+                        Log($"Unknown device type: {deviceType:X2}", Logger.LogLevel.Warning);
+                        break;
                 }
 
                 return;
@@ -2498,17 +2502,17 @@ public class Joycon
 
     private bool CalibrationDataSupported()
     {
-        return !IsSNES && !IsNES && !IsThirdParty && !IsFamicomI && !IsFamicomII;
+        return !IsThirdParty && (IsJoycon || IsPro || IsN64);
     }
 
     private bool SticksSupported()
     {
-        return !IsSNES && !IsNES && !IsFamicomI && !IsFamicomII;
+        return IsJoycon || IsPro || IsN64;
     }
 
     public bool IMUSupported()
     {
-        return !IsSNES && !IsN64 && !IsNES && !IsFamicomI && !IsFamicomII;
+        return IsJoycon || IsPro;
     }
 
     public bool HomeLightSupported()
@@ -2991,11 +2995,6 @@ public class Joycon
     {
         var output = new OutputControllerXbox360InputState();
 
-        var isPro = input.IsPro;
-        var isSNES = input.IsSNES;
-        var isNES = input.IsNES;
-        var isFamicomI = input.IsFamicomI;
-        var isFamicomII = input.IsFamicomII;
         var isN64 = input.IsN64;
         var isJoycon = input.IsJoycon;
         var isLeft = input.IsLeft;
@@ -3173,11 +3172,6 @@ public class Joycon
     {
         var output = new OutputControllerDualShock4InputState();
 
-        var isPro = input.IsPro;
-        var isSNES = input.IsSNES;
-        var isNES = input.IsNES;
-        var isFamicomI = input.IsFamicomI;
-        var isFamicomII = input.IsFamicomII;
         var isN64 = input.IsN64;
         var isJoycon = input.IsJoycon;
         var isLeft = input.IsLeft;
