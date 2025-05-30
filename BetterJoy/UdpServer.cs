@@ -423,7 +423,7 @@ internal class UdpServer
         await _receiveTask;
         _ctsTransfers.Dispose();
 
-        _form.Log($"Motion server stopped.");
+        _form.Log("Motion server stopped.");
     }
 
     private void ResetUDPSocket()

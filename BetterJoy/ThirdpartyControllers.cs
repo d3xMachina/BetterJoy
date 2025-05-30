@@ -181,7 +181,7 @@ public partial class _3rdPartyControllers : Form
         var sc = "";
         foreach (SController v in list_customControllers.Items)
         {
-            sc += v.Serialise() + "\r\n";
+            sc += v.Serialise() + Environment.NewLine;
         }
 
         File.WriteAllText(Path, sc);

@@ -197,7 +197,7 @@ public partial class MainForm : Form
         }
         catch (Exception e)
         {
-            Log($"Error initializing log file.", e);
+            Log("Error initializing log file.", e);
         }
     }
 
@@ -331,7 +331,7 @@ public partial class MainForm : Form
         Log("Closing...");
         SystemEvents.PowerModeChanged -= OnPowerChange;
         await Program.Stop();
-        Log($"Closed.", Logger.LogLevel.Debug);
+        Log("Closed.", Logger.LogLevel.Debug);
 
         _close = true;
         Close(); // we're done with the UI thread, close it for real now
@@ -801,7 +801,7 @@ public partial class MainForm : Form
 
         if (_count == 0)
         {
-            console.Text = "Calibrating IMU...\r\n";
+            console.Text = $"Calibrating IMU...{Environment.NewLine}";
             _countDown.Stop();
 
             controller.StartIMUCalibration();
@@ -814,8 +814,8 @@ public partial class MainForm : Form
         }
         else
         {
-            console.Text = "Please keep the controller flat.\r\n";
-            console.Text += "Calibration will start in " + _count + " seconds.\r\n";
+            console.Text = $"Please keep the controller flat.{Environment.NewLine}";
+            console.Text += $"Calibration will start in {_count} seconds.{Environment.NewLine}";
             _count--;
         }
     }
@@ -869,7 +869,7 @@ public partial class MainForm : Form
                 imuData[4] = (short)quickselect_median(yA, rnd.Next);
                 imuData[5] = (short)quickselect_median(zA, rnd.Next);
 
-                console.Text += "IMU calibration completed!!!\r\n";
+                console.Text += $"IMU calibration completed!!!{Environment.NewLine}";
 
                 Settings.SaveCaliIMUData(CaliIMUData);
                 controller.GetActiveIMUData();
@@ -906,7 +906,7 @@ public partial class MainForm : Form
             _countDown.Stop();
             controller.StartSticksCalibration();
 
-            console.Text = "Calibrating Sticks center position...\r\n";
+            console.Text = $"Calibrating Sticks center position...{Environment.NewLine}";
 
             _count = 3;
             _countDown = new Timer();
@@ -917,8 +917,8 @@ public partial class MainForm : Form
         }
         else
         {
-            console.Text = "Please keep the sticks at the center position.\r\n";
-            console.Text += "Calibration will start in " + _count + " seconds.\r\n";
+            console.Text = $"Please keep the sticks at the center position.{Environment.NewLine}";
+            console.Text += $"Calibration will start in {_count} seconds.{Environment.NewLine}";
             _count--;
         }
     }
@@ -972,7 +972,7 @@ public partial class MainForm : Form
 
             ClearCalibrateDatas(controller);
 
-            console.Text += "Sticks center position calibration completed!!!\r\n";
+            console.Text += $"Sticks center position calibration completed!!!{Environment.NewLine}";
 
             _count = 5;
             _countDown = new Timer();
@@ -1003,7 +1003,7 @@ public partial class MainForm : Form
             _countDown.Stop();
             controller.StartSticksCalibration();
 
-            console.Text = "Calibrating Sticks min and max position...\r\n";
+            console.Text = $"Calibrating Sticks min and max position...{Environment.NewLine}";
 
             _count = 5;
             _countDown = new Timer();
@@ -1014,8 +1014,8 @@ public partial class MainForm : Form
         }
         else
         {
-            console.Text = "Please move the sticks in a circle when the calibration starts." + "\r\n";
-            console.Text += "Calibration will start in " + _count + " seconds.\r\n";
+            console.Text = $"Please move the sticks in a circle when the calibration starts.{Environment.NewLine}";
+            console.Text += $"Calibration will start in {_count} seconds.{Environment.NewLine}";
             _count--;
         }
     }
@@ -1071,7 +1071,7 @@ public partial class MainForm : Form
 
             ClearCalibrateDatas(controller);
 
-            console.Text += "Sticks min and max position calibration completed!!!\r\n";
+            console.Text += $"Sticks min and max position calibration completed!!!{Environment.NewLine}";
 
             Settings.SaveCaliSticksData(CaliSticksData);
             controller.GetActiveSticksData();

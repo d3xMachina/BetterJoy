@@ -37,7 +37,7 @@ public static class ExceptionExtensions
 
         if (stackTrace)
         {
-            message += $"\r\n{e.StackTrace}";
+            message += $"{Environment.NewLine}{e.StackTrace}";
         }
 
         return message;

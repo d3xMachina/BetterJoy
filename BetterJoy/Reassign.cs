@@ -39,7 +39,7 @@ public partial class Reassign : Form
 
             tip_reassign.SetToolTip(
                 c,
-                "Left-click to detect input.\r\nMiddle-click to clear to default.\r\nRight-click to see more options."
+                $"Left-click to detect input.{Environment.NewLine}Middle-click to clear to default.{Environment.NewLine}Right-click to see more options."
             );
             c.MouseDown += Remap;
             c.Menu = (c.Parent == gb_inputs) ? menuJoyButtons : menuJoyButtonsNoDisable;

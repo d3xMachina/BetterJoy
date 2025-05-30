@@ -1120,7 +1120,7 @@ public class Joycon
 
                 // Mapped shake key down
                 Simulate(Settings.Value("shake"), false);
-                DebugPrint("Shaked at time: " + _shakedTime, DebugType.Shake);
+                DebugPrint($"Shaked at time: {_shakedTime}", DebugType.Shake);
             }
         }
     }
@@ -2431,7 +2431,7 @@ public class Joycon
 
         if (print)
         {
-            PrintArray<byte>(buf, DebugType.Comms, bufParameters.Length, 11, $"Subcommand {(byte)sc:X2} sent." + " Data: {0:S}");
+            PrintArray<byte>(buf, DebugType.Comms, bufParameters.Length, 11, $"Subcommand {(byte)sc:X2} sent. Data: {{0:S}}");
         }
 
         int length = Write(buf);
@@ -2483,7 +2483,7 @@ public class Joycon
                 DebugType.Comms,
                 length - 1,
                 1,
-                $"Response ID {response[0]:X2}." + " Data: {0:S}"
+                $"Response ID {response[0]:X2}. Data: {{0:S}}"
             );
         }
 
@@ -2649,14 +2649,14 @@ public class Joycon
             {
                 if (userSensorData[0] == 0xB2 && userSensorData[1] == 0xA1)
                 {
-                    DebugPrint($"Retrieve user sensors calibration data.", DebugType.Comms);
+                    DebugPrint("Retrieve user sensors calibration data.", DebugType.Comms);
                 }
                 else
                 {
                     var factorySensorData = ReadSPICheck(0x60, 0x20, 0x18, ref ok);
                     sensorData = new ReadOnlySpan<byte>(factorySensorData, 0, 24);
 
-                    DebugPrint($"Retrieve factory sensors calibration data.", DebugType.Comms);
+                    DebugPrint("Retrieve factory sensors calibration data.", DebugType.Comms);
                 }
             }
 
@@ -2706,7 +2706,7 @@ public class Joycon
 
             if (noCalibration)
             {
-                Log($"Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
+                Log("Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
             }
 
             PrintArray<short>(_gyrNeutral, len: 3, d: DebugType.IMU, format: "Gyro neutral position: {0:S}");
@@ -2784,7 +2784,7 @@ public class Joycon
     {
         if (IsDeviceError)
         {
-            return $"Device unavailable : {State}";
+            return $"Device unavailable: {State}";
         }
 
         if (_handle ==  IntPtr.Zero)
@@ -2863,7 +2863,7 @@ public class Joycon
                 DebugType.Comms,
                 length - 1,
                 1,
-                $"USB response ID {response[0]:X2}." + " Data: {0:S}"
+                $"USB response ID {response[0]:X2}. Data: {{0:S}}"
             );
         }
 
@@ -2922,21 +2922,29 @@ public class Joycon
             return;
         }
 
-        if (len == 0)
+        if (len <= 0)
         {
             len = arr.Length;
         }
 
-        var tostr = "";
-        for (var i = 0; i < len; ++i)
+        var arrayAsStr = "";
+
+        if (len > 0)
         {
-            tostr += string.Format(
-                arr[0] is byte ? "{0:X2} " : arr[0] is float ? "{0:F} " : "{0:D} ",
-                arr[i + start]
-            );
+            var elementFormat = arr[0] switch
+            {
+                byte => "{0:X2} ",
+                float => "{0:F} ",
+                _ => "{0:D} "
+            };
+
+            for (var i = 0; i < len; ++i)
+            {
+                arrayAsStr += string.Format(elementFormat, arr[i + start]);
+            }
         }
 
-        DebugPrint(string.Format(format, tostr), d);
+        DebugPrint(string.Format(format, arrayAsStr), d);
     }
 
     public class StateChangedEventArgs : EventArgs

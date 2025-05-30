@@ -112,7 +112,7 @@ public class JoyconManager
         }
         catch (BadImageFormatException e)
         {
-            _form.Log($"Invalid hidapi.dll. (32 bits VS 64 bits)", e);
+            _form.Log("Invalid hidapi.dll. (32 bits VS 64 bits)", e);
             return false;
         }
         
@@ -391,7 +391,7 @@ public class JoyconManager
             }
             catch (Exception e)
             {
-                _form.Log($"Could not connect the virtual controller. Retrying...", e);
+                _form.Log("Could not connect the virtual controller. Retrying...", e);
 
                 ReconnectVirtualControllerDelayed(controller);
             }
@@ -438,7 +438,7 @@ public class JoyconManager
             }
             catch (Exception e)
             {
-                _form.Log($"Could not connect the virtual controller for the unjoined joycon. Retrying...", e);
+                _form.Log("Could not connect the virtual controller for the unjoined joycon. Retrying...", e);
 
                 ReconnectVirtualControllerDelayed(otherController);
             }
@@ -839,7 +839,7 @@ public class JoyconManager
         }
         catch (Exception e)
         {
-            _form.Log($"Could not connect the virtual controller for the split joycon. Retrying...", e);
+            _form.Log("Could not connect the virtual controller for the split joycon. Retrying...", e);
 
             if (keep && !controller.IsViGEmSetup())
             {
@@ -1028,7 +1028,7 @@ internal class Program
         }
         catch (Exception e)
         {
-            _form.Log($"Unable to start HIDHide.", e);
+            _form.Log("Unable to start HIDHide.", e);
             return;
         }
 
@@ -1075,7 +1075,7 @@ internal class Program
         }
         catch (Exception e)
         {
-            _form.Log($"Unable to add controller to block-list.", e);
+            _form.Log("Unable to add controller to block-list.", e);
         }
     }
 
@@ -1297,7 +1297,7 @@ internal class Program
         }
         catch (Exception e)
         {
-            _form.Log($"Unable to disable HIDHide.", e);
+            _form.Log("Unable to disable HIDHide.", e);
             return;
         }
 
