@@ -751,6 +751,9 @@ public class Joycon
 
                 switch (deviceType)
                 {
+                    case 0x02:
+                        // Do nothing, it's the right joycon
+                        break;
                     case 0x09:
                     case 0x0A:
                         Type = ControllerType.NES;
