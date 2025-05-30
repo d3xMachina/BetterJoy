@@ -65,7 +65,7 @@ internal class UdpServer
     private const int ReportSize = 100;
     private const int ControllerTimeoutSeconds = 5;
 
-    private readonly Dictionary<SocketAddress, ClientRequestTimes> _clients = new();
+    private readonly Dictionary<SocketAddress, ClientRequestTimes> _clients = [];
     private readonly IList<Joycon> _controllers;
 
     private volatile bool _running = false;
@@ -106,7 +106,7 @@ internal class UdpServer
         return currIdx;
     }
 
-    private void FinishPacket(Span<byte> packetBuffer)
+    private static void FinishPacket(Span<byte> packetBuffer)
     {
         CalculateCrc32(packetBuffer, packetBuffer.Slice(8, 4));
     }
@@ -435,7 +435,7 @@ internal class UdpServer
         _udpSock.IOControl((int)sioUdpConnreset, [Convert.ToByte(false)], null);
     }
 
-    private void ReportToBuffer(Joycon hidReport, Span<byte> outputData, ref int outIdx)
+    private static void ReportToBuffer(Joycon hidReport, Span<byte> outputData, ref int outIdx)
     {
         var ds4 = Joycon.MapToDualShock4Input(hidReport);
 
@@ -460,8 +460,8 @@ internal class UdpServer
 
         if (ds4.ShoulderRight) outputData[outIdx] |= 0x08;
         if (ds4.ShoulderLeft) outputData[outIdx] |= 0x04;
-        if (ds4.TriggerRightValue == Byte.MaxValue) outputData[outIdx] |= 0x02;
-        if (ds4.TriggerLeftValue == Byte.MaxValue) outputData[outIdx] |= 0x01;
+        if (ds4.TriggerRightValue == byte.MaxValue) outputData[outIdx] |= 0x02;
+        if (ds4.TriggerLeftValue == byte.MaxValue) outputData[outIdx] |= 0x01;
 
         outputData[++outIdx] = ds4.Ps ? (byte)1 : (byte)0;
         outputData[++outIdx] = ds4.Touchpad ? (byte)1 : (byte)0;
@@ -573,8 +573,8 @@ internal class UdpServer
                 {
                     relevantClients[nbClients++] = client.Key;
                 }
-                else if (client.Value.PadMacsTime.ContainsKey(hidReport.PadMacAddress) &&
-                         !IsControllerTimedout(now, client.Value.PadMacsTime[hidReport.PadMacAddress]))
+                else if (client.Value.PadMacsTime.TryGetValue(hidReport.PadMacAddress, out var padMacTime) &&
+                         !IsControllerTimedout(now, padMacTime))
                 {
                     relevantClients[nbClients++] = client.Key;
                 }
@@ -715,7 +715,7 @@ internal class UdpServer
                 PadIdsTime[i] = DateTime.MinValue;
             }
 
-            PadMacsTime = new Dictionary<PhysicalAddress, DateTime>();
+            PadMacsTime = [];
         }
 
         public void RequestPadInfo(byte regFlags, byte idToReg, PhysicalAddress macToReg)

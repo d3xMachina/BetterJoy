@@ -22,10 +22,10 @@ public partial class Reassign : Form
     {
         InitializeComponent();
 
-        var menuJoyButtons = createMenuJoyButtons();
+        var menuJoyButtons = CreateMenuJoyButtons();
 
-        var menuJoyButtonsNoDisable = createMenuJoyButtons();
-        var key = Enum.GetName(typeof(ButtonAction), ButtonAction.Disabled);
+        var menuJoyButtonsNoDisable = CreateMenuJoyButtons();
+        var key = Enum.GetName(ButtonAction.Disabled);
         menuJoyButtonsNoDisable.Items.RemoveByKey(key);
 
         foreach (var c in new[]
@@ -164,23 +164,29 @@ public partial class Reassign : Form
         Close();
     }
 
-    private ContextMenuStrip createMenuJoyButtons()
+    private ContextMenuStrip CreateMenuJoyButtons()
     {
         var menuJoyButtons = new ContextMenuStrip(components);
 
-        foreach (int tag in Enum.GetValues(typeof(ButtonAction)))
+        foreach (int tag in Enum.GetValues<ButtonAction>())
         {
             var name = Enum.GetName(typeof(ButtonAction), tag);
-            var temp = new ToolStripMenuItem(name) { Name = name };
-            temp.Tag = (ButtonAction)tag;
+            var temp = new ToolStripMenuItem(name)
+            {
+                Name = name,
+                Tag = (ButtonAction)tag
+            };
             menuJoyButtons.Items.Add(temp);
         }
 
-        foreach (int tag in Enum.GetValues(typeof(Joycon.Button)))
+        foreach (int tag in Enum.GetValues<Joycon.Button>())
         {
             var name = Enum.GetName(typeof(Joycon.Button), tag);
-            var temp = new ToolStripMenuItem(name) { Name = name };
-            temp.Tag = (Joycon.Button)tag;
+            var temp = new ToolStripMenuItem(name)
+            {
+                Name = name,
+                Tag = (Joycon.Button)tag
+            };
             menuJoyButtons.Items.Add(temp);
         }
 

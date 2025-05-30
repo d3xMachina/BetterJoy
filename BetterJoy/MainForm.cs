@@ -28,8 +28,8 @@ public partial class MainForm : Form
 
     public readonly MainFormConfig Config;
 
-    public readonly List<KeyValuePair<string, short[]>> CaliIMUData = new();
-    public readonly List<KeyValuePair<string, ushort[]>> CaliSticksData = new();
+    public readonly List<KeyValuePair<string, short[]>> CaliIMUData = [];
+    public readonly List<KeyValuePair<string, ushort[]>> CaliSticksData = [];
 
     private int _count;
     private Timer _countDown;
@@ -62,7 +62,7 @@ public partial class MainForm : Form
         SetTaskbarIcon();
         version_lbl.Text = GetProgramVersion();
 
-        _con = new List<Button> { con1, con2, con3, con4, con5, con6, con7, con8 };
+        _con = [con1, con2, con3, con4, con5, con6, con7, con8];
 
         InitializeConfigPanel();
 
@@ -96,7 +96,7 @@ public partial class MainForm : Form
 
             if (key == "DebugType")
             {
-                var enumValues = Enum.GetValues(typeof(Joycon.DebugType));
+                var enumValues = Enum.GetValues<Joycon.DebugType>();
                 items.AddRange(enumValues.Cast<Joycon.DebugType>().Select(e => e.ToString().ToLower()).ToList());
             }
             else if (key == "GyroToJoyOrMouse")
@@ -105,7 +105,7 @@ public partial class MainForm : Form
             }
             else if (key == "DoNotRejoinJoycons")
             {
-                var enumValues = Enum.GetValues(typeof(Joycon.Orientation));
+                var enumValues = Enum.GetValues<Joycon.Orientation>();
                 items.AddRange(enumValues.Cast<Joycon.Orientation>().Select(e => e.ToString().ToLower()).ToList());
             }
 
@@ -114,7 +114,7 @@ public partial class MainForm : Form
             {
                 comboBox.Items.Add(item);
 
-                if (item == value.ToLower())
+                if (item.Equals(value, StringComparison.CurrentCultureIgnoreCase))
                 {
                     comboBox.SelectedIndex = index;
                 }
@@ -201,7 +201,7 @@ public partial class MainForm : Form
         }
     }
 
-    private string GetProgramVersion()
+    private static string GetProgramVersion()
     {
         var programVersion = Assembly.GetExecutingAssembly().GetName().Version;
         return $"v{programVersion.Major}.{programVersion.Minor}.{programVersion.Build}";
@@ -483,42 +483,40 @@ public partial class MainForm : Form
         }
     }
 
-    private void SetRunOnBoot(bool enable)
+    private static void SetRunOnBoot(bool enable)
     {
-        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
+        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);
+        if (key != null)
         {
-            if (key != null)
-            {
-                var programPath = Application.ExecutablePath;
-                var programName = Application.ProductName;
+            var programPath = Application.ExecutablePath;
+            var programName = Application.ProductName;
 
-                if (enable)
-                {
-                    key.SetValue(programName, programPath);
-                }
-                else
-                {
-                    key.DeleteValue(programName);
-                }
+            if (enable)
+            {
+                key.SetValue(programName, programPath);
+            }
+            else
+            {
+                key.DeleteValue(programName);
             }
         }
     }
 
-    static bool IsRunOnBootSet()
+    private static bool IsRunOnBootSet()
     {
-        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", false))
+        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", false);
+        if (key != null)
         {
-            if (key != null)
+            var programPath = Application.ExecutablePath;
+            var programName = Application.ProductName;
+            var value = key.GetValue(programName);
+
+            if (value is string path)
             {
-                var programPath = Application.ExecutablePath;
-                var programName = Application.ProductName;
-                var value = key.GetValue(programName);
-                if (value is string path)
-                {
-                    return path.Equals(programPath, StringComparison.OrdinalIgnoreCase);
-                }
+                return path.Equals(programPath, StringComparison.OrdinalIgnoreCase);
             }
         }
+
         return false;
     }
 
@@ -586,7 +584,7 @@ public partial class MainForm : Form
         await Program.ApplyConfig();
     }
 
-    private void Restart()
+    private static void Restart()
     {
         var info = new ProcessStartInfo
         {
@@ -862,12 +860,12 @@ public partial class MainForm : Form
                     zA.Add(calibrationData.Za);
                 }
 
-                imuData[0] = (short)quickselect_median(xG, rnd.Next);
-                imuData[1] = (short)quickselect_median(yG, rnd.Next);
-                imuData[2] = (short)quickselect_median(zG, rnd.Next);
-                imuData[3] = (short)quickselect_median(xA, rnd.Next);
-                imuData[4] = (short)quickselect_median(yA, rnd.Next);
-                imuData[5] = (short)quickselect_median(zA, rnd.Next);
+                imuData[0] = (short)QuickselectMedian(xG, rnd.Next);
+                imuData[1] = (short)QuickselectMedian(yG, rnd.Next);
+                imuData[2] = (short)QuickselectMedian(zG, rnd.Next);
+                imuData[3] = (short)QuickselectMedian(xA, rnd.Next);
+                imuData[4] = (short)QuickselectMedian(yA, rnd.Next);
+                imuData[5] = (short)QuickselectMedian(zA, rnd.Next);
 
                 console.Text += $"IMU calibration completed!!!{Environment.NewLine}";
 
@@ -964,11 +962,11 @@ public partial class MainForm : Form
                 yS2.Add(calibrationData.Ys2);
             }
 
-            leftStickData[2] = (ushort)Math.Round(quickselect_median(xS1, rnd.Next));
-            leftStickData[3] = (ushort)Math.Round(quickselect_median(yS1, rnd.Next));
+            leftStickData[2] = (ushort)Math.Round(QuickselectMedian(xS1, rnd.Next));
+            leftStickData[3] = (ushort)Math.Round(QuickselectMedian(yS1, rnd.Next));
 
-            rightStickData[2] = (ushort)Math.Round(quickselect_median(xS2, rnd.Next));
-            rightStickData[3] = (ushort)Math.Round(quickselect_median(yS2, rnd.Next));
+            rightStickData[2] = (ushort)Math.Round(QuickselectMedian(xS2, rnd.Next));
+            rightStickData[3] = (ushort)Math.Round(QuickselectMedian(yS2, rnd.Next));
 
             ClearCalibrateDatas(controller);
 
@@ -1084,7 +1082,7 @@ public partial class MainForm : Form
         }
     }
 
-    private void ClearCalibrateDatas(Joycon controller)
+    private static void ClearCalibrateDatas(Joycon controller)
     {
         controller.StopIMUCalibration(true);
         controller.StopSticksCalibration(true);
@@ -1103,7 +1101,7 @@ public partial class MainForm : Form
         ClearCalibrateDatas(controller);
     }
 
-    private double quickselect_median(List<int> l, Func<int, int> pivotFn)
+    private static double QuickselectMedian(List<int> l, Func<int, int> pivotFn)
     {
         if (l.Count == 0)
         {
@@ -1119,7 +1117,7 @@ public partial class MainForm : Form
         return 0.5 * (Quickselect(l, ll / 2 - 1, pivotFn) + Quickselect(l, ll / 2, pivotFn));
     }
 
-    private int Quickselect(List<int> l, int k, Func<int, int> pivotFn)
+    private static int Quickselect(List<int> l, int k, Func<int, int> pivotFn)
     {
         if (l.Count == 1 && k == 0)
         {
@@ -1222,24 +1220,14 @@ public partial class MainForm : Form
                 continue;
             }
 
-            switch (batteryLevel)
+            button.BackColor = batteryLevel switch
             {
-                case Joycon.BatteryLevel.Full:
-                    button.BackColor = Color.FromArgb(0xAA, 0, 150, 0);
-                    break;
-                case Joycon.BatteryLevel.Medium:
-                    button.BackColor = Color.FromArgb(0xAA, 150, 230, 0);
-                    break;
-                case Joycon.BatteryLevel.Low:
-                    button.BackColor = Color.FromArgb(0xAA, 250, 210, 0);
-                    break;
-                case Joycon.BatteryLevel.Critical:
-                    button.BackColor = Color.FromArgb(0xAA, 250, 150, 0);
-                    break;
-                default:
-                    button.BackColor = Color.FromArgb(0xAA, 230, 0, 0);
-                    break;
-            }
+                Joycon.BatteryLevel.Full => Color.FromArgb(0xAA, 0, 150, 0),
+                Joycon.BatteryLevel.Medium => Color.FromArgb(0xAA, 150, 230, 0),
+                Joycon.BatteryLevel.Low => Color.FromArgb(0xAA, 250, 210, 0),
+                Joycon.BatteryLevel.Critical => Color.FromArgb(0xAA, 250, 150, 0),
+                _ => Color.FromArgb(0xAA, 230, 0, 0),
+            };
         }
     }
 
@@ -1263,7 +1251,7 @@ public partial class MainForm : Form
         }
     }
 
-    private void SetControllerImage(Button button, Joycon.ControllerType controllerType, bool joined = false, bool charging = false)
+    private static void SetControllerImage(Button button, Joycon.ControllerType controllerType, bool joined = false, bool charging = false)
     {
         Bitmap temp;
         switch (controllerType)

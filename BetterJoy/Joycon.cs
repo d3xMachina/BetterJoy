@@ -121,11 +121,11 @@ public class Joycon
 
     public readonly ControllerConfig Config;
 
-    private static readonly byte[] LedById = { 0b0001, 0b0011, 0b0111, 0b1111, 0b1001, 0b0101, 0b1101, 0b0110 };
+    private static readonly byte[] LedById = [0b0001, 0b0011, 0b0111, 0b1111, 0b1001, 0b0101, 0b1101, 0b0110];
 
-    private readonly short[] _accNeutral = { 0, 0, 0 };
-    private readonly short[] _accRaw = { 0, 0, 0 };
-    private readonly short[] _accSensiti = { 0, 0, 0 };
+    private readonly short[] _accNeutral = [0, 0, 0];
+    private readonly short[] _accRaw = [0, 0, 0];
+    private readonly short[] _accSensiti = [0, 0, 0];
 
     private readonly MadgwickAHRS _AHRS; // for getting filtered Euler angles of rotation; 5ms sampling rate
 
@@ -136,35 +136,32 @@ public class Joycon
     private readonly bool[] _buttonsPrev = new bool[20];
     private readonly bool[] _buttonsRemapped = new bool[20];
 
-    private readonly float[] _curRotation = { 0, 0, 0, 0, 0, 0 }; // Filtered IMU data
+    private readonly float[] _curRotation = [0, 0, 0, 0, 0, 0]; // Filtered IMU data
 
-    private readonly byte[] _defaultBuf = { 0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40 };
+    private readonly byte[] _defaultBuf = [0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40];
 
-    private readonly short[] _gyrNeutral = { 0, 0, 0 };
+    private readonly short[] _gyrNeutral = [0, 0, 0];
+    private readonly short[] _gyrRaw = [0, 0, 0];
+    private readonly short[] _gyrSensiti = [0, 0, 0];
 
-    private readonly short[] _gyrRaw = { 0, 0, 0 };
+    private readonly Dictionary<int, bool> _mouseToggleBtn = [];
 
-    private readonly short[] _gyrSensiti = { 0, 0, 0 };
-
-    private readonly bool _IMUEnabled;
-    private readonly Dictionary<int, bool> _mouseToggleBtn = new();
-
-    private readonly float[] _otherStick = { 0, 0 };
+    private readonly float[] _otherStick = [0, 0];
 
     // Values from https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/blob/master/spi_flash_notes.md#6-axis-horizontal-offsets
-    private readonly short[] _accProHorOffset = { -688, 0, 4038 };
-    private readonly short[] _accLeftHorOffset = { 350, 0, 4081 };
-    private readonly short[] _accRightHorOffset = { 350, 0, -4081 };
+    private readonly short[] _accProHorOffset = [-688, 0, 4038];
+    private readonly short[] _accLeftHorOffset = [350, 0, 4081];
+    private readonly short[] _accRightHorOffset = [350, 0, -4081];
 
     private readonly Stopwatch _shakeTimer = Stopwatch.StartNew(); //Setup a timer for measuring shake in milliseconds
 
-    private readonly byte[] _sliderVal = { 0, 0 };
+    private readonly byte[] _sliderVal = [0, 0];
 
-    private readonly ushort[] _stickCal = { 0, 0, 0, 0, 0, 0 };
-    private readonly ushort[] _stickPrecal = { 0, 0 };
+    private readonly ushort[] _stickCal = [0, 0, 0, 0, 0, 0];
+    private readonly ushort[] _stickPrecal = [0, 0];
 
-    private readonly ushort[] _stick2Cal = { 0, 0, 0, 0, 0, 0 };
-    private readonly ushort[] _stick2Precal = { 0, 0 };
+    private readonly ushort[] _stick2Cal = [0, 0, 0, 0, 0, 0];
+    private readonly ushort[] _stick2Precal = [0, 0];
 
     private Vector3 _accG = Vector3.Zero;
     public bool ActiveGyro;
@@ -183,10 +180,8 @@ public class Joycon
     private float _deadzone2;
     private float _range;
     private float _range2;
-    
-    private bool _doLocalize;
 
-    private MainForm _form;
+    private readonly MainForm _form;
 
     private byte _globalCount;
     private Vector3 _gyrG = Vector3.Zero;
@@ -200,8 +195,8 @@ public class Joycon
 
     public OutputControllerDualShock4 OutDs4;
     public OutputControllerXbox360 OutXbox;
-    private readonly object _updateInputLock = new object();
-    private readonly object _ctsCommunicationsLock = new object();
+    private readonly Lock _updateInputLock = new();
+    private readonly Lock _ctsCommunicationsLock = new();
 
     public int PacketCounter;
 
@@ -214,7 +209,7 @@ public class Joycon
     private Thread _receiveReportsThread;
     private Thread _sendCommandsThread;
 
-    private RumbleQueue _rumbles;
+    private readonly RumbleQueue _rumbles;
 
     public readonly string SerialNumber;
 
@@ -239,8 +234,8 @@ public class Joycon
         }
     }
 
-    private float[] _stick = { 0, 0 };
-    private float[] _stick2 = { 0, 0 };
+    private float[] _stick = [0, 0];
+    private float[] _stick2 = [0, 0];
 
     private CancellationTokenSource _ctsCommunications;
     public ulong Timestamp { get; private set; }
@@ -252,13 +247,13 @@ public class Joycon
 
     public EventHandler<StateChangedEventArgs> StateChanged;
 
-    public readonly ConcurrentList<IMUData> CalibrationIMUDatas = new();
-    public readonly ConcurrentList<SticksData> CalibrationStickDatas = new();
+    public readonly ConcurrentList<IMUData> CalibrationIMUDatas = [];
+    public readonly ConcurrentList<SticksData> CalibrationStickDatas = [];
     private bool _calibrateSticks = false;
     private bool _calibrateIMU = false;
 
-    private Stopwatch _timeSinceReceive = new();
-    private RollingAverage _avgReceiveDeltaMs = new(100); // delta is around 10-16ms, so rolling average over 1000-1600ms
+    private readonly Stopwatch _timeSinceReceive = new();
+    private readonly RollingAverage _avgReceiveDeltaMs = new(100); // delta is around 10-16ms, so rolling average over 1000-1600ms
 
     private volatile bool _pauseSendCommands;
     private volatile bool _sendCommandsPaused;
@@ -268,8 +263,6 @@ public class Joycon
     public Joycon(
         MainForm form,
         IntPtr handle,
-        bool imu,
-        bool localize,
         string path,
         string serialNum,
         bool isUSB,
@@ -286,9 +279,8 @@ public class Joycon
         SerialNumber = serialNum;
         SerialOrMac = serialNum;
         _handle = handle;
-        _IMUEnabled = imu;
-        _doLocalize = localize;
         _rumbles = new RumbleQueue([Config.LowFreq, Config.HighFreq, 0]);
+
         for (var i = 0; i < _buttonsDownTimestamp.Length; i++)
         {
             _buttonsDownTimestamp[i] = -1;
@@ -297,7 +289,6 @@ public class Joycon
         _AHRS = new MadgwickAHRS(0.005f, Config.AHRSBeta);
 
         PadId = id;
-
         IsUSB = isUSB;
         Type = type;
         IsThirdParty = isThirdParty;
@@ -511,12 +502,8 @@ public class Joycon
             BlinkHomeLight();
             SetLEDByPlayerNum(PadId);
 
-            SetIMU(_IMUEnabled);
-
-            if (_IMUEnabled)
-            {
-                SetIMUSensitivity();
-            }
+            SetIMU(true);
+            SetIMUSensitivity();
 
             SetRumble(true);
             SetNFCIR(false);
@@ -955,12 +942,9 @@ public class Joycon
 
     private void UpdateInput()
     {
-        bool lockTaken = false;
-        bool otherLockTaken = false;
-
         if (Type == ControllerType.JoyconLeft)
         {
-            Monitor.Enter(_updateInputLock, ref lockTaken); // need with joined joycons
+            _updateInputLock.Enter(); // need with joined joycons
         }
 
         try
@@ -971,7 +955,7 @@ public class Joycon
             // Update the left joycon virtual controller when joined
             if (!IsLeft && IsJoined)
             {
-                Monitor.Enter(Other._updateInputLock, ref otherLockTaken);
+                Other._updateInputLock.Enter();
 
                 ds4 = ref Other.OutDs4;
                 xbox = ref Other.OutXbox;
@@ -987,14 +971,14 @@ public class Joycon
         }
         finally
         {
-            if (lockTaken)
+            if (_updateInputLock.IsHeldByCurrentThread)
             {
-                Monitor.Exit(_updateInputLock);
+                _updateInputLock.Exit();
             }
 
-            if (otherLockTaken)
+            if (Other != null && Other._updateInputLock.IsHeldByCurrentThread)
             {
-                Monitor.Exit(Other._updateInputLock);
+                Other._updateInputLock.Exit();
             }
         }
     }
@@ -1133,6 +1117,7 @@ public class Joycon
         if (s.StartsWith("key_"))
         {
             var key = (KeyCode)int.Parse(s.AsSpan(4));
+
             if (click)
             {
                 WindowsInput.Simulate.Events().Click(key).Invoke();
@@ -1152,6 +1137,7 @@ public class Joycon
         else if (s.StartsWith("mse_"))
         {
             var button = (ButtonCode)int.Parse(s.AsSpan(4));
+
             if (click)
             {
                 WindowsInput.Simulate.Events().Click(button).Invoke();
@@ -1162,8 +1148,8 @@ public class Joycon
                 {
                     if (!up)
                     {
-                        bool release;
-                        _mouseToggleBtn.TryGetValue((int)button, out release);
+                        _mouseToggleBtn.TryGetValue((int)button, out var release);
+
                         if (release)
                         {
                             WindowsInput.Simulate.Events().Release(button).Invoke();
@@ -1212,7 +1198,7 @@ public class Joycon
         }
     }
 
-    private int FlipButton(int button)
+    private static int FlipButton(int button)
     {
         return button switch
         {
@@ -2493,12 +2479,12 @@ public class Joycon
         return length;
     }
 
-    private float CalculateDeadzone(ushort[] cal, ushort deadzone)
+    private static float CalculateDeadzone(ushort[] cal, ushort deadzone)
     {
         return 2.0f * deadzone / Math.Max(cal[0] + cal[4], cal[1] + cal[5]);
     }
 
-    private float CalculateRange(ushort range)
+    private static float CalculateRange(ushort range)
     {
         return (float)range / 0xFFF;
     }
@@ -2881,7 +2867,7 @@ public class Joycon
             return readBuf;
         }
 
-        byte[] bufSubcommand = { addr2, addr1, 0x00, 0x00, (byte)len };
+        byte[] bufSubcommand = [addr2, addr1, 0x00, 0x00, (byte)len];
         
         Span<byte> response = stackalloc byte[ReportLength];
 
@@ -3492,7 +3478,7 @@ public class Joycon
     private class RumbleQueue
     {
         private const int MaxRumble = 15;
-        private ConcurrentSpinQueue<float[]> _queue;
+        private readonly ConcurrentSpinQueue<float[]> _queue;
 
         public RumbleQueue(float[] rumbleInfo)
         {
@@ -3502,11 +3488,11 @@ public class Joycon
 
         public void Enqueue(float lowFreq, float highFreq, float amplitude)
         {
-            float[] rumble = { lowFreq, highFreq, amplitude };
+            float[] rumble = [lowFreq, highFreq, amplitude];
             _queue.Enqueue(rumble);
         }
 
-        private byte EncodeAmp(float amp)
+        private static byte EncodeAmp(float amp)
         {
             byte enAmp;
 
@@ -3631,8 +3617,8 @@ public class Joycon
 
     private class RollingAverage
     {
-        private Queue<int> _samples;
-        private int _size;
+        private readonly Queue<int> _samples;
+        private readonly int _size;
         private long _sum;
 
         public RollingAverage(int size)

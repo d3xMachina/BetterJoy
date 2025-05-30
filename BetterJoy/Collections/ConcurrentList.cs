@@ -10,20 +10,20 @@ namespace BetterJoy.Collections;
 public class SafeEnumerator<T> : IEnumerator<T>
 {
     private readonly IEnumerator<T> _inner;
-    private readonly object _lock;
+    private readonly Lock _lock;
 
-    public SafeEnumerator(IEnumerable<T> inner, object @lock)
+    public SafeEnumerator(IEnumerable<T> inner, Lock @lock)
     {
         _lock = @lock;
 
-        Monitor.Enter(_lock);
+        _lock.Enter();
         _inner = inner.GetEnumerator();
     }
 
     public void Dispose()
     {
         // called when foreach loop finishes
-        Monitor.Exit(_lock);
+        _lock.Exit();
     }
 
     public bool MoveNext()
@@ -123,7 +123,7 @@ public sealed class ConcurrentList<T> : IList<T>
     #region Fields
 
     private readonly IList<T> _internalList;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     #endregion
 

@@ -22,7 +22,7 @@ using static BetterJoy._3rdPartyControllers;
 
 namespace BetterJoy;
 
-public struct ControllerIdentifier
+public readonly struct ControllerIdentifier
 {
     public readonly string Path;
     public readonly long TimestampCreation;
@@ -46,15 +46,12 @@ public class JoyconManager
     private const ushort ProductFamicomII = 0x2007;
     private const ushort ProductN64 = 0x2019;
 
-    public readonly bool EnableIMU = true;
-    public readonly bool EnableLocalize = false;
-
     private readonly MainForm _form;
 
     private bool _isRunning = false;
     private CancellationTokenSource _ctsDevicesNotifications;
 
-    public ConcurrentList<Joycon> Controllers { get; } = new(); // connected controllers
+    public ConcurrentList<Joycon> Controllers { get; } = []; // connected controllers
 
     private readonly Channel<DeviceNotification> _channelDeviceNotifications;
 
@@ -342,8 +339,6 @@ public class JoyconManager
         var controller = new Joycon(
             _form,
             handle,
-            EnableIMU,
-            EnableLocalize && EnableIMU,
             path,
             serial,
             isUSB,
@@ -893,7 +888,7 @@ public class JoyconManager
         return change;
     }
 
-    public void ApplyConfig(Joycon controller, bool showErrors = true)
+    public static void ApplyConfig(Joycon controller, bool showErrors = true)
     {
         controller.ApplyConfig(showErrors);
     }
@@ -910,12 +905,12 @@ internal class Program
 
     private static MainForm _form;
 
-    public static readonly ConcurrentList<SController> ThirdpartyCons = new();
+    public static readonly ConcurrentList<SController> ThirdpartyCons = [];
 
     public static ProgramConfig Config;
 
     private static readonly HidHideControlService _hidHideService = new();
-    private static readonly HashSet<string> BlockedDeviceInstances = new();
+    private static readonly HashSet<string> BlockedDeviceInstances = [];
 
     private static bool _isRunning;
     public static bool IsSuspended { get; private set; }
@@ -1392,7 +1387,7 @@ internal class Program
         bool showErrors = true;
         foreach (var controller in Mgr.Controllers)
         {
-            Mgr.ApplyConfig(controller, showErrors);
+            JoyconManager.ApplyConfig(controller, showErrors);
             showErrors = false; // only show parsing errors once
         }
     }

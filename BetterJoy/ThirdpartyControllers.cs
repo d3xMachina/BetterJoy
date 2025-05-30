@@ -25,7 +25,7 @@ public partial class _3rdPartyControllers : Form
         list_allControllers.Sorted = true;
         list_customControllers.Sorted = true;
 
-        foreach (Joycon.ControllerType type in Enum.GetValues(typeof(Joycon.ControllerType)))
+        foreach (Joycon.ControllerType type in Enum.GetValues<Joycon.ControllerType>())
         {
             chooseType.Items.Add(Joycon.GetControllerName(type));
         }
@@ -89,7 +89,7 @@ public partial class _3rdPartyControllers : Form
         Program.UpdateThirdpartyControllers(controllers);
     }
 
-    private bool ContainsText(ListBox a, string manu)
+    private static bool ContainsText(ListBox a, string manu)
     {
         foreach (SController v in a.Items)
         {
@@ -121,7 +121,7 @@ public partial class _3rdPartyControllers : Form
         // Add device to list
         for (HIDApi.HIDDeviceInfo enumerate; ptr != IntPtr.Zero; ptr = enumerate.Next)
         {
-            enumerate = (HIDApi.HIDDeviceInfo)Marshal.PtrToStructure(ptr, typeof(HIDApi.HIDDeviceInfo));
+            enumerate = Marshal.PtrToStructure<HIDApi.HIDDeviceInfo>(ptr);
 
             if (enumerate.SerialNumber == null)
             {
