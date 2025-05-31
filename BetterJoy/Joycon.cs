@@ -2608,22 +2608,24 @@ public class Joycon
         // Looks like the range is a 12 bits precision ratio.
         // I suppose the right way to interpret it is as a float by dividing it by 0xFFF
         {
-            var factoryDeadzoneData = ReadSPICheck(IsLeft ? SPIPage.StickDeadZoneLeft : SPIPage.StickDeadZoneRight, ref ok);
+            var factoryDeadzoneData = ReadSPICheck(SPIPage.StickDeadZone, ref ok);
 
-            var deadzone = (ushort)(((factoryDeadzoneData[4] << 8) & 0xF00) | factoryDeadzoneData[3]);
+            var offset = IsLeft ? 0 : 0x12;
+
+            var deadzone = (ushort)(((factoryDeadzoneData[1 + offset] << 8) & 0xF00) | factoryDeadzoneData[0 + offset]);
             _deadzone = CalculateDeadzone(_stickCal, deadzone);
 
-            var range = (ushort)((factoryDeadzoneData[5] << 4) | (factoryDeadzoneData[4] >> 4));
+            var range = (ushort)((factoryDeadzoneData[2 + offset] << 4) | (factoryDeadzoneData[1 + offset] >> 4));
             _range = CalculateRange(range);
 
             if (IsPro)
             {
-                var factoryDeadzone2Data = ReadSPICheck(!IsLeft ? SPIPage.StickDeadZoneLeft : SPIPage.StickDeadZoneRight, ref ok);
-
-                var deadzone2 = (ushort)(((factoryDeadzone2Data[4] << 8) & 0xF00) | factoryDeadzone2Data[3]);
+                offset = !IsLeft ? 0 : 0x12;
+                
+                var deadzone2 = (ushort)(((factoryDeadzoneData[1 + offset] << 8) & 0xF00) | factoryDeadzoneData[0 + offset]);
                 _deadzone2 = CalculateDeadzone(_stick2Cal, deadzone2);
 
-                var range2 = (ushort)((factoryDeadzone2Data[5] << 4) | (factoryDeadzone2Data[4] >> 4));
+                var range2 = (ushort)((factoryDeadzoneData[2 + offset] << 4) | (factoryDeadzoneData[4 + offset] >> 1));
                 _range2 = CalculateRange(range2);
             }
         }
