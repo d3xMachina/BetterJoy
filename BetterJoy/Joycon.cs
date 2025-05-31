@@ -2545,8 +2545,8 @@ public class Joycon
 
         // Sticks axis
         {
-            var userStickData = ReadSPICheck(0x80, 0x10, 0x16, ref ok);
-            var factoryStickData = ReadSPICheck(0x60, 0x3D, 0x12, ref ok);
+            var userStickData = ReadSPICheck(SPIPage.UserStickCalibration, ref ok);
+            var factoryStickData = ReadSPICheck(SPIPage.FactoryStickCalibration, ref ok);
 
             var stick1Data = new ReadOnlySpan<byte>(userStickData, IsLeft ? 2 : 13, 9);
             var stick1Name = IsLeft ? "left" : "right";
@@ -2608,7 +2608,7 @@ public class Joycon
         // Looks like the range is a 12 bits precision ratio.
         // I suppose the right way to interpret it is as a float by dividing it by 0xFFF
         {
-            var factoryDeadzoneData = ReadSPICheck(0x60, IsLeft ? (byte)0x86 : (byte)0x98, 6, ref ok);
+            var factoryDeadzoneData = ReadSPICheck(IsLeft ? SPIPage.StickBiasLeft : SPIPage.StickBiasRight, ref ok);
 
             var deadzone = (ushort)(((factoryDeadzoneData[4] << 8) & 0xF00) | factoryDeadzoneData[3]);
             _deadzone = CalculateDeadzone(_stickCal, deadzone);
@@ -2618,7 +2618,7 @@ public class Joycon
 
             if (IsPro)
             {
-                var factoryDeadzone2Data = ReadSPICheck(0x60, !IsLeft ? (byte)0x86 : (byte)0x98, 6, ref ok);
+                var factoryDeadzone2Data = ReadSPICheck(!IsLeft ? SPIPage.StickBiasLeft : SPIPage.StickBiasRight, ref ok);
 
                 var deadzone2 = (ushort)(((factoryDeadzone2Data[4] << 8) & 0xF00) | factoryDeadzone2Data[3]);
                 _deadzone2 = CalculateDeadzone(_stick2Cal, deadzone2);
@@ -2631,7 +2631,7 @@ public class Joycon
         // Gyro and accelerometer
         if (IMUSupported())
         {
-            var userSensorData = ReadSPICheck(0x80, 0x26, 0x1A, ref ok);
+            var userSensorData = ReadSPICheck(SPIPage.UserMotionCalibration, ref ok);
             var sensorData = new ReadOnlySpan<byte>(userSensorData, 2, 24);
 
             if (ok)
@@ -2642,7 +2642,7 @@ public class Joycon
                 }
                 else
                 {
-                    var factorySensorData = ReadSPICheck(0x60, 0x20, 0x18, ref ok);
+                    var factorySensorData = ReadSPICheck(SPIPage.FactoryMotionCalibration, ref ok);
                     sensorData = new ReadOnlySpan<byte>(factorySensorData, 0, 24);
 
                     DebugPrint("Retrieve factory sensors calibration data.", DebugType.Comms);
@@ -2859,23 +2859,21 @@ public class Joycon
         return length;
     }
 
-    private byte[] ReadSPICheck(byte addr1, byte addr2, int len, ref bool ok, bool print = false)
+    private byte[] ReadSPICheck(SPIPage page, ref bool ok, bool print = false)
     {
-        var readBuf = new byte[len];
+        var readBuf = new byte[page.PageSize];
         if (!ok)
         {
             return readBuf;
         }
 
-        byte[] bufSubcommand = [addr2, addr1, 0x00, 0x00, (byte)len];
-        
         Span<byte> response = stackalloc byte[ReportLength];
 
         ok = false;
         for (var i = 0; i < 5; ++i)
         {
-            int length = SubcommandCheck(SubCommand.SPIFlashRead, bufSubcommand, response, false);
-            if (length >= 20 + len && response[15] == addr2 && response[16] == addr1)
+            int length = SubcommandCheck(SubCommand.SPIFlashRead, page, response, false);
+            if (length >= 20 + page.PageSize && response[15] == page.LowAddress && response[16] == page.HighAddress)
             {
                 ok = true;
                 break;
@@ -2884,10 +2882,10 @@ public class Joycon
 
         if (ok)
         {
-            response.Slice(20, len).CopyTo(readBuf);
+            response.Slice(20, page.PageSize).CopyTo(readBuf);
             if (print)
             {
-                PrintArray<byte>(readBuf, DebugType.Comms, len);
+                PrintArray<byte>(readBuf, DebugType.Comms, page.PageSize);
             }
         }
         else
