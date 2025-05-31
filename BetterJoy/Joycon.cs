@@ -2608,7 +2608,7 @@ public class Joycon
         // Looks like the range is a 12 bits precision ratio.
         // I suppose the right way to interpret it is as a float by dividing it by 0xFFF
         {
-            var factoryDeadzoneData = ReadSPICheck(IsLeft ? SPIPage.StickBiasLeft : SPIPage.StickBiasRight, ref ok);
+            var factoryDeadzoneData = ReadSPICheck(IsLeft ? SPIPage.StickDeadZoneLeft : SPIPage.StickDeadZoneRight, ref ok);
 
             var deadzone = (ushort)(((factoryDeadzoneData[4] << 8) & 0xF00) | factoryDeadzoneData[3]);
             _deadzone = CalculateDeadzone(_stickCal, deadzone);
@@ -2618,7 +2618,7 @@ public class Joycon
 
             if (IsPro)
             {
-                var factoryDeadzone2Data = ReadSPICheck(!IsLeft ? SPIPage.StickBiasLeft : SPIPage.StickBiasRight, ref ok);
+                var factoryDeadzone2Data = ReadSPICheck(!IsLeft ? SPIPage.StickDeadZoneLeft : SPIPage.StickDeadZoneRight, ref ok);
 
                 var deadzone2 = (ushort)(((factoryDeadzone2Data[4] << 8) & 0xF00) | factoryDeadzone2Data[3]);
                 _deadzone2 = CalculateDeadzone(_stick2Cal, deadzone2);
