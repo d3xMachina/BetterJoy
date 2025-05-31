@@ -1,4 +1,11 @@
-﻿using System;
+﻿using BetterJoy.Collections;
+using BetterJoy.Config;
+using BetterJoy.Controller;
+using BetterJoy.Exceptions;
+using BetterJoy.Hardware.Bluetooth;
+using Nefarius.ViGEm.Client.Targets.DualShock4;
+using Nefarius.ViGEm.Client.Targets.Xbox360;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -6,13 +13,6 @@ using System.Net.NetworkInformation;
 using System.Numerics;
 using System.Threading;
 using System.Windows.Forms;
-using BetterJoy.Collections;
-using BetterJoy.Config;
-using BetterJoy.Controller;
-using BetterJoy.Exceptions;
-using BetterJoy.Hardware.Bluetooth;
-using Nefarius.ViGEm.Client.Targets.DualShock4;
-using Nefarius.ViGEm.Client.Targets.Xbox360;
 using WindowsInput.Events;
 
 namespace BetterJoy;
@@ -395,11 +395,11 @@ public class Joycon
         }
 
         DebugPrint("Rumble data Received: XInput", DebugType.Rumble);
-        SetRumble(Config.LowFreq, Config.HighFreq, Math.Max(e.LargeMotor, e.SmallMotor) / 255f);
+        SetRumble(Config.LowFreq, Config.HighFreq, e.SmallMotor / 255f, e.LargeMotor / 255f);
 
         if (IsJoined)
         {
-            Other.SetRumble(Config.LowFreq, Config.HighFreq, Math.Max(e.LargeMotor, e.SmallMotor) / 255f);
+            Other.SetRumble(Config.LowFreq, Config.HighFreq, e.SmallMotor / 255f, e.LargeMotor / 255f);
         }
     }
 
@@ -411,11 +411,11 @@ public class Joycon
         }
 
         DebugPrint("Rumble data Received: DS4", DebugType.Rumble);
-        SetRumble(Config.LowFreq, Config.HighFreq, Math.Max(e.LargeMotor, e.SmallMotor) / 255f);
+        SetRumble(Config.LowFreq, Config.HighFreq, e.SmallMotor / 255f, e.LargeMotor / 255f);
 
         if (IsJoined)
         {
-            Other.SetRumble(Config.LowFreq, Config.HighFreq, Math.Max(e.LargeMotor, e.SmallMotor) / 255f);
+            Other.SetRumble(Config.LowFreq, Config.HighFreq, e.SmallMotor / 255f, e.LargeMotor / 255f);
         }
     }
 
@@ -2377,14 +2377,14 @@ public class Joycon
         return (byte)MathF.Round((stickValue + 1.0f) * 0.5F * byte.MaxValue);
     }
 
-    public void SetRumble(float lowFreq, float highFreq, float amp)
+    public void SetRumble(float lowFreq, float highFreq, float lowAmplitude, float highAmplitude)
     {
         if (State <= Status.Attached)
         {
             return;
         }
 
-        _rumbles.Enqueue(lowFreq, highFreq, amp);
+        _rumbles.Enqueue(lowFreq, highFreq, lowAmplitude, highAmplitude);
     }
 
     // Run from poll thread
@@ -3477,11 +3477,12 @@ public class Joycon
 
     private class RumbleQueue
     {
-        private struct Rumble(float lowFreq, float highFreq, float amplitude)
+        private struct Rumble(float lowFreq, float highFreq, float lowAmplitude, float highAmplitude)
         {
             public float LowFreq = lowFreq;
             public float HighFreq = highFreq;
-            public float Amplitude = amplitude;
+            public float LowAmplitude = lowAmplitude;
+            public float HighAmplitude = highAmplitude;
         }
 
         private const int MaxRumble = 15;
@@ -3491,27 +3492,91 @@ public class Joycon
         {
             _queue = new(MaxRumble);
 
-            var noRumble = new Rumble(0f, 0f, 0f);
+            var noRumble = new Rumble(0f, 0f, 0f, 0f);
             _queue.Enqueue(noRumble);
         }
 
-        public void Enqueue(float lowFreq, float highFreq, float amplitude)
+        public void Enqueue(float lowFreq, float highFreq, float lowAmplitude, float highAmplitude)
         {
-            var rumble = new Rumble(lowFreq, highFreq, amplitude);
+            var rumble = new Rumble(lowFreq, highFreq, lowAmplitude, highAmplitude);
             _queue.Enqueue(rumble);
         }
 
         private static byte EncodeAmplitude(float amp)
         {
-            byte enAmp = amp switch
+            // Determined with the tables at https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/blob/master/rumble_data_table.md
+            return amp switch
             {
-                <= 0 => 0,
-                < 0.117f => (byte)((MathF.Log2(amp * 1000) * 32 - 0x60) / (5 - MathF.Pow(amp, 2)) - 1),
-                < 0.23f => (byte)(MathF.Log2(amp * 1000) * 32 - 0x60 - 0x5C),
-                _ => (byte)((MathF.Log2(amp * 1000) * 32 - 0x60) * 2 - 0xF6)
+                < 0.012f => (byte)MathF.Round(10467 * amp * amp + 45.408f * amp),
+                < 0.112f => (byte)MathF.Round(4 * MathF.Log2(amp) + 27.608f),
+                < 0.225f => (byte)MathF.Round(16 * MathF.Log2(amp) + 65.435f),
+                < 1.003f => (byte)MathF.Round(32 * MathF.Log2(amp) + 99.87f),
+                _ => 0
             };
+        }
 
-            return enAmp;
+        private static ushort EncodeLowAmplitude(ushort encodedAmplitude)
+        {
+            var parity = encodedAmplitude % 2;
+            if (parity != 0)
+            {
+                --encodedAmplitude;
+            }
+
+            encodedAmplitude = (ushort)(encodedAmplitude / 2);
+            encodedAmplitude += 0x40;
+
+            if (parity != 0)
+            {
+                encodedAmplitude |= 0x8000;
+            }
+
+            return encodedAmplitude;
+        }
+
+        private static byte EncodeHighAmplitude(byte encodedAmplitude)
+        {
+            return (byte)(encodedAmplitude * 2);
+        }
+
+        private static byte EncodeFrequency(float frequency)
+        {
+            return (byte)MathF.Round(32f * MathF.Log2(frequency * 0.1f));
+        }
+
+        private static ushort EncodeHighFrequency(float frequency)
+        {
+            return (ushort)((EncodeFrequency(frequency) - 0x60) * 4);
+        }
+
+        private static byte EncodeLowFrequency(float frequency)
+        {
+            return (byte)(EncodeFrequency(frequency) - 0x40);
+        }
+
+        private static void EncodeRumble(Span<byte> rumbleData, float lowFreq, float highFreq, float amplitude)
+        {
+            if (amplitude <= 0.0f)
+            {
+                rumbleData[0] = 0x0;
+                rumbleData[1] = 0x1;
+                rumbleData[2] = 0x40;
+                rumbleData[3] = 0x40;
+
+                return;
+            }
+                
+            var hf = EncodeHighFrequency(highFreq);
+            var lf = EncodeLowFrequency(lowFreq);
+
+            var encodedAmplitude = EncodeAmplitude(amplitude);
+            var ha = EncodeHighAmplitude(encodedAmplitude);
+            var la = EncodeLowAmplitude(encodedAmplitude);
+
+            rumbleData[0] = (byte)(hf & 0xFF);
+            rumbleData[1] = (byte)(((hf >> 8) & 0xFF) + ha);
+            rumbleData[2] = (byte)(((la >> 8) & 0xFF) + lf);
+            rumbleData[3] = (byte)(la & 0xFF);
         }
 
         public bool TryDequeue(out Span<byte> rumbleData)
@@ -3522,48 +3587,18 @@ public class Joycon
                 return false;
             }
 
+            rumble.LowFreq = Math.Clamp(rumble.LowFreq, 40.875885f, 626.286133f);
+            rumble.HighFreq = Math.Clamp(rumble.HighFreq, 81.75177f, 1252.572266f);
+            rumble.LowAmplitude = Math.Clamp(rumble.LowAmplitude, 0.0f, 1.0f);
+            rumble.HighAmplitude = Math.Clamp(rumble.HighAmplitude, 0.0f, 1.0f);
+
             rumbleData = new byte[8];
 
-            if (rumble.Amplitude <= 0.0f)
-            {
-                rumbleData[0] = 0x0;
-                rumbleData[1] = 0x1;
-                rumbleData[2] = 0x40;
-                rumbleData[3] = 0x40;
-            }
-            else
-            {
-                rumble.LowFreq = Math.Clamp(rumble.LowFreq, 40.875885f, 626.286133f);
-                rumble.HighFreq = Math.Clamp(rumble.HighFreq, 81.75177f, 1252.572266f);
-                rumble.Amplitude = Math.Clamp(rumble.Amplitude, 0.0f, 1.0f);
-                
-                var hf = (ushort)((MathF.Round(MathF.Log2(rumble.HighFreq * 0.1f) * 32f) - 0x60) * 4);
-                var lf = (byte)(MathF.Round(MathF.Log2(rumble.LowFreq * 0.1f) * 32f) - 0x40);
+            // Left rumble
+            EncodeRumble(rumbleData.Slice(0, 4), rumble.LowFreq, rumble.HighFreq, rumble.HighAmplitude);
 
-                var hfAmp = EncodeAmplitude(rumble.Amplitude);
-                var lfAmp = (ushort)(MathF.Round(hfAmp * 0.5f));
-
-                var parity = (byte)(lfAmp % 2);
-                if (parity > 0)
-                {
-                    --lfAmp;
-                }
-
-                lfAmp = (ushort)(lfAmp >> 1);
-                lfAmp += 0x40;
-                if (parity > 0)
-                {
-                    lfAmp |= 0x8000;
-                }
-
-                hfAmp = (byte)(hfAmp - hfAmp % 2); // make even at all times to prevent weird hum
-                rumbleData[0] = (byte)(hf & 0xFF);
-                rumbleData[1] = (byte)(((hf >> 8) & 0xFF) + hfAmp);
-                rumbleData[2] = (byte)(((lfAmp >> 8) & 0xFF) + lf);
-                rumbleData[3] = (byte)(lfAmp & 0xFF);
-            }
-            
-            rumbleData.Slice(0, 4).CopyTo(rumbleData.Slice(4));
+            // Right rumble
+            EncodeRumble(rumbleData.Slice(4, 4), rumble.LowFreq, rumble.HighFreq, rumble.LowAmplitude);
 
             return true;
         }
