@@ -416,9 +416,9 @@ public partial class MainForm : Form
     {
         SetLocate(false);
 
-        controller.SetRumble(160.0f, 320.0f, 1.0f);
+        controller.SetRumble(160f, 320f, 1f, 1f);
         await Task.Delay(300);
-        controller.SetRumble(160.0f, 320.0f, 0);
+        controller.SetRumble(160f, 320f, 0f, 0f);
     }
 
     private async void ConBtnClick(object sender, EventArgs e)
