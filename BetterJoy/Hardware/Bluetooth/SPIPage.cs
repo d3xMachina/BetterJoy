@@ -23,7 +23,7 @@ namespace BetterJoy.Hardware.Bluetooth
         // Calibration pages
         public static readonly SPIPage UserStickCalibration = new(0x80, 0x10, 0x16);
         public static readonly SPIPage FactoryStickCalibration = new(0x60, 0x3D, 0x12);
-        public static readonly SPIPage StickDeadZone = new(0x60, 0x89, 0x15);
+        public static readonly SPIPage StickDeadZone = new(0x60, 0x89, 0x18);
         public static readonly SPIPage UserMotionCalibration = new(0x80, 0x26, 0x1A);
         public static readonly SPIPage FactoryMotionCalibration = new(0x60, 0x20, 0x18);
     }
