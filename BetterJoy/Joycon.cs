@@ -2621,7 +2621,7 @@ public class Joycon
             if (IsPro)
             {
                 offset = !IsLeft ? 0 : 0x12;
-                
+
                 var deadzone2 = (ushort)(((factoryDeadzoneData[1 + offset] << 8) & 0xF00) | factoryDeadzoneData[0 + offset]);
                 _deadzone2 = CalculateDeadzone(_stick2Cal, deadzone2);
 
