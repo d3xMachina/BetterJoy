@@ -2610,7 +2610,7 @@ public class Joycon
         {
             var factoryDeadzoneData = ReadSPICheck(SPIPage.StickDeadZone, ref ok);
 
-            var offset = IsLeft ? 0 : 0x12;
+            var offset = IsLeft ? 0 : 0x15;
 
             var deadzone = (ushort)(((factoryDeadzoneData[1 + offset] << 8) & 0xF00) | factoryDeadzoneData[0 + offset]);
             _deadzone = CalculateDeadzone(_stickCal, deadzone);
@@ -2620,7 +2620,7 @@ public class Joycon
 
             if (IsPro)
             {
-                offset = !IsLeft ? 0 : 0x12;
+                offset = !IsLeft ? 0 : 0x15;
 
                 var deadzone2 = (ushort)(((factoryDeadzoneData[1 + offset] << 8) & 0xF00) | factoryDeadzoneData[0 + offset]);
                 _deadzone2 = CalculateDeadzone(_stick2Cal, deadzone2);
