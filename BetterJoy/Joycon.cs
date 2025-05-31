@@ -279,7 +279,7 @@ public class Joycon
         SerialNumber = serialNum;
         SerialOrMac = serialNum;
         _handle = handle;
-        _rumbles = new RumbleQueue([Config.LowFreq, Config.HighFreq, 0]);
+        _rumbles = new RumbleQueue();
 
         for (var i = 0; i < _buttonsDownTimestamp.Length; i++)
         {
@@ -3477,48 +3477,46 @@ public class Joycon
 
     private class RumbleQueue
     {
-        private const int MaxRumble = 15;
-        private readonly ConcurrentSpinQueue<float[]> _queue;
+        private struct Rumble(float lowFreq, float highFreq, float amplitude)
+        {
+            public float LowFreq = lowFreq;
+            public float HighFreq = highFreq;
+            public float Amplitude = amplitude;
+        }
 
-        public RumbleQueue(float[] rumbleInfo)
+        private const int MaxRumble = 15;
+        private readonly ConcurrentSpinQueue<Rumble> _queue;
+
+        public RumbleQueue()
         {
             _queue = new(MaxRumble);
-            _queue.Enqueue(rumbleInfo);
+
+            var noRumble = new Rumble(0f, 0f, 0f);
+            _queue.Enqueue(noRumble);
         }
 
         public void Enqueue(float lowFreq, float highFreq, float amplitude)
         {
-            float[] rumble = [lowFreq, highFreq, amplitude];
+            var rumble = new Rumble(lowFreq, highFreq, amplitude);
             _queue.Enqueue(rumble);
         }
 
-        private static byte EncodeAmp(float amp)
+        private static byte EncodeAmplitude(float amp)
         {
-            byte enAmp;
-
-            if (amp == 0)
+            byte enAmp = amp switch
             {
-                enAmp = 0;
-            }
-            else if (amp < 0.117)
-            {
-                enAmp = (byte)((MathF.Log(amp * 1000, 2) * 32 - 0x60) / (5 - MathF.Pow(amp, 2)) - 1);
-            }
-            else if (amp < 0.23)
-            {
-                enAmp = (byte)(MathF.Log(amp * 1000, 2) * 32 - 0x60 - 0x5c);
-            }
-            else
-            {
-                enAmp = (byte)((MathF.Log(amp * 1000, 2) * 32 - 0x60) * 2 - 0xf6);
-            }
+                <= 0 => 0,
+                < 0.117f => (byte)((MathF.Log2(amp * 1000) * 32 - 0x60) / (5 - MathF.Pow(amp, 2)) - 1),
+                < 0.23f => (byte)(MathF.Log2(amp * 1000) * 32 - 0x60 - 0x5C),
+                _ => (byte)((MathF.Log2(amp * 1000) * 32 - 0x60) * 2 - 0xF6)
+            };
 
             return enAmp;
         }
 
         public bool TryDequeue(out Span<byte> rumbleData)
         {
-            if (!_queue.TryDequeue(out float[] queuedData))
+            if (!_queue.TryDequeue(out var rumble))
             {
                 rumbleData = null;
                 return false;
@@ -3526,7 +3524,7 @@ public class Joycon
 
             rumbleData = new byte[8];
 
-            if (queuedData[2] == 0.0f)
+            if (rumble.Amplitude <= 0.0f)
             {
                 rumbleData[0] = 0x0;
                 rumbleData[1] = 0x1;
@@ -3535,15 +3533,15 @@ public class Joycon
             }
             else
             {
-                queuedData[0] = Math.Clamp(queuedData[0], 40.875885f, 626.286133f);
-                queuedData[1] = Math.Clamp(queuedData[1], 81.75177f, 1252.572266f);
-                queuedData[2] = Math.Clamp(queuedData[2], 0.0f, 1.0f);
+                rumble.LowFreq = Math.Clamp(rumble.LowFreq, 40.875885f, 626.286133f);
+                rumble.HighFreq = Math.Clamp(rumble.HighFreq, 81.75177f, 1252.572266f);
+                rumble.Amplitude = Math.Clamp(rumble.Amplitude, 0.0f, 1.0f);
+                
+                var hf = (ushort)((MathF.Round(MathF.Log2(rumble.HighFreq * 0.1f) * 32f) - 0x60) * 4);
+                var lf = (byte)(MathF.Round(MathF.Log2(rumble.LowFreq * 0.1f) * 32f) - 0x40);
 
-                var hf = (ushort)((MathF.Round(32f * MathF.Log(queuedData[1] * 0.1f, 2)) - 0x60) * 4);
-                var lf = (byte)(MathF.Round(32f * MathF.Log(queuedData[0] * 0.1f, 2)) - 0x40);
-
-                var hfAmp = EncodeAmp(queuedData[2]);
-                var lfAmp = (ushort)(MathF.Round(hfAmp) * 0.5f); // weird rounding, is that correct ?
+                var hfAmp = EncodeAmplitude(rumble.Amplitude);
+                var lfAmp = (ushort)(MathF.Round(hfAmp * 0.5f));
 
                 var parity = (byte)(lfAmp % 2);
                 if (parity > 0)
@@ -3559,16 +3557,13 @@ public class Joycon
                 }
 
                 hfAmp = (byte)(hfAmp - hfAmp % 2); // make even at all times to prevent weird hum
-                rumbleData[0] = (byte)(hf & 0xff);
-                rumbleData[1] = (byte)(((hf >> 8) & 0xff) + hfAmp);
-                rumbleData[2] = (byte)(((lfAmp >> 8) & 0xff) + lf);
-                rumbleData[3] = (byte)(lfAmp & 0xff);
+                rumbleData[0] = (byte)(hf & 0xFF);
+                rumbleData[1] = (byte)(((hf >> 8) & 0xFF) + hfAmp);
+                rumbleData[2] = (byte)(((lfAmp >> 8) & 0xFF) + lf);
+                rumbleData[3] = (byte)(lfAmp & 0xFF);
             }
-
-            for (var i = 0; i < 4; ++i)
-            {
-                rumbleData[4 + i] = rumbleData[i];
-            }
+            
+            rumbleData.Slice(0, 4).CopyTo(rumbleData.Slice(4));
 
             return true;
         }
@@ -3579,40 +3574,22 @@ public class Joycon
         }
     }
 
-    public struct IMUData
+    public struct IMUData(short xg, short yg, short zg, short xa, short ya, short za)
     {
-        public short Xg;
-        public short Yg;
-        public short Zg;
-        public short Xa;
-        public short Ya;
-        public short Za;
-
-        public IMUData(short xg, short yg, short zg, short xa, short ya, short za)
-        {
-            Xg = xg;
-            Yg = yg;
-            Zg = zg;
-            Xa = xa;
-            Ya = ya;
-            Za = za;
-        }
+        public short Xg = xg;
+        public short Yg = yg;
+        public short Zg = zg;
+        public short Xa = xa;
+        public short Ya = ya;
+        public short Za = za;
     }
 
-    public struct SticksData
+    public struct SticksData(ushort x1, ushort y1, ushort x2, ushort y2)
     {
-        public ushort Xs1;
-        public ushort Ys1;
-        public ushort Xs2;
-        public ushort Ys2;
-
-        public SticksData(ushort x1, ushort y1, ushort x2, ushort y2)
-        {
-            Xs1 = x1;
-            Ys1 = y1;
-            Xs2 = x2;
-            Ys2 = y2;
-        }
+        public ushort Xs1 = x1;
+        public ushort Ys1 = y1;
+        public ushort Xs2 = x2;
+        public ushort Ys2 = y2;
     }
 
     private class RollingAverage
