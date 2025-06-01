@@ -138,7 +138,8 @@ public class Joycon
 
     private readonly float[] _curRotation = [0, 0, 0, 0, 0, 0]; // Filtered IMU data
 
-    private readonly byte[] _defaultBuf = [0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40];
+    private static readonly byte[] _stopRumbleBuf = [0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40]; // Stop rumble
+    private readonly byte[] _rumbleBuf;
 
     private readonly short[] _gyrNeutral = [0, 0, 0];
     private readonly short[] _gyrRaw = [0, 0, 0];
@@ -280,6 +281,8 @@ public class Joycon
         SerialOrMac = serialNum;
         _handle = handle;
         _rumbles = new RumbleQueue();
+        _rumbleBuf = new byte[_stopRumbleBuf.Length];
+        StopRumbleInSubcommands();
 
         for (var i = 0; i < _buttonsDownTimestamp.Length; i++)
         {
@@ -635,14 +638,14 @@ public class Joycon
         SubcommandCheck(SubCommand.SetHomeLight, buf);
     }
 
-    public void SetHomeLight(bool on)
+    public bool SetHomeLight(bool on)
     {
         if (!HomeLightSupported())
         {
-            return;
+            return false;
         }
 
-        byte intensity = (byte)(on ? 0x1 : 0x0);
+        var intensity = (byte)(on ? 0x1 : 0x0);
         const byte nbCycles = 0xF; // 0x0 for permanent light
 
         Span<byte> buf =
@@ -658,11 +661,15 @@ public class Joycon
             0x11, // transition multiplier | duration multiplier, both use the base duration
             0xFF, // not used
         ];
+
         Subcommand(SubCommand.SetHomeLight, buf); // don't wait for response
+
+        return true;
     }
 
     private int SetHCIState(byte state)
     {
+        StopRumbleInSubcommands();
         return SubcommandCheck(SubCommand.SetHCIState, [state]);
     }
 
@@ -696,6 +703,16 @@ public class Joycon
     private void SetRumble(bool enable)
     {
         SubcommandCheck(SubCommand.EnableVibration, [enable ? (byte)0x01 : (byte)0x00]);
+    }
+
+    private void IgnoreRumbleInSubcommands()
+    {
+        Array.Clear(_rumbleBuf);
+    }
+
+    private void StopRumbleInSubcommands()
+    {
+        Array.Copy(_stopRumbleBuf, _rumbleBuf, _rumbleBuf.Length);
     }
 
     private void SetNFCIR(bool enable)
@@ -851,6 +868,7 @@ public class Joycon
 
         AbortCommunicationThreads();
         DisconnectViGEm();
+        StopRumbleInSubcommands();
         _rumbles.Clear();
 
         if (_handle != IntPtr.Zero)
@@ -1612,37 +1630,48 @@ public class Joycon
         // the home light stays on for 2625ms, set to less than half in case of packet drop
         const int sendHomeLightIntervalMs = 1250;
         Stopwatch timeSinceHomeLight = new();
-        bool oldHomeLEDOn = false;
+        var oldHomeLEDOn = false;
 
         while (IsDeviceReady)
         {
             token.ThrowIfCancellationRequested();
 
-            if (Program.IsSuspended)
+            if (_pauseSendCommands || Program.IsSuspended)
             {
+                if (!_sendCommandsPaused)
+                {
+                    StopRumbleInSubcommands();
+                    _sendCommandsPaused = true;
+                }
+
                 Thread.Sleep(10);
                 continue;
             }
 
-            _sendCommandsPaused = _pauseSendCommands;
-            if (_sendCommandsPaused)
-            {
-                Thread.Sleep(10);
-                continue;
-            }
+            _sendCommandsPaused = false;
 
-            bool homeLEDOn = Config.HomeLEDOn;
+            var sendHomeLight = false;
+            var homeLEDOn = Config.HomeLEDOn;
+
             if ((oldHomeLEDOn != homeLEDOn) ||
                 (homeLEDOn && timeSinceHomeLight.ElapsedMilliseconds > sendHomeLightIntervalMs))
             {
-                SetHomeLight(Config.HomeLEDOn);
+                sendHomeLight = true;
                 timeSinceHomeLight.Restart();
                 oldHomeLEDOn = homeLEDOn;
             }
 
-            while (_rumbles.TryDequeue(out var rumbleData))
+            var sendRumble = _rumbles.TryDequeue(_rumbleBuf);
+
+            // Subcommands send the rumble so no need to call SetRumble
+            if (sendHomeLight ? !SetHomeLight(true) : sendRumble)
             {
-                SendRumble(buf, rumbleData);
+                SetRumble(true);
+            }
+
+            if (sendRumble)
+            {
+                IgnoreRumbleInSubcommands();
             }
 
             Thread.Sleep(5);
@@ -2411,7 +2440,7 @@ public class Joycon
         Span<byte> buf = stackalloc byte[_CommandLength];
         buf.Clear();
 
-        _defaultBuf.AsSpan(0, 8).CopyTo(buf.Slice(2));
+        _rumbleBuf.AsSpan(0, 8).CopyTo(buf.Slice(2));
         bufParameters.CopyTo(buf.Slice(11));
         buf[10] = (byte)sc;
         buf[1] = (byte)(_globalCount & 0x0F);
@@ -3579,7 +3608,7 @@ public class Joycon
             rumbleData[3] = (byte)(la & 0xFF);
         }
 
-        public bool TryDequeue(out Span<byte> rumbleData)
+        public bool TryDequeue(Span<byte> rumbleData)
         {
             if (!_queue.TryDequeue(out var rumble))
             {
@@ -3591,8 +3620,6 @@ public class Joycon
             rumble.HighFreq = Math.Clamp(rumble.HighFreq, 81.75177f, 1252.572266f);
             rumble.LowAmplitude = Math.Clamp(rumble.LowAmplitude, 0.0f, 1.0f);
             rumble.HighAmplitude = Math.Clamp(rumble.HighAmplitude, 0.0f, 1.0f);
-
-            rumbleData = new byte[8];
 
             // Left rumble
             EncodeRumble(rumbleData.Slice(0, 4), rumble.LowFreq, rumble.HighFreq, rumble.HighAmplitude);
