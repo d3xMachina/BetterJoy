@@ -3507,9 +3507,9 @@ public class Joycon
             // Determined with the tables at https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/blob/master/rumble_data_table.md
             return amp switch
             {
-                < 0.012f => (byte)MathF.Round(10467 * amp * amp + 45.408f * amp),
-                < 0.112f => (byte)MathF.Round(4 * MathF.Log2(amp) + 27.608f),
-                < 0.225f => (byte)MathF.Round(16 * MathF.Log2(amp) + 65.435f),
+                < 0.01182818f => (byte)MathF.Round(10467 * amp * amp + 45.408f * amp),
+                < 0.1124807f => (byte)MathF.Round(4 * MathF.Log2(amp) + 27.608f),
+                < 0.2249712f => (byte)MathF.Round(16 * MathF.Log2(amp) + 65.435f),
                 < 1.003f => (byte)MathF.Round(32 * MathF.Log2(amp) + 99.87f),
                 _ => 0
             };
