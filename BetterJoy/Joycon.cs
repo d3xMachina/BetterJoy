@@ -1650,27 +1650,27 @@ public class Joycon
 
             _sendCommandsPaused = false;
 
-            var sendHomeLight = false;
+            var sendRumble = _rumbles.TryDequeue(_rumbleBuf);
+
+            var homeLightSent = false;
             var homeLEDOn = Config.HomeLEDOn;
 
             if ((oldHomeLEDOn != homeLEDOn) ||
                 (homeLEDOn && timeSinceHomeLight.ElapsedMilliseconds > sendHomeLightIntervalMs))
             {
-                sendHomeLight = true;
+                homeLightSent = SetHomeLight(true);
                 timeSinceHomeLight.Restart();
                 oldHomeLEDOn = homeLEDOn;
             }
 
-            var sendRumble = _rumbles.TryDequeue(_rumbleBuf);
-
-            // Subcommands send the rumble so no need to call SetRumble
-            if (sendHomeLight ? !SetHomeLight(true) : sendRumble)
-            {
-                SetRumble(true);
-            }
-
             if (sendRumble)
             {
+                // Subcommands send the rumble so no need to call SetRumble
+                if (!homeLightSent)
+                {
+                    SetRumble(true);
+                }
+
                 IgnoreRumbleInSubcommands();
             }
 
