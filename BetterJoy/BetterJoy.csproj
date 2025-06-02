@@ -24,40 +24,7 @@
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
       <NoWarn></NoWarn>
     </PropertyGroup>
-	
-    <ItemGroup>
-        <Compile Update="ThirdpartyControllers.cs">
-            <SubType>Form</SubType>
-        </Compile>
-        <Compile Update="ThirdpartyControllers.Designer.cs">
-            <DependentUpon>ThirdpartyControllers.cs</DependentUpon>
-        </Compile>
-        <Compile Update="Collections\ConcurrentList.cs" />
-        <Compile Update="Controller\OutputControllerDualShock4.cs" />
-        <Compile Update="Controller\OutputControllerXbox360.cs" />
-        <Compile Update="Joycon.cs" />
-        <Compile Update="MadgwickAHRS.cs" />
-        <Compile Update="MainForm.cs">
-            <SubType>Form</SubType>
-        </Compile>
-        <Compile Update="MainForm.Designer.cs">
-            <DependentUpon>MainForm.cs</DependentUpon>
-        </Compile>
-        <Compile Update="Program.cs" />
-        <Compile Update="Properties\AssemblyInfo.cs" />
-        <Compile Update="Properties\Resources.Designer.cs">
-            <AutoGen>True</AutoGen>
-            <DesignTime>True</DesignTime>
-            <DependentUpon>Resources.resx</DependentUpon>
-        </Compile>
-        <Compile Update="Reassign.cs">
-            <SubType>Form</SubType>
-        </Compile>
-        <Compile Update="Reassign.Designer.cs">
-            <DependentUpon>Reassign.cs</DependentUpon>
-        </Compile>
-        <Compile Update="UpdServer.cs" />
-    </ItemGroup>
+
     <ItemGroup>
 		<None Include="Properties\app.manifest" />
 		<None Include="App.config">
@@ -98,17 +65,17 @@
         </ContentWithTargetPath>
     </ItemGroup>
     <ItemGroup>
-        <EmbeddedResource Update="ThirdpartyControllers.resx">
+        <EmbeddedResource Update="Forms\ThirdpartyControllers.resx">
             <DependentUpon>ThirdpartyControllers.cs</DependentUpon>
         </EmbeddedResource>
-        <EmbeddedResource Update="MainForm.resx">
+        <EmbeddedResource Update="Forms\MainForm.resx">
             <DependentUpon>MainForm.cs</DependentUpon>
         </EmbeddedResource>
         <EmbeddedResource Update="Properties\Resources.resx">
             <Generator>ResXFileCodeGenerator</Generator>
             <LastGenOutput>Resources.Designer.cs</LastGenOutput>
         </EmbeddedResource>
-        <EmbeddedResource Update="Reassign.resx">
+        <EmbeddedResource Update="Forms\Reassign.resx">
             <DependentUpon>Reassign.cs</DependentUpon>
         </EmbeddedResource>
     </ItemGroup>

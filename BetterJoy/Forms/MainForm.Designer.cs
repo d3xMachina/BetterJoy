@@ -1,4 +1,4 @@
-﻿namespace BetterJoy
+﻿namespace BetterJoy.Forms
 {
     partial class MainForm
     {

@@ -12,7 +12,7 @@ using BetterJoy.Exceptions;
 using BetterJoy.Properties;
 using Microsoft.Win32;
 
-namespace BetterJoy;
+namespace BetterJoy.Forms;
 
 public partial class MainForm : Form
 {

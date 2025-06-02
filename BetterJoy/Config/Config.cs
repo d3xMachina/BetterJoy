@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BetterJoy.Forms;
+using System;
 using System.Configuration;
 using System.Linq;
 using System.Reflection;

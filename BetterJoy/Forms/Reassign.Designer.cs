@@ -3,7 +3,8 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
-namespace BetterJoy {
+namespace BetterJoy.Forms
+{
 	// from https://stackoverflow.com/a/27173509
 	public class SplitButton : Button {
 		[DefaultValue(null), Browsable(true),

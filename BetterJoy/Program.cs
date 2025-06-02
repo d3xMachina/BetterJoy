@@ -1,6 +1,7 @@
 ﻿using BetterJoy.Collections;
 using BetterJoy.Config;
 using BetterJoy.Exceptions;
+using BetterJoy.Forms;
 using Nefarius.Drivers.HidHide;
 using Nefarius.ViGEm.Client;
 using Nefarius.ViGEm.Client.Exceptions;
@@ -18,7 +19,7 @@ using System.Windows.Forms;
 using WindowsInput;
 using WindowsInput.Events;
 using WindowsInput.Events.Sources;
-using static BetterJoy._3rdPartyControllers;
+using static BetterJoy.Forms._3rdPartyControllers;
 
 namespace BetterJoy;
 

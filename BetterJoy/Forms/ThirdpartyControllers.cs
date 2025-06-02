@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace BetterJoy;
+namespace BetterJoy.Forms;
 
 public partial class _3rdPartyControllers : Form
 {

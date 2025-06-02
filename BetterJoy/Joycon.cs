@@ -2,6 +2,7 @@
 using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
+using BetterJoy.Forms;
 using BetterJoy.Hardware.Bluetooth;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
 using Nefarius.ViGEm.Client.Targets.Xbox360;

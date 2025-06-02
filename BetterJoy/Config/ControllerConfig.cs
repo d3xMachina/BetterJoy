@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BetterJoy.Forms;
+using System;
 using static BetterJoy.Joycon;
 
 namespace BetterJoy.Config;
