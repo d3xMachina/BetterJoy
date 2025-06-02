@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 namespace BetterJoy.HIDApi;
 
@@ -18,14 +19,7 @@ public enum HotplugFlag
 
 public delegate int HotplugCallback(
     int callbackHandle,
-    DeviceInfo deviceInfo,
+    [MarshalAs(UnmanagedType.Struct)] DeviceInfo deviceInfo,
     int events,
-    object userData
-);
-
-internal delegate int UnmanagedHotplugCallback(
-    int callbackHandle,
-    DeviceInfo deviceInfo,
-    int events,
-    IntPtr userData
+    [MarshalAs(UnmanagedType.IUnknown)] object userData
 );
