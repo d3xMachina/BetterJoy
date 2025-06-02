@@ -6,7 +6,7 @@ namespace BetterJoy.HIDApi;
 
 internal static class StringUtils
 {
-    private const int MaxStringLength = 255;
+    private const int MaxStringLength = 200; // Value from MAX_DEVICE_ID_LEN in cfgmgr32.h, it includes the null character
     private const int UnicodeBufferSize = MaxStringLength * sizeof(ushort);
 
     public delegate int GetStringDelegate(Span<byte> b, nuint length);
