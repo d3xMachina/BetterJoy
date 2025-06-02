@@ -3612,7 +3612,6 @@ public class Joycon
         {
             if (!_queue.TryDequeue(out var rumble))
             {
-                rumbleData = null;
                 return false;
             }
 
