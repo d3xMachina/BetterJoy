@@ -105,7 +105,7 @@ public class JoyconManager
 
         try
         {
-            ret = HIDApi.Init();
+            ret = HIDApi.Manager.Init();
         }
         catch (BadImageFormatException e)
         {
@@ -119,7 +119,7 @@ public class JoyconManager
             return false;
         }
 
-        ret = HIDApi.HotplugRegisterCallback(
+        ret = HIDApi.Manager.HotplugRegisterCallback(
             0x0,
             0x0,
             (int)(HIDApi.HotplugEvent.DeviceArrived | HIDApi.HotplugEvent.DeviceLeft),
@@ -132,7 +132,7 @@ public class JoyconManager
         if (ret != 0)
         {
             _form.Log("Could not register hidapi callback.", Logger.LogLevel.Error);
-            HIDApi.Exit();
+            HIDApi.Manager.Exit();
             return false;
         }
 
@@ -162,9 +162,9 @@ public class JoyconManager
         return true;
     }
 
-    private static int OnDeviceNotification(int callbackHandle, HIDApi.HIDDeviceInfo deviceInfo, int ev, object pUserData)
+    private static int OnDeviceNotification(int callbackHandle, HIDApi.DeviceInfo deviceInfo, int ev, object userData)
     {
-        var channelWriter = (ChannelWriter<DeviceNotification>)pUserData;
+        var channelWriter = (ChannelWriter<DeviceNotification>)userData;
         var deviceEvent = (HIDApi.HotplugEvent)ev;
 
         var notification = DeviceNotification.Type.Unknown;
@@ -203,13 +203,13 @@ public class JoyconManager
                     {
                         case DeviceNotification.Type.Connected:
                         {
-                            var deviceInfos = (HIDApi.HIDDeviceInfo)job.Data;
+                            var deviceInfos = (HIDApi.DeviceInfo)job.Data;
                             OnDeviceConnected(deviceInfos);
                             break;
                         }
                         case DeviceNotification.Type.Disconnected:
                         {
-                            var deviceInfos = (HIDApi.HIDDeviceInfo)job.Data;
+                            var deviceInfos = (HIDApi.DeviceInfo)job.Data;
                             OnDeviceDisconnected(deviceInfos);
                             break;
                         }
@@ -237,7 +237,7 @@ public class JoyconManager
         }
     }
 
-    private void OnDeviceConnected(HIDApi.HIDDeviceInfo info)
+    private void OnDeviceConnected(HIDApi.DeviceInfo info)
     {
         if (info.SerialNumber == null || GetControllerByPath(info.Path) != null)
         {
@@ -315,30 +315,30 @@ public class JoyconManager
 
     private void OnDeviceConnected(string path, string serial, Joycon.ControllerType type, bool isUSB, bool isThirdparty, bool reconnect = false)
     {
-        var handle = HIDApi.OpenPath(path);
-        if (handle == IntPtr.Zero)
+        var device = HIDApi.Device.OpenPath(path);
+        if (!device.IsValid)
         {
             // don't show an error message when the controller was dropped without hidapi callback notification (after standby for example)
             if (!reconnect)
             {
-                _form.Log($"Unable to open device: {HIDApi.Error(IntPtr.Zero)}.", Logger.LogLevel.Error);
+                _form.Log($"Unable to open device: {HIDApi.Manager.GetError()}.", Logger.LogLevel.Error);
             }
 
             return;
         }
 
-        HIDApi.SetNonBlocking(handle, 1);
+        device.SetNonBlocking(1);
 
         var index = GetControllerIndex(type);
         var name = Joycon.GetControllerName(type);
         _form.Log($"[P{index + 1}] {name} connected.");
 
         // Add controller to block-list for HidHide
-        Program.AddDeviceToBlocklist(handle);
+        Program.AddDeviceToBlocklist(device);
 
         var controller = new Joycon(
             _form,
-            handle,
+            device,
             path,
             serial,
             isUSB,
@@ -395,7 +395,7 @@ public class JoyconManager
         controller.Begin();
     }
 
-    private void OnDeviceDisconnected(HIDApi.HIDDeviceInfo info)
+    private void OnDeviceDisconnected(HIDApi.DeviceInfo info)
     {
         var controller = GetControllerByPath(info.Path);
 
@@ -709,7 +709,7 @@ public class JoyconManager
 
         if (_hidCallbackHandle != 0)
         {
-            HIDApi.HotplugDeregisterCallback(_hidCallbackHandle);
+            HIDApi.Manager.HotplugDeregisterCallback(_hidCallbackHandle);
         }
         
         await _devicesNotificationTask;
@@ -745,7 +745,7 @@ public class JoyconManager
         
         _ctsDevicesNotifications.Dispose();
 
-        HIDApi.Exit();
+        HIDApi.Manager.Exit();
     }
 
     private static bool TryJoinJoycon(Joycon controller, Joycon otherController)
@@ -1030,7 +1030,7 @@ internal class Program
         _form.Log("HIDHide is enabled.");
     }
 
-    public static void AddDeviceToBlocklist(IntPtr handle)
+    public static void AddDeviceToBlocklist(HIDApi.Device device)
     {
         try
         {
@@ -1041,7 +1041,7 @@ internal class Program
 
             var devices = new List<string>();
 
-            var instance = HIDApi.GetInstance(handle);
+            var instance = device.GetInstance();
             if (instance.Length == 0)
             {
                 _form.Log("Unable to get device instance.", Logger.LogLevel.Error);
@@ -1051,7 +1051,7 @@ internal class Program
                 devices.Add(instance);
             }
 
-            var parentInstance = HIDApi.GetParentInstance(handle);
+            var parentInstance = device.GetParentInstance();
             if (parentInstance.Length == 0)
             {
                 _form.Log("Unable to get device parent instance.", Logger.LogLevel.Error);

@@ -187,7 +187,7 @@ public class Joycon
     private byte _globalCount;
     private Vector3 _gyrG = Vector3.Zero;
 
-    private IntPtr _handle;
+    private HIDApi.Device _device;
     private bool _hasShaked;
 
     public readonly bool IsThirdParty;
@@ -263,7 +263,7 @@ public class Joycon
 
     public Joycon(
         MainForm form,
-        IntPtr handle,
+        HIDApi.Device device,
         string path,
         string serialNum,
         bool isUSB,
@@ -279,7 +279,7 @@ public class Joycon
 
         SerialNumber = serialNum;
         SerialOrMac = serialNum;
-        _handle = handle;
+        _device = device;
         _rumbles = new RumbleQueue();
         _rumbleBuf = new byte[_stopRumbleBuf.Length];
         StopRumbleInSubcommands();
@@ -465,7 +465,7 @@ public class Joycon
 
         try
         {
-            if (_handle == IntPtr.Zero)
+            if (!_device.IsValid)
             {
                 throw new DeviceNullHandleException("reset hidapi");
             }
@@ -871,7 +871,7 @@ public class Joycon
         StopRumbleInSubcommands();
         _rumbles.Clear();
 
-        if (_handle != IntPtr.Zero)
+        if (_device.IsValid)
         {
             if (IsDeviceReady)
             {
@@ -889,8 +889,7 @@ public class Joycon
 
             if (close)
             {
-                HIDApi.Close(_handle);
-                _handle = IntPtr.Zero;
+                _device.Dispose();
             }
         }
 
@@ -1004,7 +1003,7 @@ public class Joycon
     // Run from poll thread
     private ReceiveError ReceiveRaw(Span<byte> buf)
     {
-        if (_handle == IntPtr.Zero)
+        if (!_device.IsValid)
         {
             return ReceiveError.InvalidHandle;
         }
@@ -2432,7 +2431,7 @@ public class Joycon
 
     private int Subcommand(SubCommand sc, ReadOnlySpan<byte> bufParameters, bool print = true)
     {
-        if (_handle == IntPtr.Zero)
+        if (!_device.IsValid)
         {
             return DeviceErroredCode;
         }
@@ -2779,9 +2778,10 @@ public class Joycon
 
         if (timeout >= 0)
         {
-            return HIDApi.ReadTimeout(_handle, response, ReportLength, timeout);
+            return _device.ReadTimeout(response, ReportLength, timeout);
         }
-        return HIDApi.Read(_handle, response, ReportLength);
+
+        return _device.Read(response, ReportLength);
     }
 
     private int Write(ReadOnlySpan<byte> command)
@@ -2796,8 +2796,7 @@ public class Joycon
             return DeviceErroredCode;
         }
 
-        int length = HIDApi.Write(_handle, command, _CommandLength);
-        return length;
+        return _device.Write(command, _CommandLength);
     }
 
     private string ErrorMessage()
@@ -2807,17 +2806,17 @@ public class Joycon
             return $"Device unavailable: {State}";
         }
 
-        if (_handle ==  IntPtr.Zero)
+        if (!_device.IsValid)
         {
             return "Null handle";
         }
 
-        return HIDApi.Error(_handle);
+        return _device.GetError();
     }
 
     private bool USBCommand(byte command, bool print = true)
     {
-        if (_handle == IntPtr.Zero)
+        if (!_device.IsValid)
         {
             return false;
         }

@@ -115,43 +115,38 @@ public partial class _3rdPartyControllers : Form
     private void RefreshControllerList()
     {
         list_allControllers.Items.Clear();
-        var ptr = HIDApi.Enumerate(0x0, 0x0);
-        var topPtr = ptr;
+        var devices = HIDApi.Manager.EnumerateDevices(0x0, 0x0);
 
-        // Add device to list
-        for (HIDApi.HIDDeviceInfo enumerate; ptr != IntPtr.Zero; ptr = enumerate.Next)
+        // Add devices to the list
+        foreach (var device in devices)
         {
-            enumerate = Marshal.PtrToStructure<HIDApi.HIDDeviceInfo>(ptr);
-
-            if (enumerate.SerialNumber == null)
+            if (device.SerialNumber == null)
             {
                 continue;
             }
 
-            var name = enumerate.ProductString;
+            var name = device.ProductString;
             if (string.IsNullOrWhiteSpace(name))
             {
                 name = "Unknown";
             }
 
-            name += $" (P{enumerate.VendorId:X2} V{enumerate.ProductId:X2}";
-            if (!string.IsNullOrWhiteSpace(enumerate.SerialNumber))
+            name += $" (P{device.VendorId:X2} V{device.ProductId:X2}";
+            if (!string.IsNullOrWhiteSpace(device.SerialNumber))
             {
-                name += $" S{enumerate.SerialNumber}";
+                name += $" S{device.SerialNumber}";
             }
             name += ")";
 
             if (!ContainsText(list_customControllers, name) && !ContainsText(list_allControllers, name))
             {
                 list_allControllers.Items.Add(
-                    new SController(name, enumerate.VendorId, enumerate.ProductId, 0, enumerate.SerialNumber)
+                    new SController(name, device.VendorId, device.ProductId, 0, device.SerialNumber)
                 );
                 // 0 type is undefined
                 Console.WriteLine("Found controller " + name);
             }
         }
-
-        HIDApi.FreeEnumeration(topPtr);
     }
 
     private void btn_add_Click(object sender, EventArgs e)
