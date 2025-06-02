@@ -1,5 +1,4 @@
-﻿using BetterJoy.Forms;
-using System.Net;
+﻿using System.Net;
 
 namespace BetterJoy.Config;
 
@@ -13,9 +12,9 @@ public class ProgramConfig : Config
     public IPAddress IP;
     public int Port;
 
-    public ProgramConfig(MainForm form) : base(form) { }
+    public ProgramConfig(Logger logger) : base(logger) { }
 
-    public ProgramConfig(ProgramConfig config) : base (config._form)
+    public ProgramConfig(ProgramConfig config) : base (config._logger)
     {
         UseHIDHide = config.UseHIDHide;
         HIDHideAlwaysOn = config.HIDHideAlwaysOn;

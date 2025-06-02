@@ -1,5 +1,4 @@
-﻿using BetterJoy.Forms;
-using System;
+﻿using System;
 using System.Configuration;
 using System.Linq;
 using System.Reflection;
@@ -8,15 +7,15 @@ namespace BetterJoy.Config;
 
 public abstract class Config
 {
-    protected MainForm _form;
+    protected readonly Logger _logger;
     public bool ShowErrors = true;
 
-    protected Config(MainForm form)
+    protected Config(Logger logger)
     {
-        _form = form;
+        _logger = logger;
     }
 
-    protected Config(Config config) : this(config._form) { }
+    protected Config(Config config) : this(config._logger) { }
     public abstract void Update();
     public abstract Config Clone();
 
@@ -98,7 +97,7 @@ public abstract class Config
                 defaultValueTxt = $"{defaultValue}";
             }
 
-            _form.Log($"Invalid value \"{value}\" for setting {key}! Using default value \"{defaultValueTxt}\".", Logger.LogLevel.Warning);
+            _logger?.Log($"Invalid value \"{value}\" for setting {key}! Using default value \"{defaultValueTxt}\".", Logger.LogLevel.Warning);
         }
     }
 }

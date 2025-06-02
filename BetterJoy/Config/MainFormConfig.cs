@@ -1,14 +1,12 @@
-﻿using BetterJoy.Forms;
-
-namespace BetterJoy.Config;
+﻿namespace BetterJoy.Config;
 
 public class MainFormConfig : Config
 {
     public bool AllowCalibration;
 
-    public MainFormConfig(MainForm form) : base(form) { }
+    public MainFormConfig(Logger logger) : base(logger) { }
 
-    public MainFormConfig(MainFormConfig config) : base(config._form)
+    public MainFormConfig(MainFormConfig config) : base(config._logger)
     {
         AllowCalibration = config.AllowCalibration;
     }

@@ -4,7 +4,6 @@ using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterJoy.Config;
@@ -37,20 +36,27 @@ public partial class MainForm : Form
     private ControllerAction _currentAction = ControllerAction.None;
     private bool _selectController = false;
 
-    private const string _logFilePath = "LogDebug.txt";
-    private Logger _logger;
-
     private bool _closing = false;
     private bool _close = false;
 
-    public MainForm()
+    private readonly Logger _logger;
+
+    public MainForm(Logger logger)
     {
         InitializeComponent();
         InitializeConsoleTextBox();
-        InitializeLogger();
-        LogDebugInfos();
 
-        Config = new(this);
+        _logger = logger;
+        if (_logger != null)
+        {
+            _logger.OnMessageLogged += OnMessageLogged;
+        }
+        else
+        {
+            Print("Error initializing the log file.");
+        }
+
+        Config = new(_logger);
         Config.Update();
 
         if (!Config.AllowCalibration)
@@ -60,7 +66,7 @@ public partial class MainForm : Form
 
         SetIcon();
         SetTaskbarIcon();
-        version_lbl.Text = GetProgramVersion();
+        version_lbl.Text = Program.GetProgramVersion();
 
         _con = [con1, con2, con3, con4, con5, con6, con7, con8];
 
@@ -189,37 +195,6 @@ public partial class MainForm : Form
         });
     }
 
-    private void InitializeLogger()
-    {
-        try
-        {
-            _logger = new Logger(_logFilePath);
-        }
-        catch (Exception e)
-        {
-            Log("Error initializing log file.", e);
-        }
-    }
-
-    private static string GetProgramVersion()
-    {
-        var programVersion = Assembly.GetExecutingAssembly().GetName().Version;
-        return $"v{programVersion.Major}.{programVersion.Minor}.{programVersion.Build}";
-    }
-
-    private void LogDebugInfos()
-    {
-        if (_logger == null)
-        {
-            return;
-        }
-
-        var programName = Application.ProductName;
-        var osArch = Environment.Is64BitProcess ? "x64" : "x86";
-        _logger.Log($"{programName} {GetProgramVersion()}", Logger.LogLevel.Debug);
-        _logger.Log($"OS version: {Environment.OSVersion} {osArch}", Logger.LogLevel.Debug);
-    }
-
     private void HideToTray(bool init = false)
     {
         if (notifyIcon.Visible && !init)
@@ -296,7 +271,7 @@ public partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            Log("Cannot retrieve run on boot state.", ex);
+            _logger?.Log("Cannot retrieve run on boot state.", ex);
         }
 
         SystemEvents.PowerModeChanged += OnPowerChange;
@@ -328,14 +303,13 @@ public partial class MainForm : Form
         _closing = true;
         Enabled = false;
 
-        Log("Closing...");
+        _logger?.Log("Closing...");
         SystemEvents.PowerModeChanged -= OnPowerChange;
         await Program.Stop();
-        Log("Closed.", Logger.LogLevel.Debug);
+        _logger?.Log("Closed.", Logger.LogLevel.Debug);
 
         _close = true;
         Close(); // we're done with the UI thread, close it for real now
-        _logger?.Dispose();
     }
 
     private void OnPowerChange(object s, PowerModeChangedEventArgs e)
@@ -343,11 +317,11 @@ public partial class MainForm : Form
         switch (e.Mode)
         {
             case PowerModes.Resume:
-                Log("Resume session.");
+                _logger?.Log("Resume session.");
                 Program.SetSuspended(false);
                 break;
             case PowerModes.Suspend:
-                Log("Suspend session.");
+                _logger?.Log("Suspend session.");
                 Program.SetSuspended(true);
                 break;
         }
@@ -379,37 +353,44 @@ public partial class MainForm : Form
         });
     }
 
-    public void Log(string message, Logger.LogLevel level = Logger.LogLevel.Info)
+    private void OnMessageLogged(string message, Logger.LogLevel level, Exception e)
+    {
+        if (level == Logger.LogLevel.Debug)
+        {
+            return;
+        }
+
+        if (e == null)
+        {
+            Print(message);
+        }
+        else
+        {
+            Print(message, e);
+        }
+    }
+
+    public void Print(string message)
     {
         // https://stackoverflow.com/questions/519233/writing-to-a-textbox-from-another-thread
         if (InvokeRequired)
         {
-            BeginInvoke(new Action<string, Logger.LogLevel>(Log), message, level);
+            BeginInvoke(new Action<string>(Print), message);
             return;
         }
 
-        if (level != Logger.LogLevel.Debug)
-        {
-            console.AppendText(message + Environment.NewLine);
-        }
-
-        _logger?.Log(message, level);
+        console.AppendText(message + Environment.NewLine);
     }
 
-    public void Log(string message, Exception e, Logger.LogLevel level = Logger.LogLevel.Error)
+    public void Print(string message, Exception e)
     {
         if (InvokeRequired)
         {
-            BeginInvoke(new Action<string, Exception, Logger.LogLevel>(Log), message, e, level);
+            BeginInvoke(new Action<string, Exception>(Print), message, e);
             return;
         }
 
-        if (level != Logger.LogLevel.Debug)
-        {
-            console.AppendText($"{message} {e.Display()}{Environment.NewLine}");
-        }
-
-        _logger?.Log(message, e, level);
+        console.AppendText($"{message} {e.Display()}{Environment.NewLine}");
     }
 
     private async Task LocateController(Joycon controller)
@@ -478,7 +459,7 @@ public partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            Log("Cannot set run on boot.", ex);
+            _logger?.Log("Cannot set run on boot.", ex);
             startOnBoot.Checked = !startOnBoot.Checked;
         }
     }
@@ -563,11 +544,11 @@ public partial class MainForm : Form
             ConfigurationManager.RefreshSection(configFile.AppSettings.SectionInformation.Name);
 
             await ApplyConfig();
-            Log("Configuration applied.");
+            _logger?.Log("Configuration applied.");
         }
         catch (ConfigurationErrorsException ex)
         {
-            Log("Error writing app settings.", ex);
+           _logger?.Log("Error writing app settings.", ex);
         }
     }
 
@@ -632,11 +613,11 @@ public partial class MainForm : Form
             ConfigurationManager.RefreshSection(configFile.AppSettings.SectionInformation.Name);
 
             await ApplyConfig();
-            Log("Configuration applied.");
+            _logger?.Log("Configuration applied.");
         }
         catch (ConfigurationErrorsException ex)
         {
-            Log("Error writing app settings.", ex);
+            _logger?.Log("Error writing app settings.", ex);
         }
     }
 
@@ -682,7 +663,7 @@ public partial class MainForm : Form
                 break;
             default:
                 _selectController = true;
-                Log("Click on a controller to calibrate.");
+                _logger?.Log("Click on a controller to calibrate.");
                 break;
         }
     }
@@ -729,7 +710,7 @@ public partial class MainForm : Form
                 break;
             default:
                 _selectController = true;
-                Log("Click on a controller to locate.");
+                _logger?.Log("Click on a controller to locate.");
                 break;
         }
     }
@@ -835,7 +816,7 @@ public partial class MainForm : Form
 
             if (controller.CalibrationIMUDatas.Count == 0)
             {
-                Log("No IMU data received, proceed to stick calibration anyway. Is the controller working ?", Logger.LogLevel.Warning);
+                _logger?.Log("No IMU data received, proceed to stick calibration anyway. Is the controller working ?", Logger.LogLevel.Warning);
             }
             else
             {
@@ -938,7 +919,7 @@ public partial class MainForm : Form
 
             if (controller.CalibrationStickDatas.Count == 0)
             {
-                Log("No stick positions received, calibration canceled. Is the controller working ?", Logger.LogLevel.Warning);
+                _logger?.Log("No stick positions received, calibration canceled. Is the controller working ?", Logger.LogLevel.Warning);
                 CancelCalibrate(controller);
                 return;
             }
@@ -1035,7 +1016,7 @@ public partial class MainForm : Form
 
             if (controller.CalibrationStickDatas.Count == 0)
             {
-                Log("No stick positions received, calibration canceled. Is the controller working ?", Logger.LogLevel.Warning);
+                _logger?.Log("No stick positions received, calibration canceled. Is the controller working ?", Logger.LogLevel.Warning);
                 CancelCalibrate(controller);
                 return;
             }
@@ -1092,7 +1073,7 @@ public partial class MainForm : Form
     {
         if (disconnected)
         {
-            Log("Controller disconnected, calibration canceled.");
+            _logger?.Log("Controller disconnected, calibration canceled.");
         }
 
         SetCalibrate(false);

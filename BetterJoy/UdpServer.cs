@@ -76,12 +76,12 @@ internal class UdpServer
     private uint _serverId;
     private Socket _udpSock;
 
-    private readonly MainForm _form;
+    private readonly Logger _logger;
 
-    public UdpServer(MainForm form, IList<Joycon> p)
+    public UdpServer(Logger logger, IList<Joycon> p)
     {
         _controllers = p;
-        _form = form;
+        _logger = logger;
     }
 
     private int BeginPacket(Span<byte> packetBuffer, ushort reqProtocolVersion = MaxProtocolVersion)
@@ -373,7 +373,7 @@ internal class UdpServer
         {
             _udpSock.Close();
 
-            _form.Log(
+            _logger?.Log(
                 $"Could not start motion server. Make sure that no other applications using the port {port} are running.", e
             );
             return;
@@ -391,23 +391,23 @@ internal class UdpServer
                 try
                 {
                     await RunReceive(_ctsTransfers.Token);
-                    _form.Log("Task UDP receive finished.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task UDP receive finished.", Logger.LogLevel.Debug);
                 }
                 catch (OperationCanceledException) when (_ctsTransfers.IsCancellationRequested)
                 {
-                    _form.Log("Task UDP receive canceled.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task UDP receive canceled.", Logger.LogLevel.Debug);
                 }
                 catch (Exception e)
                 {
-                    _form.Log("Task UDP receive error.", e);
+                    _logger?.Log("Task UDP receive error.", e);
                     throw;
                 }
             }
         );
-        _form.Log("Task UDP receive started.", Logger.LogLevel.Debug);
+        _logger?.Log("Task UDP receive started.", Logger.LogLevel.Debug);
 
         _running = true;
-        _form.Log($"Motion server started on {ip}:{port}.");
+        _logger?.Log($"Motion server started on {ip}:{port}.");
     }
 
     public async Task Stop()
@@ -424,7 +424,7 @@ internal class UdpServer
         await _receiveTask;
         _ctsTransfers.Dispose();
 
-        _form.Log("Motion server stopped.");
+        _logger?.Log("Motion server stopped.");
     }
 
     private void ResetUDPSocket()
@@ -663,11 +663,11 @@ internal class UdpServer
         // Ignore closing
         catch (ObjectDisposedException e)
         {
-            _form.Log("UDP socket disposed.", e, Logger.LogLevel.Warning);
+            _logger?.Log("UDP socket disposed.", e, Logger.LogLevel.Warning);
         }
         catch (SocketException e)
         {
-            _form.Log("UDP socket closed.", e, Logger.LogLevel.Warning);
+            _logger?.Log("UDP socket closed.", e, Logger.LogLevel.Warning);
         }
     }
 

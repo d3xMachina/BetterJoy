@@ -184,6 +184,7 @@ public class Joycon
     private float _range2;
 
     private readonly MainForm _form;
+    private readonly Logger _logger;
 
     private byte _globalCount;
     private Vector3 _gyrG = Vector3.Zero;
@@ -263,6 +264,7 @@ public class Joycon
     private volatile bool _requestSetLEDByPadID;
 
     public Joycon(
+        Logger logger,
         MainForm form,
         HIDApi.Device device,
         string path,
@@ -273,9 +275,10 @@ public class Joycon
         bool isThirdParty = false
     )
     {
+        _logger = logger;
         _form = form;
 
-        Config = new(_form);
+        Config = new(_logger);
         Config.Update();
 
         SerialNumber = serialNum;
@@ -3432,17 +3435,17 @@ public class Joycon
     {
         if (level == Logger.LogLevel.Debug && type != DebugType.None)
         {
-            _form.Log($"[P{PadId + 1}] [{type.ToString().ToUpper()}] {message}", level);
+            _logger?.Log($"[P{PadId + 1}] [{type.ToString().ToUpper()}] {message}", level);
         }
         else
         {
-            _form.Log($"[P{PadId + 1}] {message}", level);
+            _logger?.Log($"[P{PadId + 1}] {message}", level);
         }
     }
 
     private void Log(string message, Exception e, Logger.LogLevel level = Logger.LogLevel.Error)
     {
-        _form.Log($"[P{PadId + 1}] {message}", e, level);
+        _logger?.Log($"[P{PadId + 1}] {message}", e, level);
     }
 
     public void ApplyConfig(bool showErrors = true)
