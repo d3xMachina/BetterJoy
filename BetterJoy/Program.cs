@@ -195,49 +195,44 @@ public class JoyconManager
 
         while (await channelReader.WaitToReadAsync(token))
         {
-            bool read;
-            do
+            while (channelReader.TryRead(out var job))
             {
                 token.ThrowIfCancellationRequested();
-                read = channelReader.TryRead(out var job);
 
-                if (read)
+                switch (job.Notification)
                 {
-                    switch (job.Notification)
+                    case DeviceNotification.Type.Connected:
                     {
-                        case DeviceNotification.Type.Connected:
-                        {
-                            var deviceInfos = (HIDApi.DeviceInfo)job.Data;
-                            OnDeviceConnected(deviceInfos);
-                            break;
-                        }
-                        case DeviceNotification.Type.Disconnected:
-                        {
-                            var deviceInfos = (HIDApi.DeviceInfo)job.Data;
-                            OnDeviceDisconnected(deviceInfos);
-                            break;
-                        }
-                        case DeviceNotification.Type.ForceDisconnected:
-                        {
-                            var deviceIdentifier = (ControllerIdentifier)job.Data;
-                            OnDeviceDisconnected(deviceIdentifier);
-                            break;
-                        }
-                        case DeviceNotification.Type.Errored:
-                        {
-                            var deviceIdentifier = (ControllerIdentifier)job.Data;
-                            OnDeviceErrored(deviceIdentifier);
-                            break;
-                        }
-                        case DeviceNotification.Type.VirtualControllerErrored:
-                        {
-                            var deviceIdentifier = (ControllerIdentifier)job.Data;
-                            OnVirtualControllerErrored(deviceIdentifier);
-                            break;
-                        }
+                        var deviceInfos = (HIDApi.DeviceInfo)job.Data;
+                        OnDeviceConnected(deviceInfos);
+                        break;
+                    }
+                    case DeviceNotification.Type.Disconnected:
+                    {
+                        var deviceInfos = (HIDApi.DeviceInfo)job.Data;
+                        OnDeviceDisconnected(deviceInfos);
+                        break;
+                    }
+                    case DeviceNotification.Type.ForceDisconnected:
+                    {
+                        var deviceIdentifier = (ControllerIdentifier)job.Data;
+                        OnDeviceDisconnected(deviceIdentifier);
+                        break;
+                    }
+                    case DeviceNotification.Type.Errored:
+                    {
+                        var deviceIdentifier = (ControllerIdentifier)job.Data;
+                        OnDeviceErrored(deviceIdentifier);
+                        break;
+                    }
+                    case DeviceNotification.Type.VirtualControllerErrored:
+                    {
+                        var deviceIdentifier = (ControllerIdentifier)job.Data;
+                        OnVirtualControllerErrored(deviceIdentifier);
+                        break;
                     }
                 }
-            } while (read);
+            }
         }
     }
 
