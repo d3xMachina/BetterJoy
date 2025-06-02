@@ -15,6 +15,7 @@
         <Copyright>Copyright © 2024</Copyright>
 		<ZipFileName>$(MSBuildProjectName).zip</ZipFileName>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<NeutralLanguage>en</NeutralLanguage>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
