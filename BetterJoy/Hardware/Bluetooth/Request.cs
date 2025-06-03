@@ -43,7 +43,7 @@ namespace BetterJoy.Hardware.Bluetooth
             
             _argsLength = args.Length;
             _raw[RequestStartIndex] = 0x01; // Always
-            _raw[CommandCountIndex] = (byte)(commandCount % 0x10); // Command index only uses 4 bits
+            _raw[CommandCountIndex] = (byte)(commandCount & 0x0F); // Command index only uses 4 bits
             _raw[CommandIndex] = (byte)subCommand;
             
             rumble.CopyTo(_raw.AsSpan(RumbleContentsStartIndex));
