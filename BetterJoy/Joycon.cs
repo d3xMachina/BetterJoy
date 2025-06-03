@@ -2437,22 +2437,15 @@ public class Joycon
             return DeviceErroredCode;
         }
 
-        Span<byte> buf = stackalloc byte[_CommandLength];
-        buf.Clear();
-
-        _rumbleBuf.AsSpan(0, 8).CopyTo(buf.Slice(2));
-        bufParameters.CopyTo(buf.Slice(11));
-        buf[10] = (byte)sc;
-        buf[1] = (byte)(_globalCount & 0x0F);
-        buf[0] = 0x01;
+        Request request = new Request(sc, _globalCount, bufParameters, _rumbleBuf);
         ++_globalCount;
 
         if (print)
         {
-            PrintArray<byte>(buf, DebugType.Comms, bufParameters.Length, 11, $"Subcommand {(byte)sc:X2} sent. Data: {{0:S}}");
+            DebugPrint(request.ToString(), DebugType.Comms);
         }
 
-        int length = Write(buf);
+        int length = Write(request);
 
         return length;
     }
