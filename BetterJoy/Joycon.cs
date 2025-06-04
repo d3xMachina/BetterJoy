@@ -2437,15 +2437,15 @@ public class Joycon
             return DeviceErroredCode;
         }
 
-        var request = new SubCommand(sc, _globalCount, bufParameters, _rumbleBuf, IsUSB);
+        var subCommandPacket = new SubCommandPacket(sc, _globalCount, bufParameters, _rumbleBuf, IsUSB);
         ++_globalCount;
 
         if (print)
         {
-            DebugPrint(request.ToString(), DebugType.Comms);
+            DebugPrint(subCommandPacket.ToString(), DebugType.Comms);
         }
 
-        int length = Write(request);
+        int length = Write(subCommandPacket);
 
         return length;
     }

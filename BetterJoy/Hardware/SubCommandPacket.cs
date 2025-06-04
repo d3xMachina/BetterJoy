@@ -5,11 +5,11 @@ using System.Text;
 
 namespace BetterJoy.Hardware;
 
-public class SubCommand
+public class SubCommandPacket
 {
     private static readonly byte[] _stopRumbleBuf = [0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40]; // Stop rumble
     
-    private const int RequestStartIndex = 0;
+    private const int PacketStartIndex = 0;
     private const int CommandCountIndex = 1;
     private const int RumbleContentsStartIndex = 2;
     private const int CommandIndex = 10;
@@ -30,7 +30,7 @@ public class SubCommand
 
     private readonly CommandBuffer _raw;
     
-    public SubCommand(
+    public SubCommandPacket(
         SubCommandOperation subCommandOperation, 
         uint commandCount, 
         ReadOnlySpan<byte> args = default, 
@@ -52,11 +52,11 @@ public class SubCommand
         // Check the args length
         if (args.Length > MaxArgsLength)
         {
-            throw new ArgumentException($@"Args span is too large. Expected at most: {RumbleLength} Received: {rumble.Length}", nameof(args));
+            throw new ArgumentException($@"Args span is too large. Expected at most: {MaxArgsLength} Received: {rumble.Length}", nameof(args));
         }
         
         _argsLength = args.Length;
-        _raw[RequestStartIndex] = 0x01; // Always
+        _raw[PacketStartIndex] = 0x01; // Always
         _raw[CommandCountIndex] = (byte)(commandCount & 0x0F); // Command index only uses 4 bits
         _raw[CommandIndex] = (byte)subCommandOperation;
         
@@ -64,7 +64,7 @@ public class SubCommand
         args.CopyTo(_raw[ArgumentsStartIndex..]);
     }
     
-    public static implicit operator ReadOnlySpan<byte>(SubCommand subCommand) => subCommand._raw;
+    public static implicit operator ReadOnlySpan<byte>(SubCommandPacket subCommand) => subCommand._raw;
     
     public SubCommandOperation Operation => (SubCommandOperation)_raw[CommandIndex];
 
