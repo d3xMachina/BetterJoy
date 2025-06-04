@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 
 namespace BetterJoy.HIDApi;
@@ -6,7 +6,7 @@ namespace BetterJoy.HIDApi;
 internal static partial class NativeMethods
 {
     private const string Dll = "hidapi.dll";
-    
+
     [LibraryImport(Dll, EntryPoint = "hid_init")]
     public static partial int Init();
 
@@ -21,7 +21,7 @@ internal static partial class NativeMethods
 
     [LibraryImport(Dll, EntryPoint = "hid_open")]
     public static partial IntPtr Open(ushort vendorId, ushort productId, [MarshalAs(UnmanagedType.LPWStr)] string serialNumber);
-    
+
     [LibraryImport(Dll, EntryPoint = "hid_open_path")]
     public static partial IntPtr OpenPath([MarshalAs(UnmanagedType.LPStr)] string path);
 
@@ -54,19 +54,19 @@ internal static partial class NativeMethods
 
     [LibraryImport(Dll, EntryPoint = "hid_get_serial_number_string")]
     public static partial int GetSerialNumberString(IntPtr device, ref byte str, nuint maxlen);
-    
+
     [LibraryImport(Dll, EntryPoint = "hid_get_indexed_string")]
     public static partial int GetIndexedString(IntPtr device, int stringIndex, ref byte str, nuint maxlen);
 
     [LibraryImport(Dll, EntryPoint = "hid_error")]
     public static partial IntPtr Error(IntPtr device);
-    
+
     [LibraryImport(Dll, EntryPoint = "hid_winapi_get_container_id")]
     public static partial int GetContainerId(IntPtr device, out Guid containerId);
 
     // Added in my fork of HIDapi at https://github.com/d3xMachina/hidapi (needed for HIDHide to work correctly)
     #region HIDAPI_MYFORK
-    
+
     [LibraryImport(Dll, EntryPoint = "hid_winapi_get_instance_string")]
     public static partial int GetInstanceString(IntPtr device, ref byte str, nuint maxlen);
 
@@ -77,14 +77,14 @@ internal static partial class NativeMethods
 
     #region HIDAPI_CALLBACK
 
-    [LibraryImport(Dll, EntryPoint = "hid_hotplug_register_callback")]
-    public static partial int HotplugRegisterCallback(
+    [DllImport(Dll, EntryPoint = "hid_hotplug_register_callback", CallingConvention = CallingConvention.Cdecl)]
+    public static extern int HotplugRegisterCallback(
         ushort vendorId,
         ushort productId,
         int events,
         int flags,
-        [MarshalAs(UnmanagedType.FunctionPtr)] UnmanagedHotplugCallback callback,
-        IntPtr userData,
+        [MarshalAs(UnmanagedType.FunctionPtr)] HotplugCallback callback,
+        [MarshalAs(UnmanagedType.IUnknown)] object userData,
         out int callbackHandle
     );
 

@@ -1,4 +1,4 @@
-﻿using Nefarius.ViGEm.Client.Exceptions;
+using Nefarius.ViGEm.Client.Exceptions;
 using System;
 using System.ComponentModel;
 using System.Configuration;

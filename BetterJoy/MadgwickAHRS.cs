@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 // source: https://github.com/xioTechnologies/Open-Source-AHRS-With-x-IMU/blob/master/x-IMU%20IMU%20and%20AHRS%20Algorithms/x-IMU%20IMU%20and%20AHRS%20Algorithms/AHRS/MadgwickAHRS.cs
 
@@ -34,8 +34,8 @@ public class MadgwickAHRS
     {
         SamplePeriod = samplePeriod;
         Beta = beta;
-        Quaternion = new[] { 1f, 0f, 0f, 0f };
-        OldPitchYawRoll = new[] { 0f, 0f, 0f };
+        Quaternion = [1f, 0f, 0f, 0f];
+        OldPitchYawRoll = [0f, 0f, 0f];
     }
 
     /// <summary>

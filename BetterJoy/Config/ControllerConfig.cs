@@ -1,4 +1,3 @@
-﻿using BetterJoy.Forms;
 using System;
 using static BetterJoy.Joycon;
 
@@ -43,9 +42,9 @@ public class ControllerConfig : Config
     public bool AutoPowerOff;
     public bool AllowCalibration;
 
-    public ControllerConfig(MainForm form) : base(form) { }
+    public ControllerConfig(Logger logger) : base(logger) { }
 
-    public ControllerConfig(ControllerConfig config) : base(config._form)
+    public ControllerConfig(ControllerConfig config) : base(config._logger)
     {
         LowFreq = config.LowFreq;
         HighFreq = config.HighFreq;

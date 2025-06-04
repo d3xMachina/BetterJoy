@@ -1,4 +1,4 @@
-﻿using BetterJoy.Collections;
+using BetterJoy.Collections;
 using BetterJoy.Config;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Channels;
@@ -47,6 +48,7 @@ public class JoyconManager
     private const ushort ProductFamicomII = 0x2007;
     private const ushort ProductN64 = 0x2019;
 
+    private readonly Logger _logger;
     private readonly MainForm _form;
 
     private bool _isRunning = false;
@@ -81,8 +83,9 @@ public class JoyconManager
         }
     }
 
-    public JoyconManager(MainForm form)
+    public JoyconManager(Logger logger, MainForm form)
     {
+        _logger = logger;
         _form = form;
 
         _channelDeviceNotifications = Channel.CreateUnbounded<DeviceNotification>(
@@ -110,13 +113,13 @@ public class JoyconManager
         }
         catch (BadImageFormatException e)
         {
-            _form.Log("Invalid hidapi.dll. (32 bits VS 64 bits)", e);
+            _logger?.Log("Invalid hidapi.dll. (32 bits VS 64 bits)", e);
             return false;
         }
-        
+
         if (ret != 0)
         {
-            _form.Log("Could not initialize hidapi.", Logger.LogLevel.Error);
+            _logger?.Log("Could not initialize hidapi.", Logger.LogLevel.Error);
             return false;
         }
 
@@ -132,7 +135,7 @@ public class JoyconManager
 
         if (ret != 0)
         {
-            _form.Log("Could not register hidapi callback.", Logger.LogLevel.Error);
+            _logger?.Log("Could not register hidapi callback.", Logger.LogLevel.Error);
             HIDApi.Manager.Exit();
             return false;
         }
@@ -144,20 +147,20 @@ public class JoyconManager
                 try
                 {
                     await ProcessDevicesNotifications(_ctsDevicesNotifications.Token);
-                    _form.Log("Task devices notification finished.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task devices notification finished.", Logger.LogLevel.Debug);
                 }
                 catch (OperationCanceledException) when (_ctsDevicesNotifications.IsCancellationRequested)
                 {
-                    _form.Log("Task devices notification canceled.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task devices notification canceled.", Logger.LogLevel.Debug);
                 }
                 catch (Exception e)
                 {
-                    _form.Log("Task devices notification error.", e);
+                    _logger?.Log("Task devices notification error.", e);
                     throw;
                 }
             }
         );
-        _form.Log("Task devices notification started.", Logger.LogLevel.Debug);
+        _logger?.Log("Task devices notification started.", Logger.LogLevel.Debug);
 
         _isRunning = true;
         return true;
@@ -192,49 +195,44 @@ public class JoyconManager
 
         while (await channelReader.WaitToReadAsync(token))
         {
-            bool read;
-            do
+            while (channelReader.TryRead(out var job))
             {
                 token.ThrowIfCancellationRequested();
-                read = channelReader.TryRead(out var job);
 
-                if (read)
+                switch (job.Notification)
                 {
-                    switch (job.Notification)
+                    case DeviceNotification.Type.Connected:
                     {
-                        case DeviceNotification.Type.Connected:
-                        {
-                            var deviceInfos = (HIDApi.DeviceInfo)job.Data;
-                            OnDeviceConnected(deviceInfos);
-                            break;
-                        }
-                        case DeviceNotification.Type.Disconnected:
-                        {
-                            var deviceInfos = (HIDApi.DeviceInfo)job.Data;
-                            OnDeviceDisconnected(deviceInfos);
-                            break;
-                        }
-                        case DeviceNotification.Type.ForceDisconnected:
-                        {
-                            var deviceIdentifier = (ControllerIdentifier)job.Data;
-                            OnDeviceDisconnected(deviceIdentifier);
-                            break;
-                        }
-                        case DeviceNotification.Type.Errored:
-                        {
-                            var deviceIdentifier = (ControllerIdentifier)job.Data;
-                            OnDeviceErrored(deviceIdentifier);
-                            break;
-                        }
-                        case DeviceNotification.Type.VirtualControllerErrored:
-                        {
-                            var deviceIdentifier = (ControllerIdentifier)job.Data;
-                            OnVirtualControllerErrored(deviceIdentifier);
-                            break;
-                        }
+                        var deviceInfos = (HIDApi.DeviceInfo)job.Data;
+                        OnDeviceConnected(deviceInfos);
+                        break;
+                    }
+                    case DeviceNotification.Type.Disconnected:
+                    {
+                        var deviceInfos = (HIDApi.DeviceInfo)job.Data;
+                        OnDeviceDisconnected(deviceInfos);
+                        break;
+                    }
+                    case DeviceNotification.Type.ForceDisconnected:
+                    {
+                        var deviceIdentifier = (ControllerIdentifier)job.Data;
+                        OnDeviceDisconnected(deviceIdentifier);
+                        break;
+                    }
+                    case DeviceNotification.Type.Errored:
+                    {
+                        var deviceIdentifier = (ControllerIdentifier)job.Data;
+                        OnDeviceErrored(deviceIdentifier);
+                        break;
+                    }
+                    case DeviceNotification.Type.VirtualControllerErrored:
+                    {
+                        var deviceIdentifier = (ControllerIdentifier)job.Data;
+                        OnVirtualControllerErrored(deviceIdentifier);
+                        break;
                     }
                 }
-            } while (read);
+            }
         }
     }
 
@@ -244,14 +242,14 @@ public class JoyconManager
         {
             return;
         }
-        
+
         // Don't need to put NES or Famicom here because they are the same as the right Joycon
         bool validController = info is
         {
-            VendorId: VendorId, 
+            VendorId: VendorId,
             ProductId: ProductL or ProductR or ProductPro or ProductSNES or ProductN64
         };
-        
+
         SController thirdParty = null;
 
         // Check if it's a custom controller
@@ -294,18 +292,18 @@ public class JoyconManager
                     type = Joycon.ControllerType.N64;
                     break;
                 default:
-                    _form.Log($"Invalid product ID: {info.ProductId}.", Logger.LogLevel.Error);
+                    _logger?.Log($"Invalid product ID: {info.ProductId}.", Logger.LogLevel.Error);
                     return;
-            };
+            }
         }
         else
         {
             if (!Enum.IsDefined(typeof(Joycon.ControllerType), thirdParty.Type))
             {
-                _form.Log($"Invalid third-party controller type: {thirdParty.Type}.", Logger.LogLevel.Error);
+                _logger?.Log($"Invalid third-party controller type: {thirdParty.Type}.", Logger.LogLevel.Error);
                 return;
             }
-            
+
             type = (Joycon.ControllerType)thirdParty.Type;
         }
 
@@ -322,7 +320,7 @@ public class JoyconManager
             // don't show an error message when the controller was dropped without hidapi callback notification (after standby for example)
             if (!reconnect)
             {
-                _form.Log($"Unable to open device: {HIDApi.Manager.GetError()}.", Logger.LogLevel.Error);
+                _logger?.Log($"Unable to open device: {HIDApi.Manager.GetError()}.", Logger.LogLevel.Error);
             }
 
             return;
@@ -332,12 +330,13 @@ public class JoyconManager
 
         var index = GetControllerIndex(type);
         var name = Joycon.GetControllerName(type);
-        _form.Log($"[P{index + 1}] {name} connected.");
+        _logger?.Log($"[P{index + 1}] {name} connected.");
 
         // Add controller to block-list for HidHide
         Program.AddDeviceToBlocklist(device);
 
         var controller = new Joycon(
+            _logger,
             _form,
             device,
             path,
@@ -356,14 +355,14 @@ public class JoyconManager
         }
         catch (Exception e)
         {
-            _form.Log($"[P{index + 1}] Could not connect.", e);
+            _logger?.Log($"[P{index + 1}] Could not connect.", e);
             return;
         }
         finally
         {
             Controllers.Add(controller);
         }
-        
+
         _form.AddController(controller);
 
         // attempt to auto join-up joycons on connection
@@ -387,7 +386,7 @@ public class JoyconManager
             }
             catch (Exception e)
             {
-                _form.Log("Could not connect the virtual controller. Retrying...", e);
+                _logger?.Log("Could not connect the virtual controller. Retrying...", e);
 
                 ReconnectVirtualControllerDelayed(controller);
             }
@@ -418,7 +417,7 @@ public class JoyconManager
             // change the controller state to avoid trying to send command to it
             controller.Drop(false, false);
         }
-        
+
         controller.Detach();
 
         var otherController = controller.Other;
@@ -434,7 +433,7 @@ public class JoyconManager
             }
             catch (Exception e)
             {
-                _form.Log("Could not connect the virtual controller for the unjoined joycon. Retrying...", e);
+                _logger?.Log("Could not connect the virtual controller for the unjoined joycon. Retrying...", e);
 
                 ReconnectVirtualControllerDelayed(otherController);
             }
@@ -447,7 +446,7 @@ public class JoyconManager
         }
 
         var name = controller.GetControllerName();
-        _form.Log($"[P{controller.PadId + 1}] {name} disconnected.");
+        _logger?.Log($"[P{controller.PadId + 1}] {name} disconnected.");
     }
 
     private void OnDeviceDisconnected(ControllerIdentifier deviceIdentifier)
@@ -464,7 +463,7 @@ public class JoyconManager
             // device not dropped anymore (after a reset or a reconnection from the system)
             return;
         }
-        
+
         OnDeviceDisconnected(controller);
     }
 
@@ -482,7 +481,7 @@ public class JoyconManager
             // device not in error anymore (after a reset or a reconnection from the system)
             return;
         }
-        
+
         OnDeviceDisconnected(controller);
         OnDeviceConnected(controller.Path, controller.SerialNumber, controller.Type, controller.IsUSB, controller.IsThirdParty, true);
     }
@@ -506,11 +505,11 @@ public class JoyconManager
         try
         {
             controller.ConnectViGEm();
-            _form.Log($"[P{controller.PadId + 1}] Virtual controller reconnected.");
+            _logger?.Log($"[P{controller.PadId + 1}] Virtual controller reconnected.");
         }
         catch (Exception e)
         {
-            _form.Log($"[P{controller.PadId + 1}] Could not reconnect the virtual controller. Retrying...", e);
+            _logger?.Log($"[P{controller.PadId + 1}] Could not reconnect the virtual controller. Retrying...", e);
 
             ReconnectVirtualControllerDelayed(controller);
         }
@@ -712,9 +711,9 @@ public class JoyconManager
         {
             HIDApi.Manager.HotplugDeregisterCallback(_hidCallbackHandle);
         }
-        
+
         await _devicesNotificationTask;
-        
+
         foreach (var controller in Controllers)
         {
             controller.StateChanged -= OnControllerStateChanged;
@@ -724,7 +723,7 @@ public class JoyconManager
                 controller.RequestPowerOff();
             }
         }
-        
+
         Stopwatch timeSincePowerOff = Stopwatch.StartNew();
         int timeoutPowerOff = 1800; // a bit of extra time to have 3 attempts
 
@@ -740,10 +739,10 @@ public class JoyconManager
                     timeoutPowerOff = 0;
                 }
             }
-            
+
             controller.Detach();
         }
-        
+
         _ctsDevicesNotifications.Dispose();
 
         HIDApi.Manager.Exit();
@@ -835,7 +834,7 @@ public class JoyconManager
         }
         catch (Exception e)
         {
-            _form.Log("Could not connect the virtual controller for the split joycon. Retrying...", e);
+            _logger?.Log("Could not connect the virtual controller for the split joycon. Retrying...", e);
 
             if (keep && !controller.IsViGEmSetup())
             {
@@ -875,7 +874,7 @@ public class JoyconManager
                 change = true;
             }
         }
-        else 
+        else
         {
             Joycon other = controller.Other;
 
@@ -911,20 +910,23 @@ internal class Program
     public static ProgramConfig Config;
 
     private static readonly HidHideControlService _hidHideService = new();
-    private static readonly HashSet<string> BlockedDeviceInstances = [];
+    private static readonly HashSet<string> _blockedDeviceInstances = [];
 
     private static bool _isRunning;
     public static bool IsSuspended { get; private set; }
 
-    private static readonly string AppGuid = "1bf709e9-c133-41df-933a-c9ff3f664c7b"; // randomly-generated
+    private static readonly string _appGuid = "1bf709e9-c133-41df-933a-c9ff3f664c7b"; // randomly-generated
     private static Mutex _mutexInstance;
 
     private static bool _keyEventRegistered;
     private static bool _mouseEventRegistered;
 
+    private const string _logFilePath = "LogDebug.txt";
+    private static Logger _logger;
+
     public static void Start()
     {
-        Config = new(_form);
+        Config = new(_logger);
         Config.Update();
 
         StartHIDHide();
@@ -935,24 +937,24 @@ internal class Program
         }
         catch (VigemBusNotFoundException e)
         {
-            _form.Log("Could not connect to VIGEmBus. Make sure VIGEmBus driver is installed correctly.", e);
+            _logger?.Log("Could not connect to VIGEmBus. Make sure VIGEmBus driver is installed correctly.", e);
         }
         catch (VigemBusAccessFailedException e)
         {
-            _form.Log("Could not connect to VIGEmBus. VIGEmBus is busy. Try restarting your computer or reinstalling VIGEmBus driver.", e);
+            _logger?.Log("Could not connect to VIGEmBus. VIGEmBus is busy. Try restarting your computer or reinstalling VIGEmBus driver.", e);
         }
         catch (VigemBusVersionMismatchException e)
         {
-            _form.Log("Could not connect to VIGEmBus. The installed VIGEmBus driver is not compatible. Install a newer version of VIGEmBus driver.", e);
+            _logger?.Log("Could not connect to VIGEmBus. The installed VIGEmBus driver is not compatible. Install a newer version of VIGEmBus driver.", e);
         }
         catch (VigemAllocFailedException e)
         {
-            _form.Log("Could not connect to VIGEmBus. Allocation failed. Try restarting your computer or reinstalling VIGEmBus driver.", e);
+            _logger?.Log("Could not connect to VIGEmBus. Allocation failed. Try restarting your computer or reinstalling VIGEmBus driver.", e);
         }
         catch (VigemAlreadyConnectedException e)
         {
             // should not happen
-            _form.Log("VIGEmBus is already connected.", e);
+            _logger?.Log("VIGEmBus is already connected.", e);
         }
 
         foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
@@ -971,12 +973,12 @@ internal class Program
         var controllers = GetSavedThirdpartyControllers();
         UpdateThirdpartyControllers(controllers);
 
-        Mgr = new JoyconManager(_form);
-        Server = new UdpServer(_form, Mgr.Controllers);
+        Mgr = new JoyconManager(_logger, _form);
+        Server = new UdpServer(_logger, Mgr.Controllers);
 
         if (!Config.MotionServer)
         {
-            _form.Log("Motion server is OFF.");
+            _logger?.Log("Motion server is OFF.");
         }
         else
         {
@@ -985,7 +987,7 @@ internal class Program
 
         UpdateInputEvents();
 
-        _form.Log("All systems go.");
+        _logger?.Log("All systems go.");
         Mgr.Start();
         _isRunning = true;
     }
@@ -1001,7 +1003,7 @@ internal class Program
 
             if (!_hidHideService.IsInstalled)
             {
-                _form.Log("HIDHide is not installed.", Logger.LogLevel.Warning);
+                _logger?.Log("HIDHide is not installed.", Logger.LogLevel.Warning);
                 return;
             }
 
@@ -1024,11 +1026,11 @@ internal class Program
         }
         catch (Exception e)
         {
-            _form.Log("Unable to start HIDHide.", e);
+            _logger?.Log("Unable to start HIDHide.", e);
             return;
         }
 
-        _form.Log("HIDHide is enabled.");
+        _logger?.Log("HIDHide is enabled.");
     }
 
     public static void AddDeviceToBlocklist(HIDApi.Device device)
@@ -1045,7 +1047,7 @@ internal class Program
             var instance = device.GetInstance();
             if (instance.Length == 0)
             {
-                _form.Log("Unable to get device instance.", Logger.LogLevel.Error);
+                _logger?.Log("Unable to get device instance.", Logger.LogLevel.Error);
             }
             else
             {
@@ -1055,7 +1057,7 @@ internal class Program
             var parentInstance = device.GetParentInstance();
             if (parentInstance.Length == 0)
             {
-                _form.Log("Unable to get device parent instance.", Logger.LogLevel.Error);
+                _logger?.Log("Unable to get device parent instance.", Logger.LogLevel.Error);
             }
             else
             {
@@ -1071,7 +1073,7 @@ internal class Program
         }
         catch (Exception e)
         {
-            _form.Log("Unable to add controller to block-list.", e);
+            _logger?.Log("Unable to add controller to block-list.", e);
         }
     }
 
@@ -1080,7 +1082,7 @@ internal class Program
         foreach (var instance in instances)
         {
             _hidHideService.AddBlockedInstanceId(instance);
-            BlockedDeviceInstances.Add(instance);
+            _blockedDeviceInstances.Add(instance);
         }
     }
 
@@ -1100,7 +1102,7 @@ internal class Program
             InputCapture.Global.UnregisterEvent(GlobalKeyEvent);
             _keyEventRegistered = false;
         }
-        
+
         // Mouse
         if (!remove && HasActionKM(false))
         {
@@ -1128,7 +1130,7 @@ internal class Program
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -1278,7 +1280,7 @@ internal class Program
 
             if (Config.PurgeAffectedDevices)
             {
-                foreach (var instance in BlockedDeviceInstances)
+                foreach (var instance in _blockedDeviceInstances)
                 {
                     _hidHideService.RemoveBlockedInstanceId(instance);
                 }
@@ -1293,11 +1295,11 @@ internal class Program
         }
         catch (Exception e)
         {
-            _form.Log("Unable to disable HIDHide.", e);
+            _logger?.Log("Unable to disable HIDHide.", e);
             return;
         }
 
-        _form.Log("HIDHide is disabled.");
+        _logger?.Log("HIDHide is disabled.");
     }
 
     public static void UpdateThirdpartyControllers(List<SController> controllers)
@@ -1305,8 +1307,50 @@ internal class Program
         ThirdpartyCons.Set(controllers);
     }
 
+    public static string GetProgramVersion()
+    {
+        var programVersion = Assembly.GetExecutingAssembly().GetName().Version;
+        return $"v{programVersion.Major}.{programVersion.Minor}.{programVersion.Build}";
+    }
+
+    private static void InitializeLogger()
+    {
+        try
+        {
+            _logger = new Logger(_logFilePath);
+        }
+        catch (Exception e)
+        {
+            Debug.Write($"Error initializing log file: {e}");
+        }
+    }
+
+    private static async Task DisposeLogger()
+    {
+        if (_logger == null)
+        {
+            return;
+        }
+
+        await _logger.Close();
+        _logger.Dispose();
+    }
+
+    private static void LogDebugInfos()
+    {
+        if (_logger == null)
+        {
+            return;
+        }
+
+        var programName = Application.ProductName;
+        var osArch = Environment.Is64BitProcess ? "x64" : "x86";
+        _logger?.Log($"{programName} {GetProgramVersion()}", Logger.LogLevel.Debug);
+        _logger?.Log($"OS version: {Environment.OSVersion} {osArch}", Logger.LogLevel.Debug);
+    }
+
     [STAThread]
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -1316,7 +1360,7 @@ internal class Program
         // Set the correct DLL for the current OS
         SetupDlls();
 
-        using (_mutexInstance = new Mutex(false, "Global\\" + AppGuid))
+        using (_mutexInstance = new Mutex(false, "Global\\" + _appGuid))
         {
             if (!_mutexInstance.WaitOne(0, false))
             {
@@ -1324,11 +1368,22 @@ internal class Program
                 return;
             }
 
-            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            _form = new MainForm();
-            Application.Run(_form);
+            InitializeLogger();
+
+            try
+            {
+                LogDebugInfos();
+
+                Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                _form = new MainForm(_logger);
+                Application.Run(_form);
+            }
+            finally
+            {
+                await DisposeLogger();
+            }
         }
     }
 

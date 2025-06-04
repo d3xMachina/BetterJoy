@@ -8,7 +8,7 @@ public class SPIPage
     private const byte LowAddressIndex = 0;
     private const byte PageSizeIndex = 4;
     private readonly byte[] _raw;
-    
+
     public byte HighAddress => _raw[HighAddressIndex];
     public byte LowAddress => _raw[LowAddressIndex];
     public byte PageSize => _raw[PageSizeIndex];
@@ -17,9 +17,9 @@ public class SPIPage
     {
         _raw = [low, high, 0x00, 0x00, len];
     }
-    
+
     public static implicit operator ReadOnlySpan<byte>(SPIPage page) => page._raw;
-    
+
     // Calibration pages
     public static readonly SPIPage UserStickCalibration = new(0x80, 0x10, 0x16);
     public static readonly SPIPage FactoryStickCalibration = new(0x60, 0x3D, 0x12);

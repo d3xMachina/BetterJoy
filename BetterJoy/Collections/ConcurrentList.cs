@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -7,7 +7,7 @@ namespace BetterJoy.Collections;
 
 /// A thread-safe IEnumerator implementation.
 /// https://www.codeproject.com/Articles/56575/Thread-safe-enumeration-in-C
-public class SafeEnumerator<T> : IEnumerator<T>
+public sealed class SafeEnumerator<T> : IEnumerator<T>
 {
     private readonly IEnumerator<T> _inner;
     private readonly Lock _lock;
@@ -122,7 +122,7 @@ public sealed class ConcurrentList<T> : IList<T>
 
     #region Fields
 
-    private readonly IList<T> _internalList;
+    private readonly List<T> _internalList;
     private readonly Lock _lock = new();
 
     #endregion
@@ -131,7 +131,7 @@ public sealed class ConcurrentList<T> : IList<T>
 
     public ConcurrentList()
     {
-        _internalList = new List<T>();
+        _internalList = [];
     }
 
     public ConcurrentList(int capacity)
@@ -141,11 +141,7 @@ public sealed class ConcurrentList<T> : IList<T>
 
     public ConcurrentList(IEnumerable<T> list)
     {
-        _internalList = new List<T>();
-        foreach (var item in list)
-        {
-            _internalList.Add(item);
-        }
+        _internalList = [.. list];
     }
 
     #endregion
@@ -176,7 +172,7 @@ public sealed class ConcurrentList<T> : IList<T>
         }
     }
 
-    private IEnumerator<T> LockInternalAndEnumerate()
+    private SafeEnumerator<T> LockInternalAndEnumerate()
     {
         return new SafeEnumerator<T>(_internalList, _lock);
     }

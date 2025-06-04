@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using WindowsInput.Events;
@@ -34,7 +34,7 @@ public partial class Reassign : Form
                      btn_active_gyro, btn_swap_ab, btn_swap_xy
                  })
         {
-            c.Tag = c.Name.Substring(4);
+            c.Tag = c.Name[4..];
             GetPrettyName(c);
 
             tip_reassign.SetToolTip(
@@ -168,24 +168,24 @@ public partial class Reassign : Form
     {
         var menuJoyButtons = new ContextMenuStrip(components);
 
-        foreach (int tag in Enum.GetValues<ButtonAction>())
+        foreach (var action in Enum.GetValues<ButtonAction>())
         {
-            var name = Enum.GetName(typeof(ButtonAction), tag);
+            var name = action.ToString();
             var temp = new ToolStripMenuItem(name)
             {
                 Name = name,
-                Tag = (ButtonAction)tag
+                Tag = (int)action
             };
             menuJoyButtons.Items.Add(temp);
         }
 
-        foreach (int tag in Enum.GetValues<Joycon.Button>())
+        foreach (var button in Enum.GetValues<Joycon.Button>())
         {
-            var name = Enum.GetName(typeof(Joycon.Button), tag);
+            var name = button.ToString();
             var temp = new ToolStripMenuItem(name)
             {
                 Name = name,
-                Tag = (Joycon.Button)tag
+                Tag = (int)button
             };
             menuJoyButtons.Items.Add(temp);
         }

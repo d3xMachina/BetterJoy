@@ -1,4 +1,6 @@
-﻿using System;
+using BetterJoy.Forms;
+using BetterJoy.Memory;
+using System;
 using System.Collections.Generic;
 using System.IO.Hashing;
 using System.Net;
@@ -7,8 +9,6 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterJoy.Forms;
-using BetterJoy.Memory;
 
 namespace BetterJoy;
 
@@ -76,12 +76,12 @@ internal class UdpServer
     private uint _serverId;
     private Socket _udpSock;
 
-    private readonly MainForm _form;
+    private readonly Logger _logger;
 
-    public UdpServer(MainForm form, IList<Joycon> p)
+    public UdpServer(Logger logger, IList<Joycon> p)
     {
         _controllers = p;
-        _form = form;
+        _logger = logger;
     }
 
     private int BeginPacket(Span<byte> packetBuffer, ushort reqProtocolVersion = MaxProtocolVersion)
@@ -128,7 +128,7 @@ internal class UdpServer
             var packetData = packetDataBuffer.Span;
 
             var currIdx = BeginPacket(packetData, reqProtocolVersion);
-            usefulData.AsSpan().CopyTo(packetData.Slice(currIdx));
+            usefulData.AsSpan().CopyTo(packetData[currIdx..]);
             FinishPacket(packetData);
         }
 
@@ -182,7 +182,7 @@ internal class UdpServer
         localMsg[currIdx++] = 0;
         localMsg[currIdx++] = 0;
 
-        var crcCalc = CalculateCrc32(localMsg.Slice(0, (int)packetSize));
+        var crcCalc = CalculateCrc32(localMsg[..(int)packetSize]);
         if (crcValue != crcCalc)
         {
             return false;
@@ -373,7 +373,7 @@ internal class UdpServer
         {
             _udpSock.Close();
 
-            _form.Log(
+            _logger?.Log(
                 $"Could not start motion server. Make sure that no other applications using the port {port} are running.", e
             );
             return;
@@ -391,23 +391,23 @@ internal class UdpServer
                 try
                 {
                     await RunReceive(_ctsTransfers.Token);
-                    _form.Log("Task UDP receive finished.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task UDP receive finished.", Logger.LogLevel.Debug);
                 }
                 catch (OperationCanceledException) when (_ctsTransfers.IsCancellationRequested)
                 {
-                    _form.Log("Task UDP receive canceled.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task UDP receive canceled.", Logger.LogLevel.Debug);
                 }
                 catch (Exception e)
                 {
-                    _form.Log("Task UDP receive error.", e);
+                    _logger?.Log("Task UDP receive error.", e);
                     throw;
                 }
             }
         );
-        _form.Log("Task UDP receive started.", Logger.LogLevel.Debug);
+        _logger?.Log("Task UDP receive started.", Logger.LogLevel.Debug);
 
         _running = true;
-        _form.Log($"Motion server started on {ip}:{port}.");
+        _logger?.Log($"Motion server started on {ip}:{port}.");
     }
 
     public async Task Stop()
@@ -424,7 +424,7 @@ internal class UdpServer
         await _receiveTask;
         _ctsTransfers.Dispose();
 
-        _form.Log("Motion server stopped.");
+        _logger?.Log("Motion server stopped.");
     }
 
     private void ResetUDPSocket()
@@ -492,7 +492,8 @@ internal class UdpServer
         ++outIdx;
 
         //DS4 only: touchpad points
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 2; i++)
+        {
             outIdx += 6;
         }
 
@@ -549,7 +550,7 @@ internal class UdpServer
 
         var nbClients = 0;
         var now = DateTime.UtcNow;
-        Span<SocketAddress> relevantClients = null; 
+        Span<SocketAddress> relevantClients = null;
 
         Monitor.Enter(_clients);
 
@@ -623,7 +624,7 @@ internal class UdpServer
             return;
         }
 
-        relevantClients = relevantClients.Slice(0, nbClients);
+        relevantClients = relevantClients[..nbClients];
 
         Span<byte> outputData = stackalloc byte[ReportSize];
         outputData.Clear();
@@ -663,11 +664,11 @@ internal class UdpServer
         // Ignore closing
         catch (ObjectDisposedException e)
         {
-            _form.Log("UDP socket disposed.", e, Logger.LogLevel.Warning);
+            _logger?.Log("UDP socket disposed.", e, Logger.LogLevel.Warning);
         }
         catch (SocketException e)
         {
-            _form.Log("UDP socket closed.", e, Logger.LogLevel.Warning);
+            _logger?.Log("UDP socket closed.", e, Logger.LogLevel.Warning);
         }
     }
 

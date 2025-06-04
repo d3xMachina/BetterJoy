@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Threading;
 
@@ -28,7 +28,7 @@ public sealed partial class ArrayPoolHelper<T>
         public int Length => _length;
         public U[] Array => _array; // carefull, length allocated to the array might be bigger than demanded, prefer to use Span instead
         public Span<U> Span => _array.AsSpan(0, _length);
-        public ReadOnlyMemory<U> ReadOnlyMemory => new ReadOnlyMemory<U>(_array, 0, Length);
+        public ReadOnlyMemory<U> ReadOnlyMemory => new(_array, 0, Length);
 
         public void Dispose()
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
@@ -56,24 +56,15 @@ public static class Manager
         object userData,
         out int callbackHandle)
     {
-        // Create the native callback that will forward to our managed callback
-        int nativeCallback(int handle, DeviceInfo deviceInfo, int ev, nint _)
-        {
-            return callback(handle, deviceInfo, ev, userData);
-        }
-
-        // Register the native callback
-        var result = NativeMethods.HotplugRegisterCallback(
+        return NativeMethods.HotplugRegisterCallback(
             vendorId,
             productId,
             events,
             flags,
-            nativeCallback,
-            IntPtr.Zero, // We don't pass userData through native
+            callback,
+            userData,
             out callbackHandle
         );
-
-        return result;
     }
 
     public static int HotplugDeregisterCallback(int callbackHandle)

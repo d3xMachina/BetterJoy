@@ -1,4 +1,4 @@
-﻿using Nefarius.ViGEm.Client.Targets;
+using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 
 namespace BetterJoy.Controller;
@@ -39,7 +39,7 @@ public struct OutputControllerXbox360InputState
     public byte TriggerLeft;
     public byte TriggerRight;
 
-    public bool IsEqual(OutputControllerXbox360InputState other)
+    public readonly bool IsEqual(OutputControllerXbox360InputState other)
     {
         var buttons = ThumbStickLeft == other.ThumbStickLeft
                       && ThumbStickRight == other.ThumbStickRight

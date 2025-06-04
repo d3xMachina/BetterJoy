@@ -1,10 +1,10 @@
-﻿﻿using System;
+using System;
 using System.Threading;
 using WindowsInput.Events.Sources;
 
 namespace BetterJoy;
 
-public class InputCapture : IDisposable
+public sealed class InputCapture : IDisposable
 {
     private static readonly Lazy<InputCapture> _instance = new(() => new InputCapture());
     public static InputCapture Global => _instance.Value;
@@ -50,7 +50,7 @@ public class InputCapture : IDisposable
     private void KeyboardEventCountChange(bool newEvent)
     {
         int count = newEvent ? Interlocked.Increment(ref _nbKeyboardEvents) : Interlocked.Decrement(ref _nbKeyboardEvents);
-        
+
         // The property calls invoke, so only do it if necessary
         if (count == 0)
         {
@@ -65,7 +65,7 @@ public class InputCapture : IDisposable
     private void MouseEventCountChange(bool newEvent)
     {
         int count = newEvent ? Interlocked.Increment(ref _nbMouseEvents) : Interlocked.Decrement(ref _nbMouseEvents);
-        
+
         // The property calls invoke, so only do it if necessary
         if (count == 0)
         {
