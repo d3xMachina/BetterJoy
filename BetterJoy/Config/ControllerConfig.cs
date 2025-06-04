@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using static BetterJoy.Joycon;
 
 namespace BetterJoy.Config;

@@ -1,4 +1,8 @@
-﻿using System;
+using BetterJoy.Config;
+using BetterJoy.Exceptions;
+using BetterJoy.Properties;
+using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
@@ -6,10 +10,6 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using BetterJoy.Config;
-using BetterJoy.Exceptions;
-using BetterJoy.Properties;
-using Microsoft.Win32;
 
 namespace BetterJoy.Forms;
 
@@ -548,7 +548,7 @@ public partial class MainForm : Form
         }
         catch (ConfigurationErrorsException ex)
         {
-           _logger?.Log("Error writing app settings.", ex);
+            _logger?.Log("Error writing app settings.", ex);
         }
     }
 

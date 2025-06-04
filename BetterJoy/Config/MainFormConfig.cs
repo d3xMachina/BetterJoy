@@ -1,4 +1,4 @@
-﻿namespace BetterJoy.Config;
+namespace BetterJoy.Config;
 
 public class MainFormConfig : Config
 {

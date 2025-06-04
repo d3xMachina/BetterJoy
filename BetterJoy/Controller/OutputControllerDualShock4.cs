@@ -1,6 +1,6 @@
-﻿using System;
 using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
+using System;
 
 namespace BetterJoy.Controller;
 

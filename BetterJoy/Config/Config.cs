@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Configuration;
 using System.Linq;
 using System.Reflection;
@@ -64,7 +64,7 @@ public abstract class Config
             }
         }
     }
-        
+
     protected void UpdateSetting<T>(string key, ref T setting, T defaultValue)
     {
         var value = ConfigurationManager.AppSettings[key];

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 
 namespace BetterJoy.HIDApi;
@@ -114,7 +114,7 @@ public sealed class Device : IDisposable
         {
             return;
         }
-        
+
         if (_deviceHandle != IntPtr.Zero)
         {
             NativeMethods.Close(_deviceHandle);

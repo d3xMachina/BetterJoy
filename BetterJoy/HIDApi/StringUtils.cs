@@ -1,4 +1,4 @@
-﻿using BetterJoy.Memory;
+using BetterJoy.Memory;
 using System;
 using System.Text;
 

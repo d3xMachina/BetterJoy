@@ -1,4 +1,4 @@
-﻿using Nefarius.ViGEm.Client.Targets;
+using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 
 namespace BetterJoy.Controller;

@@ -1,4 +1,4 @@
-﻿using BetterJoy.Collections;
+using BetterJoy.Collections;
 using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
@@ -554,7 +554,7 @@ public class Joycon
             SerialOrMac = PadMacAddress.ToString().ToLower();
             return;
         }
-        
+
         // Serial = MAC address of the controller in bluetooth
         var mac = new byte[6];
         try
@@ -780,7 +780,7 @@ public class Joycon
                 return;
             }
         }
-        
+
         throw new DeviceComFailedException("reset device info");
     }
 
@@ -886,7 +886,7 @@ public class Joycon
                 {
                     Retry(() => SetPlayerLED(0));
                 }
-                
+
                 // Commented because you need to restart the controller to reconnect in usb again with the following
                 //BTActivate();
             }
@@ -947,7 +947,7 @@ public class Joycon
             DebugPrint("Connect virtual xbox controller.", DebugType.Comms);
             OutXbox.Connect();
         }
-        
+
         if (Config.ShowAsDs4)
         {
             DebugPrint("Connect virtual DS4 controller.", DebugType.Comms);
@@ -1064,7 +1064,7 @@ public class Joycon
             var deltaPacketsMs = _avgReceiveDeltaMs.GetAverage() / nbPackets;
             deltaPacketsMicroseconds = (ulong)(deltaPacketsMs * 1000);
 
-             _AHRS.SamplePeriod = deltaPacketsMs / 1000;
+            _AHRS.SamplePeriod = deltaPacketsMs / 1000;
         }
 
         // Process packets as soon as they come
@@ -1357,7 +1357,7 @@ public class Joycon
             SimulateContinous(controller._buttons[(int)Button.SL], Settings.Value("sl_l"));
             SimulateContinous(controller._buttons[(int)Button.SR], Settings.Value("sr_l"));
         }
-        
+
         if (!IsLeft || IsJoined)
         {
             var controller = !IsLeft ? this : Other;
@@ -1970,7 +1970,7 @@ public class Joycon
             _buttons[(int)Button.Minus] = (reportBuf[2] & 0x01) != 0;
             _buttons[(int)Button.Plus] = (reportBuf[2] & 0x02) != 0;
             _buttons[(int)Button.Stick] = (reportBuf[2] & (IsLeft ? 0x04 : 0x08)) != 0;
-            
+
             if (!IsJoycon)
             {
                 byte stickHat = reportBuf[3];
@@ -1978,7 +1978,7 @@ public class Joycon
                 _buttons[(int)Button.DpadDown] = stickHat == 0x03 || stickHat == 0x04 || stickHat == 0x05;
                 _buttons[(int)Button.DpadRight] = stickHat == 0x01 || stickHat == 0x02 || stickHat == 0x03;
                 _buttons[(int)Button.DpadUp] = stickHat == 0x07 || stickHat == 0x00 || stickHat == 0x01;
-                _buttons[(int)Button.DpadLeft] =  stickHat == 0x05 ||  stickHat == 0x06 || stickHat == 0x07;
+                _buttons[(int)Button.DpadLeft] = stickHat == 0x05 || stickHat == 0x06 || stickHat == 0x07;
 
                 _buttons[(int)Button.B] = (reportBuf[1] & 0x01) != 0;
                 _buttons[(int)Button.A] = (reportBuf[1] & 0x02) != 0;
@@ -2217,7 +2217,7 @@ public class Joycon
             _accG.X = (_accRaw[0] - _activeIMUData[3]) * (1.0f / (_accSensiti[0] - _accNeutral[0])) * 4.0f;
             _gyrG.X = (_gyrRaw[0] - _activeIMUData[0]) * (816.0f / (_gyrSensiti[0] - _activeIMUData[0]));
 
-            _accG.Y = direction * (_accRaw[1] -_activeIMUData[4]) * (1.0f / (_accSensiti[1] - _accNeutral[1])) * 4.0f;
+            _accG.Y = direction * (_accRaw[1] - _activeIMUData[4]) * (1.0f / (_accSensiti[1] - _accNeutral[1])) * 4.0f;
             _gyrG.Y = -direction * (_gyrRaw[1] - _activeIMUData[1]) * (816.0f / (_gyrSensiti[1] - _activeIMUData[1]));
 
             _accG.Z = direction * (_accRaw[2] - _activeIMUData[5]) * (1.0f / (_accSensiti[2] - _accNeutral[2])) * 4.0f;
@@ -2286,7 +2286,7 @@ public class Joycon
         }
 
         _receiveReportsThread = new Thread(
-            () => 
+            () =>
             {
                 try
                 {
@@ -2351,7 +2351,7 @@ public class Joycon
         float magnitude = MathF.Sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
 
         if (magnitude <= deadzone || range <= deadzone)
-        {  
+        {
             // Inner deadzone
             stick[0] = 0.0f;
             stick[1] = 0.0f;
@@ -2360,7 +2360,7 @@ public class Joycon
         {
             float normalizedMagnitudeX = Math.Min(1.0f, (magnitude - deadzone) / (range - deadzone));
             float normalizedMagnitudeY = normalizedMagnitudeX;
-            
+
             if (antiDeadzone[0] > 0.0f)
             {
                 normalizedMagnitudeX = antiDeadzone[0] + (1.0f - antiDeadzone[0]) * normalizedMagnitudeX;
@@ -2376,13 +2376,13 @@ public class Joycon
 
             if (!Config.SticksSquared || normalizedX == 0f || normalizedY == 0f)
             {
-				stick[0] = normalizedX;
-				stick[1] = normalizedY;
-			}
+                stick[0] = normalizedX;
+                stick[1] = normalizedY;
+            }
             else
             {
                 // Expand the circle to a square area
-				if (Math.Abs(normalizedX) > Math.Abs(normalizedY))
+                if (Math.Abs(normalizedX) > Math.Abs(normalizedY))
                 {
                     stick[0] = Math.Sign(normalizedX) * normalizedMagnitudeX;
                     stick[1] = stick[0] * normalizedY / normalizedX;
@@ -2392,7 +2392,7 @@ public class Joycon
                     stick[1] = Math.Sign(normalizedY) * normalizedMagnitudeY;
                     stick[0] = stick[1] * normalizedX / normalizedY;
                 }
-			}
+            }
 
             stick[0] = Math.Clamp(stick[0], -1.0f, 1.0f);
             stick[1] = Math.Clamp(stick[1], -1.0f, 1.0f);
@@ -2482,7 +2482,7 @@ public class Joycon
         {
             length = Read(response, 100); // don't set the timeout lower than 100 or might not always work
             responseFound = length >= 20 && response[0] == 0x21 && response[14] == (byte)sc;
-            
+
             if (length < 0)
             {
                 DebugPrint($"Subcommand read error: {ErrorMessage()}", DebugType.Comms);
@@ -2703,7 +2703,7 @@ public class Joycon
 
             if (_accNeutral[0] == -1 || _accNeutral[1] == -1 || _accNeutral[2] == -1)
             {
-                Array.Fill(_accNeutral, (short) 0);
+                Array.Fill(_accNeutral, (short)0);
                 noCalibration = true;
             }
 
@@ -2757,7 +2757,7 @@ public class Joycon
             _IMUCalibrated = false;
             _SticksCalibrated = false;
         }
-        
+
         var calibrationType = _SticksCalibrated ? "user" : _DumpedCalibration ? "controller" : "default";
         Log($"Using {calibrationType} sticks calibration.");
 
@@ -2999,19 +2999,19 @@ public class Joycon
             if (right) return DpadDirection.Northeast;
             return DpadDirection.North;
         }
-        
+
         if (down)
         {
             if (left) return DpadDirection.Southwest;
             if (right) return DpadDirection.Southeast;
             return DpadDirection.South;
         }
-        
+
         if (left)
         {
             return DpadDirection.West;
         }
-        
+
         if (right)
         {
             return DpadDirection.East;
@@ -3255,7 +3255,7 @@ public class Joycon
                 output.Cross = buttons[(int)(isLeft ? Button.DpadLeft : Button.DpadRight)];
                 output.Circle = buttons[(int)(isLeft ? Button.DpadDown : Button.DpadUp)];
                 output.Square = buttons[(int)(isLeft ? Button.DpadUp : Button.DpadDown)];
-                output.Triangle = buttons[(int)(isLeft ? Button.DpadRight : Button.DpadLeft)]; 
+                output.Triangle = buttons[(int)(isLeft ? Button.DpadRight : Button.DpadLeft)];
 
                 output.Ps = buttons[(int)Button.Minus] | buttons[(int)Button.Home];
                 output.Options = buttons[(int)Button.Plus] | buttons[(int)Button.Capture];
@@ -3597,7 +3597,7 @@ public class Joycon
 
                 return;
             }
-                
+
             var hf = EncodeHighFrequency(highFreq);
             var lf = EncodeLowFrequency(lowFreq);
 

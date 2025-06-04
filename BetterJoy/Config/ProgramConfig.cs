@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 
 namespace BetterJoy.Config;
 
@@ -14,7 +14,7 @@ public class ProgramConfig : Config
 
     public ProgramConfig(Logger logger) : base(logger) { }
 
-    public ProgramConfig(ProgramConfig config) : base (config._logger)
+    public ProgramConfig(ProgramConfig config) : base(config._logger)
     {
         UseHIDHide = config.UseHIDHide;
         HIDHideAlwaysOn = config.HIDHideAlwaysOn;

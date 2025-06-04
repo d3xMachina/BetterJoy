@@ -1,4 +1,6 @@
-﻿using System;
+using BetterJoy.Forms;
+using BetterJoy.Memory;
+using System;
 using System.Collections.Generic;
 using System.IO.Hashing;
 using System.Net;
@@ -7,8 +9,6 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterJoy.Forms;
-using BetterJoy.Memory;
 
 namespace BetterJoy;
 
@@ -492,7 +492,8 @@ internal class UdpServer
         ++outIdx;
 
         //DS4 only: touchpad points
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 2; i++)
+        {
             outIdx += 6;
         }
 
@@ -549,7 +550,7 @@ internal class UdpServer
 
         var nbClients = 0;
         var now = DateTime.UtcNow;
-        Span<SocketAddress> relevantClients = null; 
+        Span<SocketAddress> relevantClients = null;
 
         Monitor.Enter(_clients);
 

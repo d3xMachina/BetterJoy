@@ -1,4 +1,4 @@
-﻿using BetterJoy.Exceptions;
+using BetterJoy.Exceptions;
 using System;
 using System.IO;
 using System.Threading;
@@ -37,7 +37,7 @@ public class Logger : IDisposable
 
     public Logger(string path)
     {
-        _logWriter = new StreamWriter(path, append : false);
+        _logWriter = new StreamWriter(path, append: false);
 
         _logChannel = Channel.CreateUnbounded<LogEntry>(
             new UnboundedChannelOptions
@@ -93,7 +93,8 @@ public class Logger : IDisposable
 
     private void LogImpl(string message, LogLevel level)
     {
-        var log = new LogEntry {
+        var log = new LogEntry
+        {
             Message = message,
             Level = level
         };

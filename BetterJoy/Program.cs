@@ -1,4 +1,4 @@
-﻿using BetterJoy.Collections;
+using BetterJoy.Collections;
 using BetterJoy.Config;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
@@ -116,7 +116,7 @@ public class JoyconManager
             _logger?.Log("Invalid hidapi.dll. (32 bits VS 64 bits)", e);
             return false;
         }
-        
+
         if (ret != 0)
         {
             _logger?.Log("Could not initialize hidapi.", Logger.LogLevel.Error);
@@ -242,14 +242,14 @@ public class JoyconManager
         {
             return;
         }
-        
+
         // Don't need to put NES or Famicom here because they are the same as the right Joycon
         bool validController = info is
         {
-            VendorId: VendorId, 
+            VendorId: VendorId,
             ProductId: ProductL or ProductR or ProductPro or ProductSNES or ProductN64
         };
-        
+
         SController thirdParty = null;
 
         // Check if it's a custom controller
@@ -294,7 +294,7 @@ public class JoyconManager
                 default:
                     _logger?.Log($"Invalid product ID: {info.ProductId}.", Logger.LogLevel.Error);
                     return;
-            };
+            }
         }
         else
         {
@@ -303,7 +303,7 @@ public class JoyconManager
                 _logger?.Log($"Invalid third-party controller type: {thirdParty.Type}.", Logger.LogLevel.Error);
                 return;
             }
-            
+
             type = (Joycon.ControllerType)thirdParty.Type;
         }
 
@@ -362,7 +362,7 @@ public class JoyconManager
         {
             Controllers.Add(controller);
         }
-        
+
         _form.AddController(controller);
 
         // attempt to auto join-up joycons on connection
@@ -417,7 +417,7 @@ public class JoyconManager
             // change the controller state to avoid trying to send command to it
             controller.Drop(false, false);
         }
-        
+
         controller.Detach();
 
         var otherController = controller.Other;
@@ -463,7 +463,7 @@ public class JoyconManager
             // device not dropped anymore (after a reset or a reconnection from the system)
             return;
         }
-        
+
         OnDeviceDisconnected(controller);
     }
 
@@ -481,7 +481,7 @@ public class JoyconManager
             // device not in error anymore (after a reset or a reconnection from the system)
             return;
         }
-        
+
         OnDeviceDisconnected(controller);
         OnDeviceConnected(controller.Path, controller.SerialNumber, controller.Type, controller.IsUSB, controller.IsThirdParty, true);
     }
@@ -711,9 +711,9 @@ public class JoyconManager
         {
             HIDApi.Manager.HotplugDeregisterCallback(_hidCallbackHandle);
         }
-        
+
         await _devicesNotificationTask;
-        
+
         foreach (var controller in Controllers)
         {
             controller.StateChanged -= OnControllerStateChanged;
@@ -723,7 +723,7 @@ public class JoyconManager
                 controller.RequestPowerOff();
             }
         }
-        
+
         Stopwatch timeSincePowerOff = Stopwatch.StartNew();
         int timeoutPowerOff = 1800; // a bit of extra time to have 3 attempts
 
@@ -739,10 +739,10 @@ public class JoyconManager
                     timeoutPowerOff = 0;
                 }
             }
-            
+
             controller.Detach();
         }
-        
+
         _ctsDevicesNotifications.Dispose();
 
         HIDApi.Manager.Exit();
@@ -874,7 +874,7 @@ public class JoyconManager
                 change = true;
             }
         }
-        else 
+        else
         {
             Joycon other = controller.Other;
 
@@ -1102,7 +1102,7 @@ internal class Program
             InputCapture.Global.UnregisterEvent(GlobalKeyEvent);
             _keyEventRegistered = false;
         }
-        
+
         // Mouse
         if (!remove && HasActionKM(false))
         {
@@ -1130,7 +1130,7 @@ internal class Program
                 return true;
             }
         }
-        
+
         return false;
     }
 
