@@ -77,14 +77,14 @@ internal static partial class NativeMethods
 
     #region HIDAPI_CALLBACK
 
-    [DllImport(Dll, EntryPoint = "hid_hotplug_register_callback", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int HotplugRegisterCallback(
+    [LibraryImport(Dll, EntryPoint = "hid_hotplug_register_callback")]
+    public static partial int HotplugRegisterCallback(
         ushort vendorId,
         ushort productId,
         int events,
         int flags,
         [MarshalAs(UnmanagedType.FunctionPtr)] HotplugCallback callback,
-        [MarshalAs(UnmanagedType.IUnknown)] object userData,
+        IntPtr userData,
         out int callbackHandle
     );
 

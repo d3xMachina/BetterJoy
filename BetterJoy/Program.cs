@@ -2,6 +2,7 @@ using BetterJoy.Collections;
 using BetterJoy.Config;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
+using BetterJoy.HIDApi.Exceptions;
 using Nefarius.Drivers.HidHide;
 using Nefarius.ViGEm.Client;
 using Nefarius.ViGEm.Client.Exceptions;
@@ -57,8 +58,6 @@ public class JoyconManager
     public ConcurrentList<Joycon> Controllers { get; } = []; // connected controllers
 
     private readonly Channel<DeviceNotification> _channelDeviceNotifications;
-
-    private int _hidCallbackHandle = 0;
     private Task _devicesNotificationTask;
 
     private class DeviceNotification
@@ -105,37 +104,26 @@ public class JoyconManager
             return true;
         }
 
-        int ret;
-
         try
         {
-            ret = HIDApi.Manager.Init();
+            HIDApi.Manager.Init();
+
+            HIDApi.Manager.DeviceNotificationReceived += OnDeviceNotification;
+            HIDApi.Manager.StartDeviceNotifications();
         }
         catch (BadImageFormatException e)
         {
             _logger?.Log("Invalid hidapi.dll. (32 bits VS 64 bits)", e);
             return false;
         }
-
-        if (ret != 0)
+        catch (HIDApiInitFailedException e)
         {
-            _logger?.Log("Could not initialize hidapi.", Logger.LogLevel.Error);
+            _logger?.Log("Could not initialize hidapi.", e);
             return false;
         }
-
-        ret = HIDApi.Manager.HotplugRegisterCallback(
-            0x0,
-            0x0,
-            (int)(HIDApi.HotplugEvent.DeviceArrived | HIDApi.HotplugEvent.DeviceLeft),
-            (int)HIDApi.HotplugFlag.Enumerate,
-            OnDeviceNotification,
-            _channelDeviceNotifications.Writer,
-            out _hidCallbackHandle
-        );
-
-        if (ret != 0)
+        catch (HIDApiCallbackFailedException e)
         {
-            _logger?.Log("Could not register hidapi callback.", Logger.LogLevel.Error);
+            _logger?.Log("Could not register hidapi callback.", e);
             HIDApi.Manager.Exit();
             return false;
         }
@@ -166,13 +154,10 @@ public class JoyconManager
         return true;
     }
 
-    private static int OnDeviceNotification(int callbackHandle, HIDApi.DeviceInfo deviceInfo, int ev, object userData)
+    private void OnDeviceNotification(object sender, HIDApi.DeviceNotificationEventArgs e)
     {
-        var channelWriter = (ChannelWriter<DeviceNotification>)userData;
-        var deviceEvent = (HIDApi.HotplugEvent)ev;
-
         var notification = DeviceNotification.Type.Unknown;
-        switch (deviceEvent)
+        switch (e.DeviceEvent)
         {
             case HIDApi.HotplugEvent.DeviceArrived:
                 notification = DeviceNotification.Type.Connected;
@@ -182,11 +167,9 @@ public class JoyconManager
                 break;
         }
 
-        var job = new DeviceNotification(notification, deviceInfo);
+        var job = new DeviceNotification(notification, e.DeviceInfo);
 
-        while (!channelWriter.TryWrite(job)) { }
-
-        return 0;
+        while (!_channelDeviceNotifications.Writer.TryWrite(job)) { }
     }
 
     private async Task ProcessDevicesNotifications(CancellationToken token)
@@ -708,9 +691,13 @@ public class JoyconManager
 
         _ctsDevicesNotifications.Cancel();
 
-        if (_hidCallbackHandle != 0)
+        try
         {
-            HIDApi.Manager.HotplugDeregisterCallback(_hidCallbackHandle);
+            HIDApi.Manager.StopDeviceNotifications();
+        }
+        catch (HIDApiCallbackFailedException e)
+        {
+            _logger?.Log("Could not deregister the device notifications callback.", e);
         }
 
         await _devicesNotificationTask;

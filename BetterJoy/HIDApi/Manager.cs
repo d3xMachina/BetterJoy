@@ -1,19 +1,32 @@
+using BetterJoy.HIDApi.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace BetterJoy.HIDApi;
 
+public delegate void DeviceNotificationReceivedEventHandler(object sender, DeviceNotificationEventArgs e);
+
 public static class Manager
 {
-    public static int Init()
+    public static event DeviceNotificationReceivedEventHandler DeviceNotificationReceived;
+
+    private static int _deviceNotificationsHandle = 0; // A valid callback handle is a positive integer
+
+    public static void Init()
     {
-        return NativeMethods.Init();
+        int ret = NativeMethods.Init();
+        if (ret != 0)
+        {
+            throw new HIDApiInitFailedException(GetError());
+        }
     }
 
-    public static int Exit()
+    // It also deregister all callbacks
+    public static void Exit()
     {
-        return NativeMethods.Exit();
+        // Ignore if there is a returned error, we can't do anything about it
+        _ = NativeMethods.Exit();
     }
 
     public static string GetError()
@@ -47,28 +60,48 @@ public static class Manager
         }
     }
 
-    public static int HotplugRegisterCallback(
-        ushort vendorId,
-        ushort productId,
-        int events,
-        int flags,
-        HotplugCallback callback,
-        object userData,
-        out int callbackHandle)
+    public static void StartDeviceNotifications()
     {
-        return NativeMethods.HotplugRegisterCallback(
-            vendorId,
-            productId,
-            events,
-            flags,
-            callback,
-            userData,
-            out callbackHandle
+        if (_deviceNotificationsHandle != 0)
+        {
+            return;
+        }
+
+        static int notificationCallback(int callbackHandle, DeviceInfo deviceInfo, int events, IntPtr userData)
+        {
+            DeviceNotificationReceived?.Invoke(null, new DeviceNotificationEventArgs(deviceInfo, (HotplugEvent)events));
+            return 0; // keep the callback registered
+        };
+
+        int ret = NativeMethods.HotplugRegisterCallback(
+            0x0,
+            0x0,
+            (int)(HotplugEvent.DeviceArrived | HotplugEvent.DeviceLeft),
+            (int)HotplugFlag.Enumerate,
+            notificationCallback,
+            IntPtr.Zero,
+            out _deviceNotificationsHandle
         );
+
+        if (ret != 0)
+        {
+            throw new HIDApiCallbackFailedException();
+        }
     }
 
-    public static int HotplugDeregisterCallback(int callbackHandle)
+    public static void StopDeviceNotifications()
     {
-        return NativeMethods.HotplugDeregisterCallback(callbackHandle);
+        if (_deviceNotificationsHandle == 0)
+        {
+            return;
+        }
+
+        int ret = NativeMethods.HotplugDeregisterCallback(_deviceNotificationsHandle);
+        if (ret != 0)
+        {
+            throw new HIDApiCallbackFailedException();
+        }
+
+        _deviceNotificationsHandle = 0;
     }
 }

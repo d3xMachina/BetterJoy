@@ -21,5 +21,5 @@ public delegate int HotplugCallback(
     int callbackHandle,
     [MarshalAs(UnmanagedType.Struct)] DeviceInfo deviceInfo,
     int events,
-    [MarshalAs(UnmanagedType.IUnknown)] object userData
+    IntPtr userData
 );
