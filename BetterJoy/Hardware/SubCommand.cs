@@ -88,7 +88,7 @@ public class SubCommand
             }
         }
         
-        output.Append("Rumble: ");
+        output.Append(" Rumble:");
 
         if (_stopRumbleBuf.AsSpan().SequenceEqual(Rumble))
         {
