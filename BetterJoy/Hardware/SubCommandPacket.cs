@@ -8,6 +8,7 @@ namespace BetterJoy.Hardware;
 public class SubCommandPacket
 {
     private static readonly byte[] _stopRumbleBuf = [0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40]; // Stop rumble
+    private static readonly byte[] _ignoreRumbleBuf = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]; // Ignore rumble
     
     private const int PacketStartIndex = 0;
     private const int CommandCountIndex = 1;
@@ -76,7 +77,7 @@ public class SubCommandPacket
     {
         var output = new StringBuilder();
 
-        output.Append($"Subcommand {Operation:X2} sent.");
+        output.Append($"Subcommand {(byte)Operation:X2} sent.");
         
         if (_argsLength > 0)
         {
@@ -88,17 +89,20 @@ public class SubCommandPacket
             }
         }
         
-        output.Append(" Rumble:");
+        if (!Rumble.SequenceEqual(_ignoreRumbleBuf.AsSpan()))
+        {
+            output.Append(" Rumble:");
 
-        if (_stopRumbleBuf.AsSpan().SequenceEqual(Rumble))
-        {
-            output.Append(" <Stop Sequence>");
-        }
-        else
-        {
-            foreach (var rumbleVal in ((ReadOnlySpan<byte>)_raw).Slice(ArgumentsStartIndex, _argsLength))
+            if (Rumble.SequenceEqual(_stopRumbleBuf.AsSpan()))
             {
-                output.Append($" {rumbleVal:X2}");
+                output.Append(" <Stop Sequence>");
+            }
+            else
+            {
+                foreach (var rumbleVal in ((ReadOnlySpan<byte>)_raw).Slice(ArgumentsStartIndex, _argsLength))
+                {
+                    output.Append($" {rumbleVal:X2}");
+                }
             }
         }
 

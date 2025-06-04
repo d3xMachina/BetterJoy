@@ -3,6 +3,7 @@ using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
+using BetterJoy.Hardware;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System;
@@ -11,9 +12,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net.NetworkInformation;
 using System.Numerics;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using BetterJoy.Hardware;
 using WindowsInput.Events;
 
 namespace BetterJoy;
@@ -431,17 +432,25 @@ public class Joycon
         StateChanged?.Invoke(this, e);
     }
 
-    public void DebugPrint(string message, DebugType type)
+    private bool ShouldLog(DebugType type)
     {
         if (Config.DebugType == DebugType.None)
+        {
+            return false;
+        }
+
+        return type == DebugType.All ||
+               type == Config.DebugType ||
+               Config.DebugType == DebugType.All;
+    }
+    public void DebugPrint<T>(T stringifyable, DebugType type)
+    {
+        if (!ShouldLog(type))
         {
             return;
         }
 
-        if (type == DebugType.All || type == Config.DebugType || Config.DebugType == DebugType.All)
-        {
-            Log(message, Logger.LogLevel.Debug, type);
-        }
+        Log(stringifyable.ToString(), Logger.LogLevel.Debug, type);
     }
 
     public Vector3 GetGyro()
@@ -2426,7 +2435,7 @@ public class Joycon
         ++_globalCount;
 
         data[..8].CopyTo(buf[2..]);
-        PrintArray<byte>(buf, DebugType.Rumble, 10, format: "Rumble data sent: {0:S}");
+        PrintArray<byte>(buf[..10], DebugType.Rumble, format: "Rumble data sent: {0:S}");
         Write(buf);
     }
 
@@ -2442,7 +2451,7 @@ public class Joycon
 
         if (print)
         {
-            DebugPrint(subCommandPacket.ToString(), DebugType.Comms);
+            DebugPrint(subCommandPacket, DebugType.Comms);
         }
 
         int length = Write(subCommandPacket);
@@ -2490,10 +2499,8 @@ public class Joycon
         if (print)
         {
             PrintArray<byte>(
-                response,
+                response[1..length],
                 DebugType.Comms,
-                length - 1,
-                1,
                 $"Response ID {response[0]:X2}. Data: {{0:S}}"
             );
         }
@@ -2594,7 +2601,7 @@ public class Joycon
             _stickCal[IsLeft ? 4 : 0] = (ushort)(((stick1Data[7] << 8) & 0xF00) | stick1Data[6]); // X Axis Min below center
             _stickCal[IsLeft ? 5 : 1] = (ushort)((stick1Data[8] << 4) | (stick1Data[7] >> 4)); // Y Axis Min below center
 
-            PrintArray<ushort>(_stickCal, len: 6, start: 0, format: $"{stick1Name} stick 1 calibration data: {{0:S}}");
+            PrintArray<ushort>(_stickCal[..6], format: $"{stick1Name} stick 1 calibration data: {{0:S}}");
 
             if (IsPro)
             {
@@ -2622,7 +2629,7 @@ public class Joycon
                 _stick2Cal[!IsLeft ? 4 : 0] = (ushort)(((stick2Data[7] << 8) & 0xF00) | stick2Data[6]); // X Axis Min below center
                 _stick2Cal[!IsLeft ? 5 : 1] = (ushort)((stick2Data[8] << 4) | (stick2Data[7] >> 4)); // Y Axis Min below center
 
-                PrintArray<ushort>(_stick2Cal, len: 6, start: 0, format: $"{stick2Name} stick calibration data: {{0:S}}");
+                PrintArray<ushort>(_stick2Cal[0..6], format: $"{stick2Name} stick calibration data: {{0:S}}");
             }
         }
 
@@ -2722,7 +2729,7 @@ public class Joycon
                 Log("Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
             }
 
-            PrintArray<short>(_gyrNeutral, len: 3, d: DebugType.IMU, format: "Gyro neutral position: {0:S}");
+            PrintArray<short>(_gyrNeutral[..3], type: DebugType.IMU, format: "Gyro neutral position: {0:S}");
         }
 
         if (!ok)
@@ -2872,10 +2879,8 @@ public class Joycon
         if (print)
         {
             PrintArray<byte>(
-                response,
+                response[1..length],
                 DebugType.Comms,
-                length - 1,
-                1,
                 $"USB response ID {response[0]:X2}. Data: {{0:S}}"
             );
         }
@@ -2909,7 +2914,7 @@ public class Joycon
             response.Slice(20, page.PageSize).CopyTo(readBuf);
             if (print)
             {
-                PrintArray<byte>(readBuf, DebugType.Comms, page.PageSize);
+                PrintArray<byte>(readBuf[..page.PageSize], DebugType.Comms);
             }
         }
         else
@@ -2921,41 +2926,38 @@ public class Joycon
     }
 
     private void PrintArray<T>(
-        ReadOnlySpan<T> arr,
-        DebugType d = DebugType.None,
-        int len = 0,
-        int start = 0,
+        ReadOnlySpan<T> array,
+        DebugType type = DebugType.None,
         string format = "{0:S}"
     )
     {
-        if (d != Config.DebugType && Config.DebugType != DebugType.All)
+        if (!ShouldLog(type))
         {
             return;
         }
 
-        if (len <= 0)
-        {
-            len = arr.Length;
-        }
+        var arrayAsStr = string.Empty;
 
-        var arrayAsStr = "";
-
-        if (len > 0)
+        if (!array.IsEmpty)
         {
-            var elementFormat = arr[0] switch
+            var output = new StringBuilder();
+
+            var elementFormat = array[0] switch
             {
                 byte => "{0:X2} ",
                 float => "{0:F} ",
                 _ => "{0:D} "
             };
 
-            for (var i = 0; i < len; ++i)
+            foreach (var element in array)
             {
-                arrayAsStr += string.Format(elementFormat, arr[i + start]);
+                output.AppendFormat(elementFormat, element);
             }
+
+            arrayAsStr = output.ToString(0, output.Length - 1); // Remove trailing space
         }
 
-        DebugPrint(string.Format(format, arrayAsStr), d);
+        Log(string.Format(format, arrayAsStr), Logger.LogLevel.Debug, type);
     }
 
     public class StateChangedEventArgs : EventArgs
