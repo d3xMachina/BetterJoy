@@ -7,11 +7,11 @@ namespace BetterJoy.Forms;
 
 public partial class _3rdPartyControllers : Form
 {
-    private static readonly string Path;
+    private static readonly string _path;
 
     static _3rdPartyControllers()
     {
-        Path = System.IO.Path.GetDirectoryName(Environment.ProcessPath)
+        _path = Path.GetDirectoryName(Environment.ProcessPath)
                + "\\3rdPartyControllers";
     }
 
@@ -41,9 +41,9 @@ public partial class _3rdPartyControllers : Form
     {
         var controllers = new List<SController>();
 
-        if (File.Exists(Path))
+        if (File.Exists(_path))
         {
-            using var file = new StreamReader(Path);
+            using var file = new StreamReader(_path);
             var line = string.Empty;
             while ((line = file.ReadLine()) != null && line != string.Empty)
             {
@@ -178,7 +178,7 @@ public partial class _3rdPartyControllers : Form
             sc += v.Serialise() + Environment.NewLine;
         }
 
-        File.WriteAllText(Path, sc);
+        File.WriteAllText(_path, sc);
         CopyCustomControllers();
     }
 
