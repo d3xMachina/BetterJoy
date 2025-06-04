@@ -20,7 +20,7 @@ public class SubCommandPacket
 
     private readonly int _packetSize;
     private readonly int _argsLength;
-    private int _maxArgsLength => _packetSize - ArgumentsStartIndex;
+    private int MaxArgsLength => _packetSize - ArgumentsStartIndex;
     
     [InlineArray(USBPacketSize)]
     private struct CommandBuffer
@@ -50,9 +50,9 @@ public class SubCommandPacket
         }
 
         // Check the args length
-        if (args.Length > _maxArgsLength)
+        if (args.Length > MaxArgsLength)
         {
-            throw new ArgumentException($@"Args span is too large. Expected at most: {_maxArgsLength} Received: {args.Length}", nameof(args));
+            throw new ArgumentException($@"Args span is too large. Expected at most: {MaxArgsLength} Received: {args.Length}", nameof(args));
         }
         
         _argsLength = args.Length;
