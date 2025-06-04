@@ -109,7 +109,4 @@
 	<ItemGroup>
 	  <EditorConfigFiles Remove=".editorconfig" />
 	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Hardware\Bluetooth\" />
-	</ItemGroup>
 </Project>
