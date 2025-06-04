@@ -27,4 +27,3 @@ public class SPIPage
     public static readonly SPIPage UserMotionCalibration = new(0x80, 0x26, 0x1A);
     public static readonly SPIPage FactoryMotionCalibration = new(0x60, 0x20, 0x18);
 }
-
