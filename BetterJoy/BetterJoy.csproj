@@ -27,6 +27,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+		<None Include=".editorconfig" />
 		<None Include="Properties\app.manifest" />
 		<None Include="App.config">
             <SubType>Designer</SubType>
@@ -105,4 +106,7 @@
 
 		<Message Text="Zipped publish output to $(PublishDir)$(ZipFileName)" Importance="high" />
 	</Target>
+	<ItemGroup>
+	  <EditorConfigFiles Remove=".editorconfig" />
+	</ItemGroup>
 </Project>
