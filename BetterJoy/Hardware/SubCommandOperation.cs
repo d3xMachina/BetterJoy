@@ -32,4 +32,3 @@ public enum SubCommandOperation : byte
 
     GetRegulatedVoltage             = 0x50
 }
-
