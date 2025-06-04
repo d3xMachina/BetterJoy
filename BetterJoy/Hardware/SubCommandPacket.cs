@@ -52,7 +52,7 @@ public class SubCommandPacket
         // Check the args length
         if (args.Length > _maxArgsLength)
         {
-            throw new ArgumentException($@"Args span is too large. Expected at most: {_maxArgsLength} Received: {rumble.Length}", nameof(args));
+            throw new ArgumentException($@"Args span is too large. Expected at most: {_maxArgsLength} Received: {args.Length}", nameof(args));
         }
         
         _argsLength = args.Length;
