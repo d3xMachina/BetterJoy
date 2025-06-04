@@ -128,7 +128,7 @@ internal class UdpServer
             var packetData = packetDataBuffer.Span;
 
             var currIdx = BeginPacket(packetData, reqProtocolVersion);
-            usefulData.AsSpan().CopyTo(packetData.Slice(currIdx));
+            usefulData.AsSpan().CopyTo(packetData[currIdx..]);
             FinishPacket(packetData);
         }
 
@@ -182,7 +182,7 @@ internal class UdpServer
         localMsg[currIdx++] = 0;
         localMsg[currIdx++] = 0;
 
-        var crcCalc = CalculateCrc32(localMsg.Slice(0, (int)packetSize));
+        var crcCalc = CalculateCrc32(localMsg[..(int)packetSize]);
         if (crcValue != crcCalc)
         {
             return false;
@@ -624,7 +624,7 @@ internal class UdpServer
             return;
         }
 
-        relevantClients = relevantClients.Slice(0, nbClients);
+        relevantClients = relevantClients[..nbClients];
 
         Span<byte> outputData = stackalloc byte[ReportSize];
         outputData.Clear();

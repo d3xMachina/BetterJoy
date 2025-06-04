@@ -48,7 +48,7 @@ public struct OutputControllerDualShock4InputState
     public byte TriggerLeftValue;
     public byte TriggerRightValue;
 
-    public bool IsEqual(OutputControllerDualShock4InputState other)
+    public readonly bool IsEqual(OutputControllerDualShock4InputState other)
     {
         var buttons = Triangle == other.Triangle
                       && Circle == other.Circle
@@ -210,18 +210,18 @@ public class OutputControllerDualShock4
 
     private static DualShock4DPadDirection MapDPadDirection(DpadDirection dPad)
     {
-        switch (dPad)
+        return dPad switch
         {
-            case DpadDirection.None:      return DualShock4DPadDirection.None;
-            case DpadDirection.North:     return DualShock4DPadDirection.North;
-            case DpadDirection.Northeast: return DualShock4DPadDirection.Northeast;
-            case DpadDirection.East:      return DualShock4DPadDirection.East;
-            case DpadDirection.Southeast: return DualShock4DPadDirection.Southeast;
-            case DpadDirection.South:     return DualShock4DPadDirection.South;
-            case DpadDirection.Southwest: return DualShock4DPadDirection.Southwest;
-            case DpadDirection.West:      return DualShock4DPadDirection.West;
-            case DpadDirection.Northwest: return DualShock4DPadDirection.Northwest;
-            default:                      throw new NotImplementedException();
-        }
+            DpadDirection.None => DualShock4DPadDirection.None,
+            DpadDirection.North => DualShock4DPadDirection.North,
+            DpadDirection.Northeast => DualShock4DPadDirection.Northeast,
+            DpadDirection.East => DualShock4DPadDirection.East,
+            DpadDirection.Southeast => DualShock4DPadDirection.Southeast,
+            DpadDirection.South => DualShock4DPadDirection.South,
+            DpadDirection.Southwest => DualShock4DPadDirection.Southwest,
+            DpadDirection.West => DualShock4DPadDirection.West,
+            DpadDirection.Northwest => DualShock4DPadDirection.Northwest,
+            _ => throw new NotImplementedException(),
+        };
     }
 }

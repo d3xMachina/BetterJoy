@@ -910,12 +910,12 @@ internal class Program
     public static ProgramConfig Config;
 
     private static readonly HidHideControlService _hidHideService = new();
-    private static readonly HashSet<string> BlockedDeviceInstances = [];
+    private static readonly HashSet<string> _blockedDeviceInstances = [];
 
     private static bool _isRunning;
     public static bool IsSuspended { get; private set; }
 
-    private static readonly string AppGuid = "1bf709e9-c133-41df-933a-c9ff3f664c7b"; // randomly-generated
+    private static readonly string _appGuid = "1bf709e9-c133-41df-933a-c9ff3f664c7b"; // randomly-generated
     private static Mutex _mutexInstance;
 
     private static bool _keyEventRegistered;
@@ -1082,7 +1082,7 @@ internal class Program
         foreach (var instance in instances)
         {
             _hidHideService.AddBlockedInstanceId(instance);
-            BlockedDeviceInstances.Add(instance);
+            _blockedDeviceInstances.Add(instance);
         }
     }
 
@@ -1280,7 +1280,7 @@ internal class Program
 
             if (Config.PurgeAffectedDevices)
             {
-                foreach (var instance in BlockedDeviceInstances)
+                foreach (var instance in _blockedDeviceInstances)
                 {
                     _hidHideService.RemoveBlockedInstanceId(instance);
                 }
@@ -1360,7 +1360,7 @@ internal class Program
         // Set the correct DLL for the current OS
         SetupDlls();
 
-        using (_mutexInstance = new Mutex(false, "Global\\" + AppGuid))
+        using (_mutexInstance = new Mutex(false, "Global\\" + _appGuid))
         {
             if (!_mutexInstance.WaitOne(0, false))
             {

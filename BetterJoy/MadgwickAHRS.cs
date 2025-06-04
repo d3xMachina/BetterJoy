@@ -34,8 +34,8 @@ public class MadgwickAHRS
     {
         SamplePeriod = samplePeriod;
         Beta = beta;
-        Quaternion = new[] { 1f, 0f, 0f, 0f };
-        OldPitchYawRoll = new[] { 0f, 0f, 0f };
+        Quaternion = [1f, 0f, 0f, 0f];
+        OldPitchYawRoll = [0f, 0f, 0f];
     }
 
     /// <summary>

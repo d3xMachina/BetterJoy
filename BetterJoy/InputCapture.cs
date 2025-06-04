@@ -4,7 +4,7 @@ using WindowsInput.Events.Sources;
 
 namespace BetterJoy;
 
-public class InputCapture : IDisposable
+public sealed class InputCapture : IDisposable
 {
     private static readonly Lazy<InputCapture> _instance = new(() => new InputCapture());
     public static InputCapture Global => _instance.Value;

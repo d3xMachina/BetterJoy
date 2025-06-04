@@ -42,8 +42,7 @@ public abstract class Config
 
     private void ParseArrayAs<T>(string value, Type type, ref T setting)
     {
-        var elements = setting as Array;
-        if (elements == null)
+        if (setting is not Array elements)
         {
             throw new InvalidOperationException("setting must be an array.");
         }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BetterJoy;
 
-public class Logger : IDisposable
+public sealed class Logger : IDisposable
 {
     private const int _logLevelPadding = 9; // length of the longest LogLevel + 2
 
@@ -19,7 +19,7 @@ public class Logger : IDisposable
     private readonly Task _logWriterTask;
     private readonly CancellationTokenSource _ctsLogs;
     private readonly Channel<LogEntry> _logChannel;
-    private bool _isRunning = false;
+    private readonly bool _isRunning = false;
 
     public enum LogLevel
     {
@@ -75,7 +75,7 @@ public class Logger : IDisposable
             var levelPadded = $"[{entry.Level}]".ToUpper().PadRight(_logLevelPadding);
             var log = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {levelPadded} {entry.Message}";
             await _logWriter.WriteLineAsync(log);
-            await _logWriter.FlushAsync();
+            await _logWriter.FlushAsync(CancellationToken.None);
         }
     }
 

@@ -122,7 +122,7 @@ public class Joycon
 
     public readonly ControllerConfig Config;
 
-    private static readonly byte[] LedById = [0b0001, 0b0011, 0b0111, 0b1111, 0b1001, 0b0101, 0b1101, 0b0110];
+    private static readonly byte[] _ledById = [0b0001, 0b0011, 0b0111, 0b1111, 0b1001, 0b0101, 0b1101, 0b0110];
 
     private readonly short[] _accNeutral = [0, 0, 0];
     private readonly short[] _accRaw = [0, 0, 0];
@@ -189,7 +189,7 @@ public class Joycon
     private byte _globalCount;
     private Vector3 _gyrG = Vector3.Zero;
 
-    private HIDApi.Device _device;
+    private readonly HIDApi.Device _device;
     private bool _hasShaked;
 
     public readonly bool IsThirdParty;
@@ -331,13 +331,13 @@ public class Joycon
 
     public bool SetLEDByPlayerNum(int id)
     {
-        if (id >= LedById.Length)
+        if (id >= _ledById.Length)
         {
             // No support for any higher than 8 controllers
-            id = LedById.Length - 1;
+            id = _ledById.Length - 1;
         }
 
-        byte led = LedById[id];
+        byte led = _ledById[id];
 
         return SetPlayerLED(led);
     }
@@ -626,7 +626,7 @@ public class Joycon
             return;
         }
 
-        const byte intensity = 0x1;
+        const byte Intensity = 0x1;
 
         Span<byte> buf =
         [
@@ -635,7 +635,7 @@ public class Joycon
             0x01,
 
             // Mini cycle 1
-            intensity << 4,
+            Intensity << 4,
             0xFF,
             0xFF,
         ];
@@ -650,13 +650,13 @@ public class Joycon
         }
 
         var intensity = (byte)(on ? 0x1 : 0x0);
-        const byte nbCycles = 0xF; // 0x0 for permanent light
+        const byte NbCycles = 0xF; // 0x0 for permanent light
 
         Span<byte> buf =
         [
             // Global settings
             0x0F, // 0XF = 175ms base duration
-            (byte)(intensity << 4 | nbCycles),
+            (byte)(intensity << 4 | NbCycles),
 
             // Mini cycle 1
             // Somehow still used when buf[0] high nibble is set to 0x0
@@ -1044,10 +1044,10 @@ public class Joycon
         // clear remaining of buffer just to be safe
         if (length < ReportLength)
         {
-            buf.Slice(length, ReportLength - length).Clear();
+            buf[length..ReportLength].Clear();
         }
 
-        const int nbPackets = 3;
+        const int NbPackets = 3;
         ulong deltaPacketsMicroseconds = 0;
 
         if (packetType == (byte)ReportMode.StandardFull)
@@ -1061,14 +1061,14 @@ public class Joycon
             }
             _timeSinceReceive.Restart();
 
-            var deltaPacketsMs = _avgReceiveDeltaMs.GetAverage() / nbPackets;
+            var deltaPacketsMs = _avgReceiveDeltaMs.GetAverage() / NbPackets;
             deltaPacketsMicroseconds = (ulong)(deltaPacketsMs * 1000);
 
             _AHRS.SamplePeriod = deltaPacketsMs / 1000;
         }
 
         // Process packets as soon as they come
-        for (var n = 0; n < nbPackets; n++)
+        for (var n = 0; n < NbPackets; n++)
         {
             bool updateIMU = ExtractIMUValues(buf, n);
 
@@ -1631,7 +1631,7 @@ public class Joycon
         buf.Clear();
 
         // the home light stays on for 2625ms, set to less than half in case of packet drop
-        const int sendHomeLightIntervalMs = 1250;
+        const int SendHomeLightIntervalMs = 1250;
         Stopwatch timeSinceHomeLight = new();
         var oldHomeLEDOn = false;
 
@@ -1659,7 +1659,7 @@ public class Joycon
             var homeLEDOn = Config.HomeLEDOn;
 
             if ((oldHomeLEDOn != homeLEDOn) ||
-                (homeLEDOn && timeSinceHomeLight.ElapsedMilliseconds > sendHomeLightIntervalMs))
+                (homeLEDOn && timeSinceHomeLight.ElapsedMilliseconds > SendHomeLightIntervalMs))
             {
                 homeLightSent = SetHomeLight(true);
                 timeSinceHomeLight.Restart();
@@ -1838,9 +1838,9 @@ public class Joycon
 
     private static ushort Scale16bitsTo12bits(int value)
     {
-        const float scale16bitsTo12bits = 4095f / 65535f;
+        const float Scale16bitsTo12bits = 4095f / 65535f;
 
-        return (ushort)MathF.Round(value * scale16bitsTo12bits);
+        return (ushort)MathF.Round(value * Scale16bitsTo12bits);
     }
 
     private void ExtractSticksValues(ReadOnlySpan<byte> reportBuf)
@@ -2094,11 +2094,11 @@ public class Joycon
                 //DebugPrint($"X1={_stick[0]:0.00} Y1={_stick[1]:0.00}. X2={_stick2[0]:0.00} Y2={_stick2[1]:0.00}", DebugType.Threading);
             }
 
-            const float stickActivityThreshold = 0.1f;
-            if (MathF.Abs(_stick[0]) > stickActivityThreshold ||
-                MathF.Abs(_stick[1]) > stickActivityThreshold ||
-                MathF.Abs(_stick2[0]) > stickActivityThreshold ||
-                MathF.Abs(_stick2[1]) > stickActivityThreshold)
+            const float StickActivityThreshold = 0.1f;
+            if (MathF.Abs(_stick[0]) > StickActivityThreshold ||
+                MathF.Abs(_stick[1]) > StickActivityThreshold ||
+                MathF.Abs(_stick2[0]) > StickActivityThreshold ||
+                MathF.Abs(_stick2[1]) > StickActivityThreshold)
             {
                 activity = true;
             }
@@ -2280,10 +2280,7 @@ public class Joycon
             return;
         }
 
-        if (_ctsCommunications == null)
-        {
-            _ctsCommunications = new();
-        }
+        _ctsCommunications ??= new();
 
         _receiveReportsThread = new Thread(
             () =>
@@ -2428,7 +2425,7 @@ public class Joycon
         buf[1] = (byte)(_globalCount & 0x0F);
         ++_globalCount;
 
-        data.Slice(0, 8).CopyTo(buf.Slice(2));
+        data[..8].CopyTo(buf[2..]);
         PrintArray<byte>(buf, DebugType.Rumble, 10, format: "Rumble data sent: {0:S}");
         Write(buf);
     }
@@ -2443,8 +2440,8 @@ public class Joycon
         Span<byte> buf = stackalloc byte[_CommandLength];
         buf.Clear();
 
-        _rumbleBuf.AsSpan(0, 8).CopyTo(buf.Slice(2));
-        bufParameters.CopyTo(buf.Slice(11));
+        _rumbleBuf.AsSpan(0, 8).CopyTo(buf[2..]);
+        bufParameters.CopyTo(buf[11..]);
         buf[10] = (byte)sc;
         buf[1] = (byte)(_globalCount & 0x0F);
         buf[0] = 0x01;
@@ -3624,7 +3621,7 @@ public class Joycon
             rumble.HighAmplitude = Math.Clamp(rumble.HighAmplitude, 0.0f, 1.0f);
 
             // Left rumble
-            EncodeRumble(rumbleData.Slice(0, 4), rumble.LowFreq, rumble.HighFreq, rumble.HighAmplitude);
+            EncodeRumble(rumbleData[..4], rumble.LowFreq, rumble.HighFreq, rumble.HighAmplitude);
 
             // Right rumble
             EncodeRumble(rumbleData.Slice(4, 4), rumble.LowFreq, rumble.HighFreq, rumble.LowAmplitude);

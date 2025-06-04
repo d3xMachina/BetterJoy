@@ -23,7 +23,7 @@ internal static class StringUtils
         }
 
         var nullTerminatorPosition = FindNullTerminator(buffer);
-        return Encoding.Unicode.GetString(buffer.Slice(0, nullTerminatorPosition));
+        return Encoding.Unicode.GetString(buffer[..nullTerminatorPosition]);
     }
 
     private static int FindNullTerminator(ReadOnlySpan<byte> buffer)
