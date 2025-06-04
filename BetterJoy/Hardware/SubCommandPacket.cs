@@ -64,7 +64,7 @@ public class SubCommandPacket
         args.CopyTo(_raw[ArgumentsStartIndex..]);
     }
     
-    public static implicit operator ReadOnlySpan<byte>(SubCommandPacket subCommand) => subCommand._raw;
+    public static implicit operator ReadOnlySpan<byte>(SubCommandPacket subCommand) => subCommand._raw[..subCommand._packetSize];
     
     public SubCommandOperation Operation => (SubCommandOperation)_raw[CommandIndex];
 
