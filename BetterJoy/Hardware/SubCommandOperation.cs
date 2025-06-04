@@ -1,6 +1,6 @@
-namespace BetterJoy.Hardware.Bluetooth;
+namespace BetterJoy.Hardware;
 
-public enum SubCommand : byte
+public enum SubCommandOperation : byte
 {
     GetControllerState              = 0x00,
     ManualBluetoothPairing          = 0x01,

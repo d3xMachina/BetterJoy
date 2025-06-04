@@ -1,6 +1,6 @@
 using System;
 
-namespace BetterJoy.Hardware.Bluetooth;
+namespace BetterJoy.Hardware;
 
 public class SPIPage
 {
