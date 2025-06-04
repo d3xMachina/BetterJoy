@@ -2437,7 +2437,7 @@ public class Joycon
             return DeviceErroredCode;
         }
 
-        var request = new SubCommand(sc, _globalCount, bufParameters, _rumbleBuf);
+        var request = new SubCommand(sc, _globalCount, bufParameters, _rumbleBuf, IsUSB);
         ++_globalCount;
 
         if (print)
