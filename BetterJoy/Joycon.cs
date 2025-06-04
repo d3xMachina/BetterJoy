@@ -443,7 +443,7 @@ public class Joycon
                type == Config.DebugType ||
                Config.DebugType == DebugType.All;
     }
-    public void DebugPrint<T>(T stringifyable, DebugType type)
+    private void DebugPrint<T>(T stringifyable, DebugType type)
     {
         if (!ShouldLog(type))
         {
@@ -1636,9 +1636,6 @@ public class Joycon
 
     private void SendCommands(CancellationToken token)
     {
-        Span<byte> buf = stackalloc byte[_CommandLength];
-        buf.Clear();
-
         // the home light stays on for 2625ms, set to less than half in case of packet drop
         const int SendHomeLightIntervalMs = 1250;
         Stopwatch timeSinceHomeLight = new();
@@ -1664,13 +1661,13 @@ public class Joycon
 
             var sendRumble = _rumbles.TryDequeue(_rumbleBuf);
 
-            var homeLightSent = false;
+            var subCommandSent = false;
             var homeLEDOn = Config.HomeLEDOn;
 
             if ((oldHomeLEDOn != homeLEDOn) ||
                 (homeLEDOn && timeSinceHomeLight.ElapsedMilliseconds > SendHomeLightIntervalMs))
             {
-                homeLightSent = SetHomeLight(true);
+                subCommandSent = SetHomeLight(true);
                 timeSinceHomeLight.Restart();
                 oldHomeLEDOn = homeLEDOn;
             }
@@ -1678,7 +1675,7 @@ public class Joycon
             if (sendRumble)
             {
                 // Subcommands send the rumble so no need to call SetRumble
-                if (!homeLightSent)
+                if (!subCommandSent)
                 {
                     SetRumble(true);
                 }
@@ -2629,7 +2626,7 @@ public class Joycon
                 _stick2Cal[!IsLeft ? 4 : 0] = (ushort)(((stick2Data[7] << 8) & 0xF00) | stick2Data[6]); // X Axis Min below center
                 _stick2Cal[!IsLeft ? 5 : 1] = (ushort)((stick2Data[8] << 4) | (stick2Data[7] >> 4)); // Y Axis Min below center
 
-                PrintArray<ushort>(_stick2Cal[0..6], format: $"{stick2Name} stick calibration data: {{0:S}}");
+                PrintArray<ushort>(_stick2Cal[..6], format: $"{stick2Name} stick calibration data: {{0:S}}");
             }
         }
 

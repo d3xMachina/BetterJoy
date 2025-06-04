@@ -703,6 +703,7 @@ public class JoyconManager
         {
             return;
         }
+
         _isRunning = false;
 
         _ctsDevicesNotifications.Cancel();
