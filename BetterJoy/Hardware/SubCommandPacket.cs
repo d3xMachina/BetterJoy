@@ -19,8 +19,8 @@ public class SubCommandPacket
     private const int RumbleLength = CommandIndex - RumbleContentsStartIndex;
 
     private readonly int _packetSize;
-    private int MaxArgsLength => _packetSize - ArgumentsStartIndex;
     private readonly int _argsLength;
+    private int _maxArgsLength => _packetSize - ArgumentsStartIndex;
     
     [InlineArray(USBPacketSize)]
     private struct CommandBuffer
@@ -50,9 +50,9 @@ public class SubCommandPacket
         }
 
         // Check the args length
-        if (args.Length > MaxArgsLength)
+        if (args.Length > _maxArgsLength)
         {
-            throw new ArgumentException($@"Args span is too large. Expected at most: {MaxArgsLength} Received: {rumble.Length}", nameof(args));
+            throw new ArgumentException($@"Args span is too large. Expected at most: {_maxArgsLength} Received: {rumble.Length}", nameof(args));
         }
         
         _argsLength = args.Length;
