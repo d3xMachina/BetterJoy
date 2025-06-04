@@ -99,7 +99,7 @@ public class SubCommandPacket
             }
             else
             {
-                foreach (var rumbleVal in ((ReadOnlySpan<byte>)_raw).Slice(ArgumentsStartIndex, _argsLength))
+                foreach (var rumbleVal in Rumble)
                 {
                     output.Append($" {rumbleVal:X2}");
                 }
