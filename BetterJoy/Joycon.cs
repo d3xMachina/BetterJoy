@@ -1877,11 +1877,11 @@ public class Joycon
             {
                 // Scale down to 12 bits to match the calibrations datas precision
                 // Invert y axis by substracting from 0xFFFF to match 0x30 reports 
-                _stickPrecal[0] = Scale16bitsTo12bits(Nibble.EncodeBytesLittleEndian(reportBuf[4], reportBuf[5]));
-                _stickPrecal[1] = Scale16bitsTo12bits(0XFFFF - Nibble.EncodeBytesLittleEndian(reportBuf[6], reportBuf[7]));
+                _stickPrecal[0] = Scale16bitsTo12bits(Nibble.EncodeBytesAsWordLittleEndian(reportBuf[4], reportBuf[5]));
+                _stickPrecal[1] = Scale16bitsTo12bits(0XFFFF - Nibble.EncodeBytesAsWordLittleEndian(reportBuf[6], reportBuf[7]));
 
-                _stick2Precal[0] = Scale16bitsTo12bits(Nibble.EncodeBytesLittleEndian(reportBuf[8], reportBuf[9]));
-                _stick2Precal[1] = Scale16bitsTo12bits(0xFFFF - Nibble.EncodeBytesLittleEndian(reportBuf[10], (reportBuf[11])));
+                _stick2Precal[0] = Scale16bitsTo12bits(Nibble.EncodeBytesAsWordLittleEndian(reportBuf[8], reportBuf[9]));
+                _stick2Precal[1] = Scale16bitsTo12bits(0xFFFF - Nibble.EncodeBytesAsWordLittleEndian(reportBuf[10], (reportBuf[11])));
             }
             else
             {
@@ -2181,12 +2181,14 @@ public class Joycon
             return false;
         }
 
-        _gyrRaw[0] = Nibble.EncodeBytesLittleEndian(reportBuf[19 + n * 12], reportBuf[20 + n * 12]);
-        _gyrRaw[1] = Nibble.EncodeBytesLittleEndian(reportBuf[21 + n * 12], reportBuf[22 + n * 12]);
-        _gyrRaw[2] = Nibble.EncodeBytesLittleEndian(reportBuf[23 + n * 12], reportBuf[24 + n * 12]);
-        _accRaw[0] = Nibble.EncodeBytesLittleEndian(reportBuf[13 + n * 12], reportBuf[14 + n * 12]);
-        _accRaw[1] = Nibble.EncodeBytesLittleEndian(reportBuf[15 + n * 12], reportBuf[16 + n * 12]);
-        _accRaw[2] = Nibble.EncodeBytesLittleEndian(reportBuf[17 + n * 12], reportBuf[18 + n * 12]);
+        var offset = n * 12;
+
+        _gyrRaw[0] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[19 + offset], reportBuf[20 + offset]);
+        _gyrRaw[1] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[21 + offset], reportBuf[22 + offset]);
+        _gyrRaw[2] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[23 + offset], reportBuf[24 + offset]);
+        _accRaw[0] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[13 + offset], reportBuf[14 + offset]);
+        _accRaw[1] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[15 + offset], reportBuf[16 + offset]);
+        _accRaw[2] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[17 + offset], reportBuf[18 + offset]);
 
         if (_calibrateIMU)
         {
@@ -2677,21 +2679,21 @@ public class Joycon
                 }
             }
 
-            _accNeutral[0] = Nibble.EncodeBytesLittleEndian(sensorData[0], sensorData[1]);
-            _accNeutral[1] = Nibble.EncodeBytesLittleEndian(sensorData[2], sensorData[3]);
-            _accNeutral[2] = Nibble.EncodeBytesLittleEndian(sensorData[4], sensorData[5]);
+            _accNeutral[0] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[0], sensorData[1]);
+            _accNeutral[1] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[2], sensorData[3]);
+            _accNeutral[2] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[4], sensorData[5]);
 
-            _accSensiti[0] = Nibble.EncodeBytesLittleEndian(sensorData[6], sensorData[7]);
-            _accSensiti[1] = Nibble.EncodeBytesLittleEndian(sensorData[8], sensorData[9]);
-            _accSensiti[2] = Nibble.EncodeBytesLittleEndian(sensorData[10], sensorData[11]);
+            _accSensiti[0] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[6], sensorData[7]);
+            _accSensiti[1] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[8], sensorData[9]);
+            _accSensiti[2] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[10], sensorData[11]);
 
-            _gyrNeutral[0] = Nibble.EncodeBytesLittleEndian(sensorData[12], sensorData[13]);
-            _gyrNeutral[1] = Nibble.EncodeBytesLittleEndian(sensorData[14], sensorData[15]);
-            _gyrNeutral[2] = Nibble.EncodeBytesLittleEndian(sensorData[16], sensorData[17]);
+            _gyrNeutral[0] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[12], sensorData[13]);
+            _gyrNeutral[1] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[14], sensorData[15]);
+            _gyrNeutral[2] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[16], sensorData[17]);
 
-            _gyrSensiti[0] = Nibble.EncodeBytesLittleEndian(sensorData[18], sensorData[19]);
-            _gyrSensiti[1] = Nibble.EncodeBytesLittleEndian(sensorData[20], sensorData[21]);
-            _gyrSensiti[2] = Nibble.EncodeBytesLittleEndian(sensorData[22], sensorData[23]);
+            _gyrSensiti[0] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[18], sensorData[19]);
+            _gyrSensiti[1] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[20], sensorData[21]);
+            _gyrSensiti[2] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[22], sensorData[23]);
 
             bool noCalibration = false;
 

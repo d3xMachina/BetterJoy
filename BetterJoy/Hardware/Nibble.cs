@@ -18,11 +18,11 @@ public static class Nibble
         => (byte)((LowerNibble(high) << 4) | LowerNibble(low) );
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ushort EncodeBytesLittleEndianUnsigned(byte low, byte high)
+    public static ushort EncodeBytesAsWordLittleEndianUnsigned(byte low, byte high)
         => (ushort)((high << 8) | low);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static short EncodeBytesLittleEndian(byte low, byte high)
+    public static short EncodeBytesAsWordLittleEndian(byte low, byte high)
         => (short)((high << 8) | low);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -35,9 +35,9 @@ public static class Nibble
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort Lower3NibblesLittleEndian(byte low, byte high)
-        => Lower3Nibbles(EncodeBytesLittleEndianUnsigned(low, high));
+        => Lower3Nibbles(EncodeBytesAsWordLittleEndianUnsigned(low, high));
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort Upper3NibblesLittleEndian(byte low, byte high)
-        => Upper3Nibbles(EncodeBytesLittleEndianUnsigned(low, high));
+        => Upper3Nibbles(EncodeBytesAsWordLittleEndianUnsigned(low, high));
 }
