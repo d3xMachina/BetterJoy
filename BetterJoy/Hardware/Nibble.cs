@@ -5,13 +5,13 @@ namespace BetterJoy.Hardware;
 public class Nibble
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static byte LowerNibble(byte b) => (byte)(b & 0b00001111);
+    public static byte LowerNibble(byte b) => (byte)(b & 0x0F);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static byte UpperNibble(byte b) => (byte)(LowerNibble(b) << 4);
+    public static byte UpperNibble(byte b) => (byte)(b >> 4);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static byte Merge(byte high, byte low)
+    public static byte Merge(byte low, byte high)
         => (byte)(LowerNibble(high) | UpperNibble(low));
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -644,7 +644,7 @@ public class Joycon
             0x01,
 
             // Mini cycle 1
-            Intensity << 4,
+            Nibble.Merge(0, Intensity),
             0xFF,
             0xFF,
         ];
@@ -665,12 +665,12 @@ public class Joycon
         [
             // Global settings
             0x0F, // 0XF = 175ms base duration
-            (byte)(intensity << 4 | NbCycles),
+            Nibble.Merge(NbCycles, intensity),
 
             // Mini cycle 1
             // Somehow still used when buf[0] high nibble is set to 0x0
             // Increase the multipliers (like 0xFF instead of 0x11) to increase the duration beyond 2625ms
-            (byte)(intensity << 4), // intensity | not used
+            Nibble.Merge(0, intensity), // intensity | not used
             0x11, // transition multiplier | duration multiplier, both use the base duration
             0xFF, // not used
         ];
