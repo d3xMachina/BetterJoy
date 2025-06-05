@@ -11,8 +11,11 @@ public class Nibble
     public static byte UpperNibble(byte b) => (byte)(b >> 4);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static byte Merge(byte low, byte high)
-        => (byte)((LowerNibble(high) << 4) | UpperNibble(low) );
+    public static byte LowerToUpper(byte b) => (byte)(b << 4);
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static byte EncodeNibblesAsByteLittleEndian(byte low, byte high)
+        => (byte)((LowerNibble(high) << 4) | LowerNibble(low) );
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort EncodeBytesLittleEndianUnsigned(byte low, byte high)
