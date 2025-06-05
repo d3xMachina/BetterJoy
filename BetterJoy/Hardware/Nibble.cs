@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace BetterJoy.Hardware;
 
-public class Nibble
+public static class Nibble
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static byte LowerNibble(byte b) => (byte)(b & 0x0F);
