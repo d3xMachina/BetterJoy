@@ -1,4 +1,4 @@
-namespace BetterJoy.Hardware;
+namespace BetterJoy.Hardware.SubCommandUtils;
 
 public enum SubCommandOperation : byte
 {

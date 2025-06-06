@@ -1,4 +1,5 @@
 using BetterJoy.HIDApi.Exceptions;
+using BetterJoy.HIDApi.Native;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -15,7 +16,7 @@ public static class Manager
 
     public static void Init()
     {
-        int ret = NativeMethods.Init();
+        int ret = Native.NativeMethods.Init();
         if (ret != 0)
         {
             throw new HIDApiInitFailedException(GetError());
@@ -26,18 +27,18 @@ public static class Manager
     public static void Exit()
     {
         // Ignore if there is a returned error, we can't do anything about it
-        _ = NativeMethods.Exit();
+        _ = Native.NativeMethods.Exit();
     }
 
     public static string GetError()
     {
-        var ptr = NativeMethods.Error(IntPtr.Zero);
+        var ptr = Native.NativeMethods.Error(IntPtr.Zero);
         return Marshal.PtrToStringUni(ptr);
     }
 
     public static IEnumerable<DeviceInfo> EnumerateDevices(ushort vendorId, ushort productId)
     {
-        var devicesPtr = NativeMethods.Enumerate(vendorId, productId);
+        var devicesPtr = Native.NativeMethods.Enumerate(vendorId, productId);
         if (devicesPtr == IntPtr.Zero)
         {
             yield break;
@@ -56,7 +57,7 @@ public static class Manager
         }
         finally
         {
-            NativeMethods.FreeEnumeration(devicesPtr);
+            Native.NativeMethods.FreeEnumeration(devicesPtr);
         }
     }
 
@@ -73,7 +74,7 @@ public static class Manager
             return 0; // keep the callback registered
         };
 
-        int ret = NativeMethods.HotplugRegisterCallback(
+        int ret = Native.NativeMethods.HotplugRegisterCallback(
             0x0,
             0x0,
             (int)(HotplugEvent.DeviceArrived | HotplugEvent.DeviceLeft),
@@ -96,7 +97,7 @@ public static class Manager
             return;
         }
 
-        int ret = NativeMethods.HotplugDeregisterCallback(_deviceNotificationsHandle);
+        int ret = Native.NativeMethods.HotplugDeregisterCallback(_deviceNotificationsHandle);
         if (ret != 0)
         {
             throw new HIDApiCallbackFailedException();
