@@ -644,7 +644,7 @@ public class Joycon
             0x01,
 
             // Mini cycle 1
-            Nibble.LowerToUpper(Intensity),
+            BitWrangler.LowerToUpper(Intensity),
             0xFF,
             0xFF,
         ];
@@ -665,12 +665,12 @@ public class Joycon
         [
             // Global settings
             0x0F, // 0XF = 175ms base duration
-            Nibble.EncodeNibblesAsByteLittleEndian(NbCycles, intensity),
+            BitWrangler.EncodeNibblesAsByteLittleEndian(NbCycles, intensity),
 
             // Mini cycle 1
             // Somehow still used when buf[0] high nibble is set to 0x0
             // Increase the multipliers (like 0xFF instead of 0x11) to increase the duration beyond 2625ms
-            Nibble.LowerToUpper(intensity), // intensity | not used
+            BitWrangler.LowerToUpper(intensity), // intensity | not used
             0x11, // transition multiplier | duration multiplier, both use the base duration
             0xFF, // not used
         ];
@@ -1842,7 +1842,7 @@ public class Joycon
         }
     }
 
-    private static ushort Scale16bitsTo12bits(int value)
+    private static ushort Scale16bitsTo12bits(ushort  value)
     {
         const float Scale16bitsTo12bits = 4095f / 65535f;
 
@@ -1862,13 +1862,13 @@ public class Joycon
         {
             var offset = IsLeft ? 0 : 3;
 
-            _stickPrecal[0] = Nibble.Lower3NibblesLittleEndian(reportBuf[6 + offset], reportBuf[7 + offset]);
-            _stickPrecal[1] = Nibble.Upper3NibblesLittleEndian(reportBuf[7 + offset], reportBuf[8 + offset]);
+            _stickPrecal[0] = BitWrangler.Lower3NibblesLittleEndian(reportBuf[6 + offset], reportBuf[7 + offset]);
+            _stickPrecal[1] = BitWrangler.Upper3NibblesLittleEndian(reportBuf[7 + offset], reportBuf[8 + offset]);
 
             if (IsPro)
             {
-                _stick2Precal[0] = Nibble.Lower3NibblesLittleEndian(reportBuf[9], reportBuf[10]);
-                _stick2Precal[1] = Nibble.Upper3NibblesLittleEndian(reportBuf[10],reportBuf[11]);
+                _stick2Precal[0] = BitWrangler.Lower3NibblesLittleEndian(reportBuf[9], reportBuf[10]);
+                _stick2Precal[1] = BitWrangler.Upper3NibblesLittleEndian(reportBuf[10], reportBuf[11]);
             }
         }
         else if (reportType == (byte)ReportMode.SimpleHID)
@@ -1877,11 +1877,11 @@ public class Joycon
             {
                 // Scale down to 12 bits to match the calibrations datas precision
                 // Invert y axis by substracting from 0xFFFF to match 0x30 reports 
-                _stickPrecal[0] = Scale16bitsTo12bits(Nibble.EncodeBytesAsWordLittleEndian(reportBuf[4], reportBuf[5]));
-                _stickPrecal[1] = Scale16bitsTo12bits(0XFFFF - Nibble.EncodeBytesAsWordLittleEndian(reportBuf[6], reportBuf[7]));
+                _stickPrecal[0] = Scale16bitsTo12bits(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[4], reportBuf[5]));
+                _stickPrecal[1] = Scale16bitsTo12bits(BitWrangler.InvertWord(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[6], reportBuf[7])));
 
-                _stick2Precal[0] = Scale16bitsTo12bits(Nibble.EncodeBytesAsWordLittleEndian(reportBuf[8], reportBuf[9]));
-                _stick2Precal[1] = Scale16bitsTo12bits(0xFFFF - Nibble.EncodeBytesAsWordLittleEndian(reportBuf[10], (reportBuf[11])));
+                _stick2Precal[0] = Scale16bitsTo12bits(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[8], reportBuf[9]));
+                _stick2Precal[1] = Scale16bitsTo12bits(BitWrangler.InvertWord(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[10], (reportBuf[11]))));
             }
             else
             {
@@ -2183,12 +2183,12 @@ public class Joycon
 
         var offset = n * 12;
 
-        _gyrRaw[0] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[19 + offset], reportBuf[20 + offset]);
-        _gyrRaw[1] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[21 + offset], reportBuf[22 + offset]);
-        _gyrRaw[2] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[23 + offset], reportBuf[24 + offset]);
-        _accRaw[0] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[13 + offset], reportBuf[14 + offset]);
-        _accRaw[1] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[15 + offset], reportBuf[16 + offset]);
-        _accRaw[2] = Nibble.EncodeBytesAsWordLittleEndian(reportBuf[17 + offset], reportBuf[18 + offset]);
+        _gyrRaw[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[19 + offset], reportBuf[20 + offset]);
+        _gyrRaw[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[21 + offset], reportBuf[22 + offset]);
+        _gyrRaw[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[23 + offset], reportBuf[24 + offset]);
+        _accRaw[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[13 + offset], reportBuf[14 + offset]);
+        _accRaw[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[15 + offset], reportBuf[16 + offset]);
+        _accRaw[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[17 + offset], reportBuf[18 + offset]);
 
         if (_calibrateIMU)
         {
@@ -2593,12 +2593,12 @@ public class Joycon
                 }
             }
 
-            _stickCal[IsLeft ? 0 : 2] = Nibble.Lower3NibblesLittleEndian(stick1Data[0], stick1Data[1]); // X Axis Max above center
-            _stickCal[IsLeft ? 1 : 3] = Nibble.Upper3NibblesLittleEndian(stick1Data[1], stick1Data[2]); // Y Axis Max above center
-            _stickCal[IsLeft ? 2 : 4] = Nibble.Lower3NibblesLittleEndian(stick1Data[3], stick1Data[4]); // X Axis Center
-            _stickCal[IsLeft ? 3 : 5] = Nibble.Upper3NibblesLittleEndian(stick1Data[4], stick1Data[5]); // Y Axis Center
-            _stickCal[IsLeft ? 4 : 0] = Nibble.Lower3NibblesLittleEndian(stick1Data[6], stick1Data[7]); // X Axis Min below center
-            _stickCal[IsLeft ? 5 : 1] = Nibble.Upper3NibblesLittleEndian(stick1Data[7], stick1Data[8]); // Y Axis Min below center
+            _stickCal[IsLeft ? 0 : 2] = BitWrangler.Lower3NibblesLittleEndian(stick1Data[0], stick1Data[1]); // X Axis Max above center
+            _stickCal[IsLeft ? 1 : 3] = BitWrangler.Upper3NibblesLittleEndian(stick1Data[1], stick1Data[2]); // Y Axis Max above center
+            _stickCal[IsLeft ? 2 : 4] = BitWrangler.Lower3NibblesLittleEndian(stick1Data[3], stick1Data[4]); // X Axis Center
+            _stickCal[IsLeft ? 3 : 5] = BitWrangler.Upper3NibblesLittleEndian(stick1Data[4], stick1Data[5]); // Y Axis Center
+            _stickCal[IsLeft ? 4 : 0] = BitWrangler.Lower3NibblesLittleEndian(stick1Data[6], stick1Data[7]); // X Axis Min below center
+            _stickCal[IsLeft ? 5 : 1] = BitWrangler.Upper3NibblesLittleEndian(stick1Data[7], stick1Data[8]); // Y Axis Min below center
 
             PrintArray<ushort>(_stickCal[..6], format: $"{stick1Name} stick 1 calibration data: {{0:S}}");
 
@@ -2621,12 +2621,12 @@ public class Joycon
                     }
                 }
 
-                _stick2Cal[!IsLeft ? 0 : 2] = Nibble.Lower3NibblesLittleEndian(stick2Data[0], stick2Data[1]); // X Axis Max above center
-                _stick2Cal[!IsLeft ? 1 : 3] = Nibble.Upper3NibblesLittleEndian(stick2Data[1], stick2Data[2]); // Y Axis Max above center
-                _stick2Cal[!IsLeft ? 2 : 4] = Nibble.Lower3NibblesLittleEndian(stick2Data[3], stick2Data[4]); // X Axis Center
-                _stick2Cal[!IsLeft ? 3 : 5] = Nibble.Upper3NibblesLittleEndian(stick2Data[4], stick2Data[5]); // Y Axis Center
-                _stick2Cal[!IsLeft ? 4 : 0] = Nibble.Lower3NibblesLittleEndian(stick2Data[6], stick2Data[7]); // X Axis Min below center
-                _stick2Cal[!IsLeft ? 5 : 1] = Nibble.Upper3NibblesLittleEndian(stick2Data[7], stick2Data[8]); // Y Axis Min below center
+                _stick2Cal[!IsLeft ? 0 : 2] = BitWrangler.Lower3NibblesLittleEndian(stick2Data[0], stick2Data[1]); // X Axis Max above center
+                _stick2Cal[!IsLeft ? 1 : 3] = BitWrangler.Upper3NibblesLittleEndian(stick2Data[1], stick2Data[2]); // Y Axis Max above center
+                _stick2Cal[!IsLeft ? 2 : 4] = BitWrangler.Lower3NibblesLittleEndian(stick2Data[3], stick2Data[4]); // X Axis Center
+                _stick2Cal[!IsLeft ? 3 : 5] = BitWrangler.Upper3NibblesLittleEndian(stick2Data[4], stick2Data[5]); // Y Axis Center
+                _stick2Cal[!IsLeft ? 4 : 0] = BitWrangler.Lower3NibblesLittleEndian(stick2Data[6], stick2Data[7]); // X Axis Min below center
+                _stick2Cal[!IsLeft ? 5 : 1] = BitWrangler.Upper3NibblesLittleEndian(stick2Data[7], stick2Data[8]); // Y Axis Min below center
 
                 PrintArray<ushort>(_stick2Cal[..6], format: $"{stick2Name} stick calibration data: {{0:S}}");
             }
@@ -2640,20 +2640,20 @@ public class Joycon
 
             var offset = IsLeft ? 0 : 0x12;
 
-            var deadzone = Nibble.Lower3NibblesLittleEndian(factoryDeadzoneData[0 + offset], factoryDeadzoneData[1 + offset]);
+            var deadzone = BitWrangler.Lower3NibblesLittleEndian(factoryDeadzoneData[0 + offset], factoryDeadzoneData[1 + offset]);
             _deadzone = CalculateDeadzone(_stickCal, deadzone);
 
-            var range = Nibble.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
+            var range = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
             _range = CalculateRange(range);
 
             if (IsPro)
             {
                 offset = !IsLeft ? 0 : 0x12;
 
-                var deadzone2 = Nibble.Lower3NibblesLittleEndian(factoryDeadzoneData[0 + offset], factoryDeadzoneData[1 + offset]);
+                var deadzone2 = BitWrangler.Lower3NibblesLittleEndian(factoryDeadzoneData[0 + offset], factoryDeadzoneData[1 + offset]);
                 _deadzone2 = CalculateDeadzone(_stick2Cal, deadzone2);
 
-                var range2 = Nibble.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
+                var range2 = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
                 _range2 = CalculateRange(range2);
             }
         }
@@ -2679,21 +2679,21 @@ public class Joycon
                 }
             }
 
-            _accNeutral[0] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[0], sensorData[1]);
-            _accNeutral[1] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[2], sensorData[3]);
-            _accNeutral[2] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[4], sensorData[5]);
+            _accNeutral[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[0], sensorData[1]);
+            _accNeutral[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[2], sensorData[3]);
+            _accNeutral[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[4], sensorData[5]);
 
-            _accSensiti[0] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[6], sensorData[7]);
-            _accSensiti[1] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[8], sensorData[9]);
-            _accSensiti[2] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[10], sensorData[11]);
+            _accSensiti[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[6], sensorData[7]);
+            _accSensiti[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[8], sensorData[9]);
+            _accSensiti[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[10], sensorData[11]);
 
-            _gyrNeutral[0] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[12], sensorData[13]);
-            _gyrNeutral[1] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[14], sensorData[15]);
-            _gyrNeutral[2] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[16], sensorData[17]);
+            _gyrNeutral[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[12], sensorData[13]);
+            _gyrNeutral[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[14], sensorData[15]);
+            _gyrNeutral[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[16], sensorData[17]);
 
-            _gyrSensiti[0] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[18], sensorData[19]);
-            _gyrSensiti[1] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[20], sensorData[21]);
-            _gyrSensiti[2] = Nibble.EncodeBytesAsWordLittleEndian(sensorData[22], sensorData[23]);
+            _gyrSensiti[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[18], sensorData[19]);
+            _gyrSensiti[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[20], sensorData[21]);
+            _gyrSensiti[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[22], sensorData[23]);
 
             bool noCalibration = false;
 

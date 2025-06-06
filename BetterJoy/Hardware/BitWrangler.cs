@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace BetterJoy.Hardware;
 
-public static class Nibble
+public static class BitWrangler
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static byte LowerNibble(byte b) => (byte)(b & 0x0F);
@@ -15,14 +15,14 @@ public static class Nibble
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static byte EncodeNibblesAsByteLittleEndian(byte low, byte high)
-        => (byte)((LowerNibble(high) << 4) | LowerNibble(low) );
+        => (byte)(LowerToUpper(high) | LowerNibble(low) );
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ushort EncodeBytesAsWordLittleEndianUnsigned(byte low, byte high)
+    public static ushort EncodeBytesAsWordLittleEndian(byte low, byte high)
         => (ushort)((high << 8) | low);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static short EncodeBytesAsWordLittleEndian(byte low, byte high)
+    public static short EncodeBytesAsWordLittleEndianSigned(byte low, byte high)
         => (short)((high << 8) | low);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -35,9 +35,13 @@ public static class Nibble
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort Lower3NibblesLittleEndian(byte low, byte high)
-        => Lower3Nibbles(EncodeBytesAsWordLittleEndianUnsigned(low, high));
+        => Lower3Nibbles(EncodeBytesAsWordLittleEndian(low, high));
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort Upper3NibblesLittleEndian(byte low, byte high)
-        => Upper3Nibbles(EncodeBytesAsWordLittleEndianUnsigned(low, high));
+        => Upper3Nibbles(EncodeBytesAsWordLittleEndian(low, high));
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ushort InvertWord(ushort word)
+        => (ushort)(ushort.MaxValue - word);
 }
