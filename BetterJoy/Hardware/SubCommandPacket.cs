@@ -33,7 +33,7 @@ public class SubCommandPacket
     
     public SubCommandPacket(
         SubCommandOperation subCommandOperation, 
-        uint commandCount, 
+        byte commandCount, 
         ReadOnlySpan<byte> args = default, 
         ReadOnlySpan<byte> rumble = default,
         bool useUSBPacketSize = false)
@@ -58,7 +58,7 @@ public class SubCommandPacket
         
         _argsLength = args.Length;
         _raw[PacketStartIndex] = 0x01; // Always
-        _raw[CommandCountIndex] = (byte)(commandCount & 0x0F); // Command index only uses 4 bits
+        _raw[CommandCountIndex] = BitWrangler.LowerNibble(commandCount); // Command index only uses 4 bits
         _raw[CommandIndex] = (byte)subCommandOperation;
         
         rumble.CopyTo(_raw[RumbleContentsStartIndex..]);
