@@ -518,7 +518,7 @@ public class Joycon
             SetRumble(true);
             SetNFCIR(false);
 
-            SetReportMode(InputReportMode.StandardFull60Hz);
+            SetReportMode(InputReportMode.StandardFull);
 
             State = Status.Attached;
 
@@ -1039,7 +1039,7 @@ public class Joycon
             return ReceiveError.Disconnected;
         }
 
-        if (packetType != (byte)InputReportMode.StandardFull60Hz && packetType != (byte)InputReportMode.SimpleHID)
+        if (packetType != (byte)InputReportMode.StandardFull && packetType != (byte)InputReportMode.SimpleHID)
         {
             return ReceiveError.InvalidPacket;
         }
@@ -1053,7 +1053,7 @@ public class Joycon
         const int NbPackets = 3;
         ulong deltaPacketsMicroseconds = 0;
 
-        if (packetType == (byte)InputReportMode.StandardFull60Hz)
+        if (packetType == (byte)InputReportMode.StandardFull)
         {
             // Determine the IMU timestamp with a rolling average instead of relying on the unreliable packet's timestamp
             // more detailed explanations on why : https://github.com/torvalds/linux/blob/52b1853b080a082ec3749c3a9577f6c71b1d4a90/drivers/hid/hid-nintendo.c#L1115
@@ -1605,7 +1605,7 @@ public class Joycon
     private void GetBatteryInfos(ReadOnlySpan<byte> reportBuf)
     {
         byte packetType = reportBuf[0];
-        if (packetType != (byte)InputReportMode.StandardFull60Hz)
+        if (packetType != (byte)InputReportMode.StandardFull)
         {
             return;
         }
@@ -1783,7 +1783,7 @@ public class Joycon
                     try
                     {
                         USBPairing();
-                        SetReportMode(InputReportMode.StandardFull60Hz);
+                        SetReportMode(InputReportMode.StandardFull);
                         RequestSetLEDByPadID();
                     }
                     // ignore and retry
@@ -1795,7 +1795,7 @@ public class Joycon
                 else
                 {
                     //Log("Attempt soft reconnect...");
-                    SetReportMode(InputReportMode.StandardFull60Hz);
+                    SetReportMode(InputReportMode.StandardFull);
                 }
 
                 ++reconnectAttempts;
@@ -1852,7 +1852,7 @@ public class Joycon
 
         byte reportType = reportBuf[0];
 
-        if (reportType == (byte)InputReportMode.StandardFull60Hz)
+        if (reportType == (byte)InputReportMode.StandardFull)
         {
             var offset = IsLeft ? 0 : 3;
 
@@ -1932,7 +1932,7 @@ public class Joycon
     {
         byte reportType = reportBuf[0];
 
-        if (reportType == (byte)InputReportMode.StandardFull60Hz)
+        if (reportType == (byte)InputReportMode.StandardFull)
         {
             var offset = IsLeft ? 2 : 0;
 
@@ -2170,7 +2170,7 @@ public class Joycon
     // Get Gyro/Accel data
     private bool ExtractIMUValues(ReadOnlySpan<byte> reportBuf, int n = 0)
     {
-        if (!IMUSupported() || reportBuf[0] != (byte)InputReportMode.StandardFull60Hz)
+        if (!IMUSupported() || reportBuf[0] != (byte)InputReportMode.StandardFull)
         {
             return false;
         }
