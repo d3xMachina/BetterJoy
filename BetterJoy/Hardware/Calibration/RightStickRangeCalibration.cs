@@ -10,6 +10,6 @@ public class RightStickRangeCalibration : StickRangeCalibration
     
     public override string ToString()
     {
-        return base.ToString();
+        return $"{nameof(RightStickRangeCalibration)} data: (XMax: {XMax:S}, YMax: {YMax:S}, XCenter: {XCenter:S}, YCenter: {YCenter:S}, XMin: {XMin:S}, YMin: {YMin:S})";
     }
 }

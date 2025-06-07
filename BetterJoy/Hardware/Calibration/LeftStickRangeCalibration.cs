@@ -10,6 +10,6 @@ public class LeftStickRangeCalibration : StickRangeCalibration
 
     public override string ToString()
     {
-        return $"{nameof(LeftStickRangeCalibration)} data: (XMax: , YMax: , XCenter: , YCenter: , XMin: , YMin)";
+        return $"{nameof(LeftStickRangeCalibration)} data: (XMax: {XMax:S}, YMax: {YMax:S}, XCenter: {XCenter:S}, YCenter: {YCenter:S}, XMin: {XMin:S}, YMin: {YMin:S})";
     }
 }
