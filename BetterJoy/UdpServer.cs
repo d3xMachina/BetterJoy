@@ -1,4 +1,3 @@
-using BetterJoy.Forms;
 using BetterJoy.Memory;
 using System;
 using System.Collections.Generic;
@@ -429,9 +428,9 @@ internal class UdpServer
 
     private void ResetUDPSocket()
     {
-        const uint iocIn = 0x80000000;
-        const uint iocVendor = 0x18000000;
-        uint sioUdpConnreset = iocIn | iocVendor | 12;
+        const uint IocIn = 0x80000000;
+        const uint IocVendor = 0x18000000;
+        uint sioUdpConnreset = IocIn | IocVendor | 12;
 
         _udpSock.IOControl((int)sioUdpConnreset, [Convert.ToByte(false)], null);
     }
