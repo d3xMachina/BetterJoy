@@ -174,7 +174,7 @@ public partial class Reassign : Form
             var temp = new ToolStripMenuItem(name)
             {
                 Name = name,
-                Tag = (int)action
+                Tag = action
             };
             menuJoyButtons.Items.Add(temp);
         }
@@ -185,7 +185,7 @@ public partial class Reassign : Form
             var temp = new ToolStripMenuItem(name)
             {
                 Name = name,
-                Tag = (int)button
+                Tag = button
             };
             menuJoyButtons.Items.Add(temp);
         }
