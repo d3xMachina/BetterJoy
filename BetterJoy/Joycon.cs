@@ -4,6 +4,7 @@ using BetterJoy.Controller;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
 using BetterJoy.Hardware;
+using BetterJoy.Hardware.SubCommandUtils;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System;
@@ -106,13 +107,6 @@ public class Joycon
         InvalidPacket,
         NoData,
         Disconnected
-    }
-
-    private enum ReportMode : byte
-    {
-        StandardFull = 0x30,
-        SimpleHID = 0x3F,
-        USBHID = 0x81
     }
 
     private const int DeviceErroredCode = -100; // custom error
@@ -497,7 +491,7 @@ public class Joycon
 
             // set report mode to simple HID mode (fix SPI read not working when controller is already initialized)
             // do not always send a response so we don't check if there is one
-            SetReportMode(ReportMode.SimpleHID, false);
+            SetReportMode(InputReportMode.SimpleHID, false);
 
             SetLowPowerState(false);
 
@@ -522,7 +516,7 @@ public class Joycon
             SetRumble(true);
             SetNFCIR(false);
 
-            SetReportMode(ReportMode.StandardFull);
+            SetReportMode(InputReportMode.StandardFull);
 
             State = Status.Attached;
 
@@ -736,7 +730,7 @@ public class Joycon
         SubcommandCheck(SubCommandOperation.SetMCUState, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
-    private bool SetReportMode(ReportMode reportMode, bool checkResponse = true)
+    private bool SetReportMode(InputReportMode reportMode, bool checkResponse = true)
     {
         if (checkResponse)
         {
@@ -888,7 +882,7 @@ public class Joycon
             {
                 //SetIMU(false);
                 //SetRumble(false);
-                var sent = Retry(() => SetReportMode(ReportMode.SimpleHID));
+                var sent = Retry(() => SetReportMode(InputReportMode.SimpleHID));
                 if (sent)
                 {
                     Retry(() => SetPlayerLED(0));
@@ -1007,14 +1001,14 @@ public class Joycon
 
         byte packetType = buf[0];
 
-        if (packetType == (byte)ReportMode.USBHID &&
+        if (packetType == (byte)InputReportMode.USBHID &&
             length > 2 &&
             buf[1] == 0x01 && buf[2] == 0x03)
         {
             return ReceiveError.Disconnected;
         }
 
-        if (packetType != (byte)ReportMode.StandardFull && packetType != (byte)ReportMode.SimpleHID)
+        if (packetType != (byte)InputReportMode.StandardFull && packetType != (byte)InputReportMode.SimpleHID)
         {
             return ReceiveError.InvalidPacket;
         }
@@ -1037,7 +1031,7 @@ public class Joycon
         ulong deltaPacketsMicroseconds = 0;
         byte packetType = buf[0];
 
-        if (packetType == (byte)ReportMode.StandardFull)
+        if (packetType == (byte)InputReportMode.StandardFull)
         {
             // Determine the IMU timestamp with a rolling average instead of relying on the unreliable packet's timestamp
             // more detailed explanations on why : https://github.com/torvalds/linux/blob/52b1853b080a082ec3749c3a9577f6c71b1d4a90/drivers/hid/hid-nintendo.c#L1115
@@ -1616,7 +1610,7 @@ public class Joycon
     private void GetBatteryInfos(ReadOnlySpan<byte> reportBuf)
     {
         byte packetType = reportBuf[0];
-        if (packetType != (byte)ReportMode.StandardFull)
+        if (packetType != (byte)InputReportMode.StandardFull)
         {
             return;
         }
@@ -1794,7 +1788,7 @@ public class Joycon
                     try
                     {
                         USBPairing();
-                        SetReportMode(ReportMode.StandardFull);
+                        SetReportMode(InputReportMode.StandardFull);
                         RequestSetLEDByPadID();
                     }
                     // ignore and retry
@@ -1806,7 +1800,7 @@ public class Joycon
                 else
                 {
                     //Log("Attempt soft reconnect...");
-                    SetReportMode(ReportMode.StandardFull);
+                    SetReportMode(InputReportMode.StandardFull);
                 }
 
                 ++reconnectAttempts;
@@ -1867,7 +1861,7 @@ public class Joycon
 
         byte reportType = reportBuf[0];
 
-        if (reportType == (byte)ReportMode.StandardFull)
+        if (reportType == (byte)InputReportMode.StandardFull)
         {
             var offset = IsLeft ? 0 : 3;
 
@@ -1880,7 +1874,7 @@ public class Joycon
                 _stick2Precal[1] = BitWrangler.Upper3NibblesLittleEndian(reportBuf[10], reportBuf[11]);
             }
         }
-        else if (reportType == (byte)ReportMode.SimpleHID)
+        else if (reportType == (byte)InputReportMode.SimpleHID)
         {
             if (IsPro)
             {
@@ -1947,7 +1941,7 @@ public class Joycon
     {
         byte reportType = reportBuf[0];
 
-        if (reportType == (byte)ReportMode.StandardFull)
+        if (reportType == (byte)InputReportMode.StandardFull)
         {
             var offset = IsLeft ? 2 : 0;
 
@@ -1978,7 +1972,7 @@ public class Joycon
                 _buttons[(int)Button.Stick2] = (reportBuf[4] & 0x04) != 0;
             }
         }
-        else if (reportType == (byte)ReportMode.SimpleHID)
+        else if (reportType == (byte)InputReportMode.SimpleHID)
         {
             _buttons[(int)Button.Home] = (reportBuf[2] & 0x10) != 0;
             _buttons[(int)Button.Capture] = (reportBuf[2] & 0x20) != 0;
@@ -2183,7 +2177,7 @@ public class Joycon
     // Get Gyro/Accel data
     private bool ExtractIMUValues(ReadOnlySpan<byte> reportBuf, int n = 0)
     {
-        if (!IMUSupported() || reportBuf[0] != (byte)ReportMode.StandardFull)
+        if (!IMUSupported() || reportBuf[0] != (byte)InputReportMode.StandardFull)
         {
             return false;
         }

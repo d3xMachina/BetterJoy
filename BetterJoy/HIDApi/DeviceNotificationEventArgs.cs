@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BetterJoy.HIDApi.Native;
+using System;
 
 namespace BetterJoy.HIDApi;
 

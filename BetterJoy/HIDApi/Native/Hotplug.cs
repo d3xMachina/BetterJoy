@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace BetterJoy.HIDApi;
+namespace BetterJoy.HIDApi.Native;
 
 [Flags]
 public enum HotplugEvent

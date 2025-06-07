@@ -3,6 +3,7 @@ using BetterJoy.Config;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
 using BetterJoy.HIDApi.Exceptions;
+using BetterJoy.HIDApi.Native;
 using Nefarius.Drivers.HidHide;
 using Nefarius.ViGEm.Client;
 using Nefarius.ViGEm.Client.Exceptions;
@@ -161,10 +162,10 @@ public class JoyconManager
         var notification = DeviceNotification.Type.Unknown;
         switch (e.DeviceEvent)
         {
-            case HIDApi.HotplugEvent.DeviceArrived:
+            case HotplugEvent.DeviceArrived:
                 notification = DeviceNotification.Type.Connected;
                 break;
-            case HIDApi.HotplugEvent.DeviceLeft:
+            case HotplugEvent.DeviceLeft:
                 notification = DeviceNotification.Type.Disconnected;
                 break;
         }
@@ -188,13 +189,13 @@ public class JoyconManager
                 {
                     case DeviceNotification.Type.Connected:
                     {
-                        var deviceInfos = (HIDApi.DeviceInfo)job.Data;
+                        var deviceInfos = (DeviceInfo)job.Data;
                         OnDeviceConnected(deviceInfos);
                         break;
                     }
                     case DeviceNotification.Type.Disconnected:
                     {
-                        var deviceInfos = (HIDApi.DeviceInfo)job.Data;
+                        var deviceInfos = (DeviceInfo)job.Data;
                         OnDeviceDisconnected(deviceInfos);
                         break;
                     }
@@ -221,7 +222,7 @@ public class JoyconManager
         }
     }
 
-    private void OnDeviceConnected(HIDApi.DeviceInfo info)
+    private void OnDeviceConnected(DeviceInfo info)
     {
         if (info.SerialNumber == null || GetControllerByPath(info.Path) != null)
         {
@@ -292,7 +293,7 @@ public class JoyconManager
             type = (Joycon.ControllerType)thirdParty.Type;
         }
 
-        var isUSB = info.BusType == HIDApi.BusType.USB;
+        var isUSB = info.BusType == BusType.USB;
 
         OnDeviceConnected(info.Path, info.SerialNumber, type, isUSB, thirdParty != null);
     }
@@ -380,7 +381,7 @@ public class JoyconManager
         controller.Begin();
     }
 
-    private void OnDeviceDisconnected(HIDApi.DeviceInfo info)
+    private void OnDeviceDisconnected(DeviceInfo info)
     {
         var controller = GetControllerByPath(info.Path);
 
