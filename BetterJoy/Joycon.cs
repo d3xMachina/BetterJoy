@@ -4,6 +4,7 @@ using BetterJoy.Controller;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
 using BetterJoy.Hardware;
+using BetterJoy.Hardware.Calibration;
 using BetterJoy.Hardware.SubCommandUtils;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
@@ -11,7 +12,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Net.NetworkInformation;
+using System.Net.Security;
 using System.Numerics;
 using System.Text;
 using System.Threading;
@@ -154,10 +157,10 @@ public class Joycon
 
     private readonly byte[] _sliderVal = [0, 0];
 
-    private readonly ushort[] _stickCal = [0, 0, 0, 0, 0, 0];
+    private StickRangeCalibration _stickCal = new LeftStickRangeCalibration();
     private readonly ushort[] _stickPrecal = [0, 0];
 
-    private readonly ushort[] _stick2Cal = [0, 0, 0, 0, 0, 0];
+    private StickRangeCalibration _stick2Cal = new RightStickRangeCalibration();
     private readonly ushort[] _stick2Precal = [0, 0];
 
     private Vector3 _accG = Vector3.Zero;
@@ -167,8 +170,8 @@ public class Joycon
     private bool _IMUCalibrated = false;
     private bool _SticksCalibrated = false;
     private readonly short[] _activeIMUData = new short[6];
-    private readonly ushort[] _activeStick1 = new ushort[6];
-    private readonly ushort[] _activeStick2 = new ushort[6];
+    private StickRangeCalibration _activeStick1 = new LeftStickRangeCalibration();
+    private StickRangeCalibration _activeStick2 = new RightStickRangeCalibration();
 
     public BatteryLevel Battery = BatteryLevel.Unknown;
     public bool Charging = false;
@@ -379,8 +382,8 @@ public class Joycon
         var activeSticksData = _form.ActiveCaliSticksData(SerialOrMac);
         if (activeSticksData != null)
         {
-            Array.Copy(activeSticksData, _activeStick1, 6);
-            Array.Copy(activeSticksData, 6, _activeStick2, 0, 6);
+            _activeStick1 = new LeftStickRangeCalibration(activeSticksData.Take(6).ToArray());
+            _activeStick2 = new RightStickRangeCalibration(activeSticksData.Skip(6).Take(6).ToArray());
             _SticksCalibrated = true;
         }
         else
@@ -1907,19 +1910,19 @@ public class Joycon
 
                 switch (stickHat)
                 {
-                    case 0x00: offsetY = _stickCal[1]; break; // top
-                    case 0x01: offsetX = _stickCal[0]; offsetY = _stickCal[1]; break; // top right
-                    case 0x02: offsetX = _stickCal[0]; break; // right
-                    case 0x03: offsetX = _stickCal[0]; offsetY = -_stickCal[5]; break; // bottom right
-                    case 0x04: offsetY = -_stickCal[5]; break; // bottom
-                    case 0x05: offsetX = -_stickCal[4]; offsetY = -_stickCal[5]; break; // bottom left
-                    case 0x06: offsetX = -_stickCal[4]; break; // left
-                    case 0x07: offsetX = -_stickCal[4]; offsetY = _stickCal[1]; break; // top left
+                    case 0x00: offsetY = _stickCal.YMax; break; // top
+                    case 0x01: offsetX = _stickCal.XMax; offsetY = _stickCal.YMax; break; // top right
+                    case 0x02: offsetX = _stickCal.XMax; break; // right
+                    case 0x03: offsetX = _stickCal.XMax; offsetY = -_stickCal.YMin; break; // bottom right
+                    case 0x04: offsetY = -_stickCal.YMin; break; // bottom
+                    case 0x05: offsetX = -_stickCal.XMin; offsetY = -_stickCal.YMin; break; // bottom left
+                    case 0x06: offsetX = -_stickCal.XMin; break; // left
+                    case 0x07: offsetX = -_stickCal.XMin; offsetY = _stickCal.YMax; break; // top left
                     case 0x08: default: break; // center
                 }
 
-                _stickPrecal[0] = (ushort)(_stickCal[2] + offsetX);
-                _stickPrecal[1] = (ushort)(_stickCal[3] + offsetY);
+                _stickPrecal[0] = (ushort)(_stickCal.XCenter + offsetX);
+                _stickPrecal[1] = (ushort)(_stickCal.YCenter + offsetY);
             }
         }
         else
@@ -2339,14 +2342,14 @@ public class Joycon
         Log("Ready.");
     }
 
-    private void CalculateStickCenter(ushort[] vals, ushort[] cal, float deadzone, float range, float[] antiDeadzone, float[] stick)
+    private void CalculateStickCenter(ushort[] vals, StickRangeCalibration cal, float deadzone, float range, float[] antiDeadzone, float[] stick)
     {
-        float dx = vals[0] - cal[2];
-        float dy = vals[1] - cal[3];
+        float dx = vals[0] - cal.XCenter;
+        float dy = vals[1] - cal.YCenter;
 
-        float normalizedX = dx / (dx > 0 ? cal[0] : cal[4]);
-        float normalizedY = dy / (dy > 0 ? cal[1] : cal[5]);
-
+        float normalizedX = dx / (dx > 0 ? cal.XMax : cal.XMin);
+        float normalizedY = dy / (dy > 0 ? cal.YMax : cal.YMin);
+        
         float magnitude = MathF.Sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
 
         if (magnitude <= deadzone || range <= deadzone)
@@ -2501,9 +2504,9 @@ public class Joycon
         return length;
     }
 
-    private static float CalculateDeadzone(ushort[] cal, ushort deadzone)
+    private static float CalculateDeadzone(StickRangeCalibration cal, ushort deadzone)
     {
-        return 2.0f * deadzone / Math.Max(cal[0] + cal[4], cal[1] + cal[5]);
+        return 2.0f * deadzone / Math.Max(cal.XMax + cal.XMin, cal.YMax + cal.YMin);
     }
 
     private static float CalculateRange(ushort range)
@@ -2547,8 +2550,8 @@ public class Joycon
             Array.Fill(_gyrNeutral, (short)0);
 
             // Default stick calibration
-            Array.Fill(_stickCal, (ushort)2048);
-            Array.Fill(_stick2Cal, (ushort)2048);
+            _stickCal = new LeftStickRangeCalibration();
+            _stick2Cal = new RightStickRangeCalibration();
 
             _deadzone = Config.StickLeftDeadzone;
             _deadzone2 = Config.StickRightDeadzone;
@@ -2587,16 +2590,11 @@ public class Joycon
                 }
             }
 
-            _stickCal[IsLeft ? 0 : 2] = BitWrangler.Lower3NibblesLittleEndian(stick1Data[0], stick1Data[1]); // X Axis Max above center
-            _stickCal[IsLeft ? 1 : 3] = BitWrangler.Upper3NibblesLittleEndian(stick1Data[1], stick1Data[2]); // Y Axis Max above center
-            _stickCal[IsLeft ? 2 : 4] = BitWrangler.Lower3NibblesLittleEndian(stick1Data[3], stick1Data[4]); // X Axis Center
-            _stickCal[IsLeft ? 3 : 5] = BitWrangler.Upper3NibblesLittleEndian(stick1Data[4], stick1Data[5]); // Y Axis Center
-            _stickCal[IsLeft ? 4 : 0] = BitWrangler.Lower3NibblesLittleEndian(stick1Data[6], stick1Data[7]); // X Axis Min below center
-            _stickCal[IsLeft ? 5 : 1] = BitWrangler.Upper3NibblesLittleEndian(stick1Data[7], stick1Data[8]); // Y Axis Min below center
+            _stickCal = IsLeft ? new LeftStickRangeCalibration(stick1Data[..9]) : new RightStickRangeCalibration(stick1Data[..9]);
 
-            PrintArray<ushort>(_stickCal[..6], format: $"{stick1Name} stick 1 calibration data: {{0:S}}");
+            DebugPrint($"Stick 1: {_stickCal}", DebugType.None);
 
-            if (IsPro)
+            if (IsPro) //If it is pro, then it is also always left
             {
                 var stick2Data = new ReadOnlySpan<byte>(userStickData, !IsLeft ? 2 : 13, 9);
                 var stick2Name = !IsLeft ? "left" : "right";
@@ -2614,15 +2612,10 @@ public class Joycon
                         DebugPrint($"Retrieve factory {stick2Name} stick calibration data.", DebugType.Comms);
                     }
                 }
+                
+                _stick2Cal = new RightStickRangeCalibration(stick2Data[..9]);
 
-                _stick2Cal[!IsLeft ? 0 : 2] = BitWrangler.Lower3NibblesLittleEndian(stick2Data[0], stick2Data[1]); // X Axis Max above center
-                _stick2Cal[!IsLeft ? 1 : 3] = BitWrangler.Upper3NibblesLittleEndian(stick2Data[1], stick2Data[2]); // Y Axis Max above center
-                _stick2Cal[!IsLeft ? 2 : 4] = BitWrangler.Lower3NibblesLittleEndian(stick2Data[3], stick2Data[4]); // X Axis Center
-                _stick2Cal[!IsLeft ? 3 : 5] = BitWrangler.Upper3NibblesLittleEndian(stick2Data[4], stick2Data[5]); // Y Axis Center
-                _stick2Cal[!IsLeft ? 4 : 0] = BitWrangler.Lower3NibblesLittleEndian(stick2Data[6], stick2Data[7]); // X Axis Min below center
-                _stick2Cal[!IsLeft ? 5 : 1] = BitWrangler.Upper3NibblesLittleEndian(stick2Data[7], stick2Data[8]); // Y Axis Min below center
-
-                PrintArray<ushort>(_stick2Cal[..6], format: $"{stick2Name} stick calibration data: {{0:S}}");
+                DebugPrint($"Stick 2: {_stick2Cal}", DebugType.None);
             }
         }
 
