@@ -61,6 +61,9 @@ public abstract class StickRangeCalibration
         XMin    = values[4];
         YMin    = values[5];
     }
-    
-    
+
+    protected string ToString(string name)
+    {
+        return $"{name} data: (XMax: {XMax:S}, YMax: {YMax:S}, XCenter: {XCenter:S}, YCenter: {YCenter:S}, XMin: {XMin:S}, YMin: {YMin:S})";
+    }
 }

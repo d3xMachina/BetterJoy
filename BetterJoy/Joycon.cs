@@ -2596,18 +2596,18 @@ public class Joycon
 
             if (IsPro) //If it is pro, then it is also always left
             {
-                var stick2Data = new ReadOnlySpan<byte>(userStickData, !IsLeft ? 2 : 13, 9);
-                var stick2Name = !IsLeft ? "left" : "right";
+                var stick2Data = new ReadOnlySpan<byte>(userStickData, 13, 9);
+                var stick2Name = "right";
 
                 if (ok)
                 {
-                    if (userStickData[!IsLeft ? 0 : 11] == 0xB2 && userStickData[!IsLeft ? 1 : 12] == 0xA1)
+                    if (userStickData[11] == 0xB2 && userStickData[12] == 0xA1)
                     {
                         DebugPrint($"Retrieve user {stick2Name} stick calibration data.", DebugType.Comms);
                     }
                     else
                     {
-                        stick2Data = new ReadOnlySpan<byte>(factoryStickData, !IsLeft ? 0 : 9, 9);
+                        stick2Data = new ReadOnlySpan<byte>(factoryStickData, 9, 9);
 
                         DebugPrint($"Retrieve factory {stick2Name} stick calibration data.", DebugType.Comms);
                     }

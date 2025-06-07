@@ -8,8 +8,5 @@ public class LeftStickRangeCalibration : StickRangeCalibration
     public LeftStickRangeCalibration(ReadOnlySpan<byte> raw) : base(raw, 0) { }
     public LeftStickRangeCalibration(ReadOnlySpan<ushort> values) : base(values) { }
 
-    public override string ToString()
-    {
-        return $"{nameof(LeftStickRangeCalibration)} data: (XMax: {XMax:S}, YMax: {YMax:S}, XCenter: {XCenter:S}, YCenter: {YCenter:S}, XMin: {XMin:S}, YMin: {YMin:S})";
-    }
+    public override string ToString() => ToString(nameof(LeftStickRangeCalibration));
 }
