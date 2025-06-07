@@ -157,10 +157,10 @@ public class Joycon
 
     private readonly byte[] _sliderVal = [0, 0];
 
-    private StickRangeCalibration _stickCal = new LeftStickRangeCalibration();
+    private StickRangeCalibration _stickCal = new LeftStickRangeCalibration(new ushort[] {0, 0, 0, 0, 0, 0});
     private readonly ushort[] _stickPrecal = [0, 0];
 
-    private StickRangeCalibration _stick2Cal = new RightStickRangeCalibration();
+    private StickRangeCalibration _stick2Cal = new RightStickRangeCalibration(new ushort[] {0, 0, 0, 0, 0, 0});
     private readonly ushort[] _stick2Precal = [0, 0];
 
     private Vector3 _accG = Vector3.Zero;
@@ -170,8 +170,8 @@ public class Joycon
     private bool _IMUCalibrated = false;
     private bool _SticksCalibrated = false;
     private readonly short[] _activeIMUData = new short[6];
-    private StickRangeCalibration _activeStick1 = new LeftStickRangeCalibration();
-    private StickRangeCalibration _activeStick2 = new RightStickRangeCalibration();
+    private StickRangeCalibration _activeStick1 = new LeftStickRangeCalibration(new ushort[] {0, 0, 0, 0, 0, 0});
+    private StickRangeCalibration _activeStick2 = new RightStickRangeCalibration(new ushort[] {0, 0, 0, 0, 0, 0});
 
     public BatteryLevel Battery = BatteryLevel.Unknown;
     public bool Charging = false;
