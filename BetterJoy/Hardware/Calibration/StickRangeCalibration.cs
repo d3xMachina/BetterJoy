@@ -66,6 +66,6 @@ public abstract class StickRangeCalibration
 
     protected string ToString(string name)
     {
-        return $"{name} data: (XMax: {XMax:S}, YMax: {YMax:S}, XCenter: {XCenter:S}, YCenter: {YCenter:S}, XMin: {XMin:S}, YMin: {YMin:S})";
+        return $"{name} data: (XMax: {XMax:D}, YMax: {YMax:D}, XCenter: {XCenter:D}, YCenter: {YCenter:D}, XMin: {XMin:D}, YMin: {YMin:D})";
     }
 }
