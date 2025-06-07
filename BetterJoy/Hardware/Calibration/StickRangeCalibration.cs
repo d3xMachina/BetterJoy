@@ -28,7 +28,8 @@ public abstract class StickRangeCalibration
         InitFromValues(values);
     }
 
-    private void InitFromBytes(ReadOnlySpan<byte> raw, int offset) {
+    private void InitFromBytes(ReadOnlySpan<byte> raw, int offset) 
+    {
         if (raw.Length != 9)
         {
             throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 9 bytes.");
@@ -49,7 +50,8 @@ public abstract class StickRangeCalibration
         return (index + offset) % 9;
     }
 
-    private void InitFromValues(ReadOnlySpan<ushort> values) {
+    private void InitFromValues(ReadOnlySpan<ushort> values) 
+    {
         if (values.Length != 6) throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 6 values");
             
         IsBlank = values.IndexOfAnyExcept(BitWrangler.Lower3Nibbles(ushort.MaxValue)) == -1 ||
