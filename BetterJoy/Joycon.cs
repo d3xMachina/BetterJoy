@@ -230,8 +230,8 @@ public class Joycon
         }
     }
 
-    private float[] _stick = [0, 0];
-    private float[] _stick2 = [0, 0];
+    private readonly float[] _stick = [0, 0];
+    private readonly float[] _stick2 = [0, 0];
 
     private CancellationTokenSource _ctsCommunications;
     public ulong Timestamp { get; private set; }
@@ -2601,7 +2601,7 @@ public class Joycon
             _stickCal[IsLeft ? 4 : 0] = BitWrangler.Lower3NibblesLittleEndian(stick1Data[6], stick1Data[7]); // X Axis Min below center
             _stickCal[IsLeft ? 5 : 1] = BitWrangler.Upper3NibblesLittleEndian(stick1Data[7], stick1Data[8]); // Y Axis Min below center
 
-            PrintArray<ushort>(_stickCal[..6], format: $"{stick1Name} stick 1 calibration data: {{0:S}}");
+            PrintArray<ushort>(_stickCal.AsSpan()[..6], format: $"{stick1Name} stick 1 calibration data: {{0:S}}");
 
             if (IsPro)
             {
@@ -2629,7 +2629,7 @@ public class Joycon
                 _stick2Cal[!IsLeft ? 4 : 0] = BitWrangler.Lower3NibblesLittleEndian(stick2Data[6], stick2Data[7]); // X Axis Min below center
                 _stick2Cal[!IsLeft ? 5 : 1] = BitWrangler.Upper3NibblesLittleEndian(stick2Data[7], stick2Data[8]); // Y Axis Min below center
 
-                PrintArray<ushort>(_stick2Cal[..6], format: $"{stick2Name} stick calibration data: {{0:S}}");
+                PrintArray<ushort>(_stick2Cal.AsSpan()[..6], format: $"{stick2Name} stick calibration data: {{0:S}}");
             }
         }
 
@@ -2729,7 +2729,7 @@ public class Joycon
                 Log("Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
             }
 
-            PrintArray<short>(_gyrNeutral[..3], type: DebugType.IMU, format: "Gyro neutral position: {0:S}");
+            PrintArray<short>(_gyrNeutral.AsSpan()[..3], type: DebugType.IMU, format: "Gyro neutral position: {0:S}");
         }
 
         if (!ok)
@@ -2914,7 +2914,7 @@ public class Joycon
             response.Slice(20, page.PageSize).CopyTo(readBuf);
             if (print)
             {
-                PrintArray<byte>(readBuf[..page.PageSize], DebugType.Comms);
+                PrintArray<byte>(readBuf.AsSpan()[..page.PageSize], DebugType.Comms);
             }
         }
         else
