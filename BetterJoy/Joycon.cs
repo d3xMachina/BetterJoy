@@ -149,8 +149,6 @@ public class Joycon
 
     private readonly Dictionary<int, bool> _mouseToggleBtn = [];
 
-    private readonly float[] _otherStick = [0, 0];
-
     // Values from https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/blob/master/spi_flash_notes.md#6-axis-horizontal-offsets
     private readonly short[] _accProHorOffset = [-688, 0, 4038];
     private readonly short[] _accLeftHorOffset = [350, 0, 4081];
@@ -195,7 +193,7 @@ public class Joycon
 
     public readonly bool IsThirdParty;
     public readonly bool IsUSB;
-    private long _lastDoubleClick = -1;
+    private long _lastStickDoubleClick = -1;
 
     public OutputControllerDualShock4 OutDs4;
     public OutputControllerXbox360 OutXbox;
@@ -972,44 +970,15 @@ public class Joycon
 
     private void UpdateInput()
     {
-        if (Type == ControllerType.JoyconLeft)
-        {
-            _updateInputLock.Enter(); // need with joined joycons
-        }
-
         try
         {
-            ref var ds4 = ref OutDs4;
-            ref var xbox = ref OutXbox;
-
-            // Update the left joycon virtual controller when joined
-            if (!IsLeft && IsJoined)
-            {
-                Other._updateInputLock.Enter();
-
-                ds4 = ref Other.OutDs4;
-                xbox = ref Other.OutXbox;
-            }
-
-            ds4.UpdateInput(MapToDualShock4Input(this));
-            xbox.UpdateInput(MapToXbox360Input(this));
+            OutDs4.UpdateInput(MapToDualShock4Input(this));
+            OutXbox.UpdateInput(MapToXbox360Input(this));
         }
         // ignore
         catch (Exception e)
         {
             Log("Cannot update input.", e, Logger.LogLevel.Debug);
-        }
-        finally
-        {
-            if (_updateInputLock.IsHeldByCurrentThread)
-            {
-                _updateInputLock.Exit();
-            }
-
-            if (Other != null && Other._updateInputLock.IsHeldByCurrentThread)
-            {
-                Other._updateInputLock.Exit();
-            }
         }
     }
 
@@ -1050,14 +1019,23 @@ public class Joycon
             return ReceiveError.InvalidPacket;
         }
 
-        // clear remaining of buffer just to be safe
+        // Clear remaining of buffer just to be safe
         if (length < ReportLength)
         {
             buf[length..ReportLength].Clear();
         }
 
-        const int NbPackets = 3;
+        //DebugPrint($"Bytes read: {length:D}. Elapsed: {deltaReceiveMs}ms AVG: {_avgReceiveDeltaMs.GetAverage()}ms", DebugType.Threading);
+
+        return ReceiveError.None;
+    }
+
+    private void ProcessInputReport(ReadOnlySpan<byte> buf)
+    {
+        const int NbIMUPackets = 3;
+
         ulong deltaPacketsMicroseconds = 0;
+        byte packetType = buf[0];
 
         if (packetType == (byte)ReportMode.StandardFull)
         {
@@ -1070,40 +1048,60 @@ public class Joycon
             }
             _timeSinceReceive.Restart();
 
-            var deltaPacketsMs = _avgReceiveDeltaMs.GetAverage() / NbPackets;
+            var deltaPacketsMs = _avgReceiveDeltaMs.GetAverage() / NbIMUPackets;
             deltaPacketsMicroseconds = (ulong)(deltaPacketsMs * 1000);
 
             _AHRS.SamplePeriod = deltaPacketsMs / 1000;
         }
 
-        // Process packets as soon as they come
-        for (var n = 0; n < NbPackets; n++)
+        var mainController = this;
+
+        try
         {
-            bool updateIMU = ExtractIMUValues(buf, n);
-
-            if (n == 0)
+            // Only joycons support joining. Need to lock to synchronize inputs between two joycons
+            if (Type == ControllerType.JoyconLeft) 
             {
-                ProcessButtonsAndStick(buf);
-                DoThingsWithButtons();
-                GetBatteryInfos(buf);
+                _updateInputLock.Enter();
+            }
+            else if (!IsLeft && IsJoined)
+            {
+                mainController = Other;
+                mainController._updateInputLock.Enter();
             }
 
-            if (!updateIMU)
+            GetBatteryInfos(buf);
+            ProcessButtonsAndSticks(buf);
+            CopyInputFromJoinedController();
+            UpdateInputActivity();
+
+            // Process packets as soon as they come
+            for (var n = 0; n < NbIMUPackets; n++)
             {
-                break;
+                bool updateIMU = ExtractIMUValues(buf, n);
+                if (!updateIMU)
+                {
+                    break;
+                }
+
+                DoThingsWithIMU();
+
+                Timestamp += deltaPacketsMicroseconds;
+                PacketCounter++;
+
+                Program.Server?.NewReportIncoming(this);
             }
 
-            Timestamp += deltaPacketsMicroseconds;
-            PacketCounter++;
+            DoThingsWithButtons();
 
-            Program.Server?.NewReportIncoming(this);
+            mainController.UpdateInput();
         }
-
-        UpdateInput();
-
-        //DebugPrint($"Bytes read: {length:D}. Elapsed: {deltaReceiveMs}ms AVG: {_avgReceiveDeltaMs.GetAverage()}ms", DebugType.Threading);
-
-        return ReceiveError.None;
+        finally
+        {
+            if (mainController._updateInputLock.IsHeldByCurrentThread)
+            {
+                mainController._updateInputLock.Exit();
+            }
+        }
     }
 
     private void DetectShake()
@@ -1218,36 +1216,8 @@ public class Joycon
         if (s.StartsWith("joy_"))
         {
             var button = int.Parse(s.AsSpan(4));
-
-            if (IsJoined && !IsLeft)
-            {
-                button = FlipButton(button);
-            }
-
             _buttonsRemapped[button] |= pressed;
         }
-    }
-
-    private static int FlipButton(int button)
-    {
-        return button switch
-        {
-            (int)Button.DpadDown => (int)Button.B,
-            (int)Button.DpadRight => (int)Button.A,
-            (int)Button.DpadUp => (int)Button.X,
-            (int)Button.DpadLeft => (int)Button.Y,
-            (int)Button.Stick => (int)Button.Stick2,
-            (int)Button.Shoulder1 => (int)Button.Shoulder21,
-            (int)Button.Shoulder2 => (int)Button.Shoulder22,
-            (int)Button.B => (int)Button.DpadDown,
-            (int)Button.A => (int)Button.DpadRight,
-            (int)Button.X => (int)Button.DpadUp,
-            (int)Button.Y => (int)Button.DpadLeft,
-            (int)Button.Stick2 => (int)Button.Stick,
-            (int)Button.Shoulder21 => (int)Button.Shoulder1,
-            (int)Button.Shoulder22 => (int)Button.Shoulder2,
-            _ => button
-        };
     }
 
     private void ReleaseRemappedButtons()
@@ -1336,40 +1306,35 @@ public class Joycon
             {
                 Simulate(Settings.Value("sr_l"), false, true);
             }
-        }
-        else
-        {
-            if (_buttonsDown[(int)Button.SL])
-            {
-                Simulate(Settings.Value("sl_r"), false);
-            }
 
-            if (_buttonsUp[(int)Button.SL])
-            {
-                Simulate(Settings.Value("sl_r"), false, true);
-            }
-
-            if (_buttonsDown[(int)Button.SR])
-            {
-                Simulate(Settings.Value("sr_r"), false);
-            }
-
-            if (_buttonsUp[(int)Button.SR])
-            {
-                Simulate(Settings.Value("sr_r"), false, true);
-            }
-        }
-
-        if (IsLeft || IsJoined)
-        {
-            var controller = IsLeft ? this : Other;
-            SimulateContinous(controller._buttons[(int)Button.SL], Settings.Value("sl_l"));
-            SimulateContinous(controller._buttons[(int)Button.SR], Settings.Value("sr_l"));
+            SimulateContinous(_buttons[(int)Button.SL], Settings.Value("sl_l"));
+            SimulateContinous(_buttons[(int)Button.SR], Settings.Value("sr_l"));
         }
 
         if (!IsLeft || IsJoined)
         {
             var controller = !IsLeft ? this : Other;
+
+            if (controller._buttonsDown[(int)Button.SL])
+            {
+                Simulate(Settings.Value("sl_r"), false);
+            }
+
+            if (controller._buttonsUp[(int)Button.SL])
+            {
+                Simulate(Settings.Value("sl_r"), false, true);
+            }
+
+            if (controller._buttonsDown[(int)Button.SR])
+            {
+                Simulate(Settings.Value("sr_r"), false);
+            }
+
+            if (controller._buttonsUp[(int)Button.SR])
+            {
+                Simulate(Settings.Value("sr_r"), false, true);
+            }
+
             SimulateContinous(controller._buttons[(int)Button.SL], Settings.Value("sl_r"));
             SimulateContinous(controller._buttons[(int)Button.SR], Settings.Value("sr_r"));
         }
@@ -1380,16 +1345,10 @@ public class Joycon
 
     private void RemapButtons()
     {
-        lock (_buttonsRemapped)
-        {
-            lock (_buttons)
-            {
-                Array.Copy(_buttons, _buttonsRemapped, _buttons.Length);
+        Array.Copy(_buttons, _buttonsRemapped, _buttons.Length);
 
-                ReleaseRemappedButtons();
-                SimulateRemappedButtons();
-            }
-        }
+        ReleaseRemappedButtons();
+        SimulateRemappedButtons();
     }
 
     private static bool HandleJoyAction(string settingKey, out int button)
@@ -1414,7 +1373,13 @@ public class Joycon
         return _buttonsUp[button] || (Other != null && Other._buttonsUp[button]);
     }
 
-    private void DoThingsWithButtons()
+    private Joycon GetMainController()
+    {
+        return IsLeft || !IsJoined ? this : Other;
+    }
+
+    // Must be done by the main controller (in the case they are joined)
+    private void DoThingsWithButtonsMainController()
     {
         var powerOffButton = (int)(!IsJoycon || !IsLeft || IsJoined ? Button.Home : Button.Capture);
         var timestampNow = Stopwatch.GetTimestamp();
@@ -1425,7 +1390,7 @@ public class Joycon
 
             if (Config.HomeLongPowerOff && _buttons[powerOffButton])
             {
-                var powerOffPressedDurationMs = (timestampNow - _buttonsDownTimestamp[powerOffButton]) / 10000;
+                var powerOffPressedDurationMs = TimestampToMs(timestampNow - _buttonsDownTimestamp[powerOffButton]);
                 if (powerOffPressedDurationMs > 2000)
                 {
                     powerOff = true;
@@ -1434,7 +1399,7 @@ public class Joycon
 
             if (Config.PowerOffInactivityMins > 0)
             {
-                var timeSinceActivityMs = (timestampNow - _timestampActivity) / 10000;
+                var timeSinceActivityMs = TimestampToMs(timestampNow - _timestampActivity);
                 if (timeSinceActivityMs > Config.PowerOffInactivityMins * 60 * 1000)
                 {
                     powerOff = true;
@@ -1447,33 +1412,35 @@ public class Joycon
                 {
                     Other.RequestPowerOff();
                 }
+
                 RequestPowerOff();
-                return;
             }
         }
 
-        if (IsJoycon && !_calibrateSticks && !_calibrateIMU)
+        RemapButtons();
+    }
+
+    // Must be done by all controllers when any button is updated (in the case they are joined)
+    private void DoThingsWithButtonsEachController()
+    {
+        if (Config.ChangeOrientationDoubleClick && IsJoycon && !_calibrateSticks && !_calibrateIMU)
         {
-            if (Config.ChangeOrientationDoubleClick && _buttonsDown[(int)Button.Stick] && _lastDoubleClick != -1)
+            const int MaxClickDelayMs = 300;
+
+            if (_buttonsDown[(int)Button.Stick])
             {
-                if (_buttonsDownTimestamp[(int)Button.Stick] - _lastDoubleClick < 3000000)
+                if (_lastStickDoubleClick != -1 && 
+                    TimestampToMs(_buttonsDownTimestamp[(int)Button.Stick] - _lastStickDoubleClick) < MaxClickDelayMs)
                 {
                     Program.Mgr.JoinOrSplitJoycon(this);
-
-                    _lastDoubleClick = _buttonsDownTimestamp[(int)Button.Stick];
-                    return;
+                    _lastStickDoubleClick = -1;
                 }
-
-                _lastDoubleClick = _buttonsDownTimestamp[(int)Button.Stick];
-            }
-            else if (Config.ChangeOrientationDoubleClick && _buttonsDown[(int)Button.Stick])
-            {
-                _lastDoubleClick = _buttonsDownTimestamp[(int)Button.Stick];
+                else
+                {
+                    _lastStickDoubleClick = _buttonsDownTimestamp[(int)Button.Stick];
+                }
             }
         }
-
-        DetectShake();
-        RemapButtons();
 
         if (HandleJoyAction("swap_ab", out int button) && IsButtonDown(button))
         {
@@ -1507,16 +1474,32 @@ public class Joycon
             }
         }
 
-        // Filtered IMU data
-        _AHRS.GetEulerAngles(_curRotation);
-        float dt = _avgReceiveDeltaMs.GetAverage() / 1000;
+        if (IsPrimaryGyro && Config.ExtraGyroFeature == "mouse")
+        {
+            // reset mouse position to centre of primary monitor
+            if (HandleJoyAction("reset_mouse", out button) && IsButtonDown(button))
+            {
+                WindowsInput.Simulate.Events()
+                    .MoveTo(
+                        Screen.PrimaryScreen.Bounds.Width / 2,
+                        Screen.PrimaryScreen.Bounds.Height / 2
+                    )
+                    .Invoke();
+            }
+        }
+    }
 
+    // Must be done by the main controller (in the case they are joined)
+    private void DoThingsWithIMUMainController()
+    {
         if (UseGyroAnalogSliders())
         {
             var leftT = IsLeft ? Button.Shoulder2 : Button.Shoulder22;
             var rightT = IsLeft ? Button.Shoulder22 : Button.Shoulder2;
             var left = IsLeft || !IsJoycon ? this : Other;
             var right = !IsLeft || !IsJoycon ? this : Other;
+            float leftDt = left._AHRS.SamplePeriod;
+            float rightDt = right._AHRS.SamplePeriod;
 
             int ldy, rdy;
             if (Config.UseFilteredIMU)
@@ -1526,8 +1509,8 @@ public class Joycon
             }
             else
             {
-                ldy = (int)(Config.GyroAnalogSensitivity * (left._gyrG.Y * dt));
-                rdy = (int)(Config.GyroAnalogSensitivity * (right._gyrG.Y * dt));
+                ldy = (int)(Config.GyroAnalogSensitivity * (left._gyrG.Y * leftDt));
+                rdy = (int)(Config.GyroAnalogSensitivity * (right._gyrG.Y * rightDt));
             }
 
             if (_buttons[(int)leftT])
@@ -1548,14 +1531,26 @@ public class Joycon
                 _sliderVal[1] = 0;
             }
         }
+    }
+
+    // Must be done by all controllers when their IMU is updated (in the case they are joined)
+    private void DoThingsWithIMUEachController()
+    {
+        // Filtered IMU data
+        _AHRS.GetEulerAngles(_curRotation);
+
+        DetectShake();
 
         if (IsPrimaryGyro)
         {
+            float dt = _AHRS.SamplePeriod;
+
             if (Config.ExtraGyroFeature.StartsWith("joy"))
             {
                 if (Settings.Value("active_gyro") == "0" || ActiveGyro)
                 {
-                    var controlStick = Config.ExtraGyroFeature == "joy_left" ? _stick : _stick2;
+                    var mainController = GetMainController();
+                    var controlStick = Config.ExtraGyroFeature == "joy_left" ? mainController._stick : mainController._stick2;
 
                     float dx, dy;
                     if (Config.UseFilteredIMU)
@@ -1593,19 +1588,29 @@ public class Joycon
 
                     WindowsInput.Simulate.Events().MoveBy(dx, dy).Invoke();
                 }
-
-                // reset mouse position to centre of primary monitor
-                if (HandleJoyAction("reset_mouse", out button) && IsButtonDown(button))
-                {
-                    WindowsInput.Simulate.Events()
-                                .MoveTo(
-                                    Screen.PrimaryScreen.Bounds.Width / 2,
-                                    Screen.PrimaryScreen.Bounds.Height / 2
-                                )
-                                .Invoke();
-                }
             }
         }
+    }
+
+    private void DoThingsWithButtons()
+    {
+        // Updating a controller's button impacts the joined controller
+        DoThingsWithButtonsEachController();
+        if (IsJoined)
+        {
+            Other.DoThingsWithButtonsEachController();
+        }
+
+        var mainController = GetMainController();
+        mainController.DoThingsWithButtonsMainController();
+    }
+
+    private void DoThingsWithIMU()
+    {
+        DoThingsWithIMUEachController();
+
+        var mainController = GetMainController();
+        mainController.DoThingsWithIMUMainController();
     }
 
     private void GetBatteryInfos(ReadOnlySpan<byte> reportBuf)
@@ -1811,33 +1816,37 @@ public class Joycon
             // Receive controller data
             var error = ReceiveRaw(buf);
 
-            if (error == ReceiveError.None && IsDeviceReady)
+            switch (error)
             {
-                State = Status.IMUDataOk;
-                timeSinceError.Reset();
-                reconnectAttempts = 0;
-                _pauseSendCommands = false;
-            }
-            else if (error == ReceiveError.InvalidHandle)
-            {
-                // should not happen
-                Log("Dropped (invalid handle).", Logger.LogLevel.Error);
-                Drop(true, false);
-            }
-            else if (error == ReceiveError.Disconnected)
-            {
-                Log("Disconnected.", Logger.LogLevel.Warning);
-                Drop(true, false);
-            }
-            else
-            {
-                timeSinceError.Start();
+                case ReceiveError.None:
+                    ProcessInputReport(buf);
 
-                // No data read, read error or invalid packet
-                if (error == ReceiveError.ReadError)
-                {
-                    Thread.Sleep(5); // to avoid spin
-                }
+                    if (IsDeviceReady)
+                    {
+                        State = Status.IMUDataOk;
+                        timeSinceError.Reset();
+                        reconnectAttempts = 0;
+                        _pauseSendCommands = false;
+                    }
+                    break;
+                case ReceiveError.InvalidHandle:
+                    // should not happen
+                    Log("Dropped (invalid handle).", Logger.LogLevel.Error);
+                    Drop(true, false);
+                    break;
+                case ReceiveError.Disconnected:
+                    Log("Disconnected.", Logger.LogLevel.Warning);
+                    Drop(true, false);
+                    break;
+                default:
+                    timeSinceError.Start();
+
+                    // No data read, read error or invalid packet
+                    if (error == ReceiveError.ReadError)
+                    {
+                        Thread.Sleep(5); // to avoid spin
+                    }
+                    break;
             }
         }
     }
@@ -2018,11 +2027,8 @@ public class Joycon
         }
     }
 
-    private void ProcessButtonsAndStick(ReadOnlySpan<byte> reportBuf)
+    private void ProcessButtonsAndSticks(ReadOnlySpan<byte> reportBuf)
     {
-        var activity = false;
-        var timestamp = Stopwatch.GetTimestamp();
-
         if (SticksSupported())
         {
             ExtractSticksValues(reportBuf);
@@ -2058,28 +2064,6 @@ public class Joycon
                 CalculateStickCenter(_stick2Precal, cal, dz, range, antiDeadzone, _stick2);
             }
             // Read other Joycon's sticks
-            else if (IsJoined)
-            {
-                lock (_otherStick)
-                {
-                    // Read other stick sent by other joycon
-                    if (IsLeft)
-                    {
-                        Array.Copy(_otherStick, _stick2, 2);
-                    }
-                    else
-                    {
-                        _stick = Interlocked.Exchange(ref _stick2, _stick);
-                        Array.Copy(_otherStick, _stick, 2);
-                    }
-                }
-
-                lock (Other._otherStick)
-                {
-                    // Write stick to linked joycon
-                    Array.Copy(IsLeft ? _stick : _stick2, Other._otherStick, 2);
-                }
-            }
             else
             {
                 Array.Clear(_stick2);
@@ -2099,7 +2083,46 @@ public class Joycon
             {
                 //DebugPrint($"X1={_stick[0]:0.00} Y1={_stick[1]:0.00}. X2={_stick2[0]:0.00} Y2={_stick2[1]:0.00}", DebugType.Threading);
             }
+        }
 
+        Array.Clear(_buttons);
+
+        ExtractButtonsValues(reportBuf);
+    }
+
+    private void CopyInputFromJoinedController()
+    {
+        if (!IsJoined)
+        {
+            return;
+        }
+
+        var mainController = IsLeft ? this : Other;
+        var OtherController = mainController.Other;
+
+        mainController._buttons[(int)Button.B] = OtherController._buttons[(int)Button.DpadDown];
+        mainController._buttons[(int)Button.A] = OtherController._buttons[(int)Button.DpadRight];
+        mainController._buttons[(int)Button.X] = OtherController._buttons[(int)Button.DpadUp];
+        mainController._buttons[(int)Button.Y] = OtherController._buttons[(int)Button.DpadLeft];
+
+        mainController._buttons[(int)Button.Stick2] = OtherController._buttons[(int)Button.Stick];
+        mainController._buttons[(int)Button.Shoulder21] = OtherController._buttons[(int)Button.Shoulder1];
+        mainController._buttons[(int)Button.Shoulder22] = OtherController._buttons[(int)Button.Shoulder2];
+
+        mainController._buttons[(int)Button.Home] = OtherController._buttons[(int)Button.Home];
+        mainController._buttons[(int)Button.Plus] = OtherController._buttons[(int)Button.Plus];
+
+        Array.Copy(OtherController._stick, mainController._stick2, mainController._stick2.Length);
+    }
+
+    // Must be done by all controllers when their input is updated (in the case they are joined)
+    private void UpdateInputActivityEachController()
+    {
+        var activity = false;
+        var timestamp = Stopwatch.GetTimestamp();
+
+        if (SticksSupported())
+        {
             const float StickActivityThreshold = 0.1f;
             if (MathF.Abs(_stick[0]) > StickActivityThreshold ||
                 MathF.Abs(_stick[1]) > StickActivityThreshold ||
@@ -2110,67 +2133,51 @@ public class Joycon
             }
         }
 
-        // Set button states both for ViGEm
-        lock (_buttons)
+        for (var i = 0; i < _buttons.Length; ++i)
         {
-            lock (_buttonsPrev)
+            _buttonsUp[i] = _buttonsPrev[i] && !_buttons[i];
+            _buttonsDown[i] = !_buttonsPrev[i] && _buttons[i];
+            if (_buttonsPrev[i] != _buttons[i])
             {
-                Array.Copy(_buttons, _buttonsPrev, _buttons.Length);
+                _buttonsDownTimestamp[i] = _buttons[i] ? timestamp : -1;
             }
 
-            Array.Clear(_buttons);
-
-            ExtractButtonsValues(reportBuf);
-
-            if (IsJoined)
+            if (_buttonsUp[i] || _buttonsDown[i])
             {
-                _buttons[(int)Button.B] = Other._buttons[(int)Button.DpadDown];
-                _buttons[(int)Button.A] = Other._buttons[(int)Button.DpadRight];
-                _buttons[(int)Button.X] = Other._buttons[(int)Button.DpadUp];
-                _buttons[(int)Button.Y] = Other._buttons[(int)Button.DpadLeft];
-
-                _buttons[(int)Button.Stick2] = Other._buttons[(int)Button.Stick];
-                _buttons[(int)Button.Shoulder21] = Other._buttons[(int)Button.Shoulder1];
-                _buttons[(int)Button.Shoulder22] = Other._buttons[(int)Button.Shoulder2];
-
-                if (IsLeft)
-                {
-                    _buttons[(int)Button.Home] = Other._buttons[(int)Button.Home];
-                    _buttons[(int)Button.Plus] = Other._buttons[(int)Button.Plus];
-                }
-                else
-                {
-                    _buttons[(int)Button.Capture] = Other._buttons[(int)Button.Capture];
-                    _buttons[(int)Button.Minus] = Other._buttons[(int)Button.Minus];
-                }
-            }
-
-            lock (_buttonsUp)
-            {
-                lock (_buttonsDown)
-                {
-                    for (var i = 0; i < _buttons.Length; ++i)
-                    {
-                        _buttonsUp[i] = _buttonsPrev[i] & !_buttons[i];
-                        _buttonsDown[i] = !_buttonsPrev[i] & _buttons[i];
-                        if (_buttonsPrev[i] != _buttons[i])
-                        {
-                            _buttonsDownTimestamp[i] = _buttons[i] ? timestamp : -1;
-                        }
-
-                        if (_buttonsUp[i] || _buttonsDown[i])
-                        {
-                            activity = true;
-                        }
-                    }
-                }
+                activity = true;
             }
         }
+
+        Array.Copy(_buttons, _buttonsPrev, _buttons.Length);
 
         if (activity)
         {
             _timestampActivity = timestamp;
         }
+    }
+
+    private void UpdateInputActivity()
+    {
+        // Need to update both joined controllers in case they are split afterward
+        UpdateInputActivityEachController();
+
+        if (IsJoined)
+        {
+            Other.UpdateInputActivityEachController();
+
+            // Consider the other joined controller active when the main controller is (so it doesn't power off after splitting)
+            var mainController = IsLeft ? this : Other;
+            if (mainController._timestampActivity > mainController.Other._timestampActivity)
+            {
+                mainController.Other._timestampActivity = mainController._timestampActivity;
+            }
+        }
+    }
+
+    private static long TimestampToMs(long timestamp)
+    {
+        long ticksPerMillisecond = Stopwatch.Frequency / 1000;
+        return timestamp / ticksPerMillisecond;
     }
 
     // Get Gyro/Accel data
