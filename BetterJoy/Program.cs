@@ -60,6 +60,8 @@ public class JoyconManager
     private readonly Channel<DeviceNotification> _channelDeviceNotifications;
     private Task _devicesNotificationTask;
 
+    private readonly Lock _joinOrSplitJoyconLock = new();
+
     private class DeviceNotification
     {
         public enum Type
@@ -761,42 +763,49 @@ public class JoyconManager
 
     public bool JoinJoycon(Joycon controller, bool joinSelf = false)
     {
-        if (!controller.IsJoycon || controller.Other != null)
+        if (!controller.IsJoycon)
         {
             return false;
         }
 
-        if (joinSelf)
+        lock (_joinOrSplitJoyconLock)
         {
-            // hacky; implement check in Joycon.cs to account for this
-            controller.Other = controller;
-
-            return true;
-        }
-
-        // Join joycon with one next to it if possible
-        if (controller.IsJoycon)
-        {
-            var otherPadId = controller.IsLeft ? controller.PadId + 1 : controller.PadId - 1;
-            var otherController = Controllers.FirstOrDefault(c => c.PadId == otherPadId);
-
-            if (otherController != null)
+            if (controller.Other != null)
             {
-                if (TryJoinJoycon(controller, otherController))
+                return false;
+            }
+
+            if (joinSelf)
+            {
+                // hacky; implement check in Joycon.cs to account for this
+                controller.Other = controller;
+
+                return true;
+            }
+
+            // Join joycon with one next to it if possible
+            {
+                var otherPadId = controller.IsLeft ? controller.PadId + 1 : controller.PadId - 1;
+                var otherController = Controllers.FirstOrDefault(c => c.PadId == otherPadId);
+
+                if (otherController != null)
                 {
-                    return true;
+                    if (TryJoinJoycon(controller, otherController))
+                    {
+                        return true;
+                    }
                 }
             }
-        }
 
-        foreach (var otherController in Controllers.OrderBy(c => c.PadId))
-        {
-            if (!TryJoinJoycon(controller, otherController))
+            foreach (var otherController in Controllers.OrderBy(c => c.PadId))
             {
-                continue;
-            }
+                if (!TryJoinJoycon(controller, otherController))
+                {
+                    continue;
+                }
 
-            return true;
+                return true;
+            }
         }
 
         return false;
@@ -804,43 +813,51 @@ public class JoyconManager
 
     public bool SplitJoycon(Joycon controller, bool keep = true)
     {
-        if (!controller.IsJoycon || controller.Other == null)
+        if (!controller.IsJoycon)
         {
             return false;
         }
 
-        var otherController = controller.Other;
-
-        // Reenable vigem for the joined controller
-        try
+        lock (_joinOrSplitJoyconLock)
         {
-            if (keep)
+            var otherController = controller.Other;
+
+            if (otherController == null)
             {
-                controller.ConnectViGEm();
+                return false;
             }
-            otherController.ConnectViGEm();
+
+            // Reenable vigem for the joined controller
+            try
+            {
+                if (keep)
+                {
+                    controller.ConnectViGEm();
+                }
+                otherController.ConnectViGEm();
+            }
+            catch (Exception e)
+            {
+                _logger?.Log("Could not connect the virtual controller for the split joycon. Retrying...", e);
+
+                if (keep && !controller.IsViGEmSetup())
+                {
+                    ReconnectVirtualControllerDelayed(controller);
+                }
+
+                if (controller != otherController &&
+                    !otherController.IsViGEmSetup())
+                {
+                    ReconnectVirtualControllerDelayed(otherController);
+                }
+            }
+
+            controller.Other = null;
+            otherController.Other = null;
+
+            controller.RequestSetLEDByPadID();
+            otherController.RequestSetLEDByPadID();
         }
-        catch (Exception e)
-        {
-            _logger?.Log("Could not connect the virtual controller for the split joycon. Retrying...", e);
-
-            if (keep && !controller.IsViGEmSetup())
-            {
-                ReconnectVirtualControllerDelayed(controller);
-            }
-
-            if (controller != otherController &&
-                !otherController.IsViGEmSetup())
-            {
-                ReconnectVirtualControllerDelayed(otherController);
-            }
-        }
-
-        controller.Other = null;
-        otherController.Other = null;
-
-        controller.RequestSetLEDByPadID();
-        otherController.RequestSetLEDByPadID();
 
         return true;
     }
@@ -849,27 +866,30 @@ public class JoyconManager
     {
         bool change = false;
 
-        if (controller.Other == null)
+        lock (_joinOrSplitJoyconLock)
         {
-            int nbJoycons = Controllers.Count(j => j.IsJoycon);
-
-            // when we want to have a single joycon in vertical mode
-            bool joinSelf = nbJoycons == 1 || controller.Config.DoNotRejoin != Joycon.Orientation.None;
-
-            if (JoinJoycon(controller, joinSelf))
+            if (controller.Other == null)
             {
-                _form.JoinJoycon(controller, controller.Other);
-                change = true;
+                int nbJoycons = Controllers.Count(j => j.IsJoycon);
+
+                // when we want to have a single joycon in vertical mode
+                bool joinSelf = nbJoycons == 1 || controller.Config.DoNotRejoin != Joycon.Orientation.None;
+
+                if (JoinJoycon(controller, joinSelf))
+                {
+                    _form.JoinJoycon(controller, controller.Other);
+                    change = true;
+                }
             }
-        }
-        else
-        {
-            Joycon other = controller.Other;
-
-            if (SplitJoycon(controller))
+            else
             {
-                _form.SplitJoycon(controller, other);
-                change = true;
+                Joycon other = controller.Other;
+
+                if (SplitJoycon(controller))
+                {
+                    _form.SplitJoycon(controller, other);
+                    change = true;
+                }
             }
         }
 
