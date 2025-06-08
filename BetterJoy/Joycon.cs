@@ -427,6 +427,11 @@ public class Joycon
 
     private bool ShouldLog(DebugType type)
     {
+        if (type == DebugType.None)
+        {
+            return true;
+        }
+
         if (Config.DebugType == DebugType.None)
         {
             return false;
