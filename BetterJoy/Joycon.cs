@@ -1634,8 +1634,12 @@ public class Joycon
 
     private void SendCommands(CancellationToken token)
     {
+        const int SendRumbleIntervalMs = 50;
+
         // the home light stays on for 2625ms, set to less than half in case of packet drop
         const int SendHomeLightIntervalMs = 1250;
+
+        Stopwatch timeSinceRumble = new();
         Stopwatch timeSinceHomeLight = new();
         var oldHomeLEDOn = false;
 
@@ -1657,7 +1661,16 @@ public class Joycon
 
             _sendCommandsPaused = false;
 
-            var sendRumble = _rumbles.TryDequeue(_rumbleBuf);
+            var sendRumble = false;
+            
+            if (!timeSinceRumble.IsRunning || timeSinceRumble.ElapsedMilliseconds > SendRumbleIntervalMs)
+            {
+                if (_rumbles.TryDequeue(_rumbleBuf))
+                {
+                    sendRumble = true;
+                    timeSinceRumble.Restart();
+                }
+            }
 
             var subCommandSent = false;
             var homeLEDOn = Config.HomeLEDOn;
