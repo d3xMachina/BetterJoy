@@ -1059,7 +1059,7 @@ public class Joycon
         try
         {
             // Only joycons support joining. Need to lock to synchronize inputs between two joycons
-            if (Type == ControllerType.JoyconLeft) 
+            if (Type == ControllerType.JoyconLeft)
             {
                 _updateInputLock.Enter();
             }
@@ -1429,7 +1429,7 @@ public class Joycon
 
             if (_buttonsDown[(int)Button.Stick])
             {
-                if (_lastStickDoubleClick != -1 && 
+                if (_lastStickDoubleClick != -1 &&
                     TimestampToMs(_buttonsDownTimestamp[(int)Button.Stick] - _lastStickDoubleClick) < MaxClickDelayMs)
                 {
                     Program.Mgr.JoinOrSplitJoycon(this);
@@ -1668,7 +1668,7 @@ public class Joycon
             _sendCommandsPaused = false;
 
             var sendRumble = false;
-            
+
             if (!timeSinceRumble.IsRunning || timeSinceRumble.ElapsedMilliseconds > SendRumbleIntervalMs)
             {
                 if (_rumbles.TryDequeue(_rumbleBuf))
@@ -1863,7 +1863,7 @@ public class Joycon
         }
     }
 
-    private static ushort Scale16bitsTo12bits(ushort  value)
+    private static ushort Scale16bitsTo12bits(ushort value)
     {
         const float Scale16bitsTo12bits = 4095f / 65535f;
 
@@ -2371,7 +2371,7 @@ public class Joycon
 
         float normalizedX = dx / (dx > 0 ? cal.XMax : cal.XMin);
         float normalizedY = dy / (dy > 0 ? cal.YMax : cal.YMin);
-        
+
         float magnitude = MathF.Sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
 
         if (magnitude <= deadzone || range <= deadzone)
@@ -2608,12 +2608,12 @@ public class Joycon
                 }
             }
 
-            _stickCal = IsLeft ? 
-                StickRangeCalibration.FromLeftStickCalibrationBytes(stick1Data[..9]) : 
+            _stickCal = IsLeft ?
+                StickRangeCalibration.FromLeftStickCalibrationBytes(stick1Data[..9]) :
                 StickRangeCalibration.FromRightStickCalibrationBytes(stick1Data[..9]);
 
             DebugPrint(_stickCal, DebugType.None);
-            
+
             if (IsPro) //If it is pro, then it is also always left
             {
                 var stick2Data = new ReadOnlySpan<byte>(userStickData, 13, 9);
@@ -2632,7 +2632,7 @@ public class Joycon
                         DebugPrint($"Retrieve factory {stick2Name} stick calibration data.", DebugType.Comms);
                     }
                 }
-                
+
                 _stick2Cal = StickRangeCalibration.FromRightStickCalibrationBytes(stick2Data[..9]);
 
                 DebugPrint(_stick2Cal, DebugType.None);

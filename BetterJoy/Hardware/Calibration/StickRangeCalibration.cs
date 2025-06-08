@@ -18,36 +18,36 @@ public class StickRangeCalibration
     {
         InitFromValues(_defaultCalibration, isLeft);
     }
-    
+
     public StickRangeCalibration(ReadOnlySpan<ushort> values, bool? isLeft = null)
     {
         InitFromValues(values, isLeft);
     }
 
-    public static  StickRangeCalibration FromRightStickCalibrationBytes(ReadOnlySpan<byte> raw)
+    public static StickRangeCalibration FromRightStickCalibrationBytes(ReadOnlySpan<byte> raw)
     {
         return new StickRangeCalibration(raw, false);
     }
-    
-    public static  StickRangeCalibration FromLeftStickCalibrationBytes(ReadOnlySpan<byte> raw)
+
+    public static StickRangeCalibration FromLeftStickCalibrationBytes(ReadOnlySpan<byte> raw)
     {
         return new StickRangeCalibration(raw, true);
     }
-    
+
     private StickRangeCalibration(ReadOnlySpan<byte> raw, bool isLeft)
     {
         InitFromBytes(raw, isLeft);
     }
 
-    private void InitFromBytes(ReadOnlySpan<byte> raw, bool isLeft) 
+    private void InitFromBytes(ReadOnlySpan<byte> raw, bool isLeft)
     {
         if (raw.Length != 9)
         {
             throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 9 bytes.");
         }
-        
+
         int offset = isLeft ? 0 : 2;
-        
+
         InitFromValues([
             BitWrangler.Lower3NibblesLittleEndian(raw[IndexOffsetter(0, offset)], raw[IndexOffsetter(1, offset)]),
             BitWrangler.Upper3NibblesLittleEndian(raw[IndexOffsetter(1, offset)], raw[IndexOffsetter(2, offset)]),
@@ -63,7 +63,7 @@ public class StickRangeCalibration
         return (index + offset) % 9;
     }
 
-    private void InitFromValues(ReadOnlySpan<ushort> values, bool? isLeft) 
+    private void InitFromValues(ReadOnlySpan<ushort> values, bool? isLeft)
     {
         if (values.Length != 6)
         {
@@ -78,7 +78,7 @@ public class StickRangeCalibration
         XMin    = values[4];
         YMin    = values[5];
     }
-    
+
     public override string ToString()
     {
         string name = _isLeft == null ? "S" : (bool)(_isLeft) ? "Left s" : "Right s";
