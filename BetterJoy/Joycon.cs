@@ -61,9 +61,6 @@ public class Joycon
         NES = 0x06,
         FamicomI = 0x07,
         FamicomII = 0x08,
-        Genesis = 0x0D,
-        MegaDrive,
-        SuperFamicom
     }
 
     public enum DebugType
@@ -502,9 +499,9 @@ public class Joycon
             SetLowPowerState(false);
 
             //Make sure we're not actually a retro controller
-            if (Type is ControllerType.JoyconRight or ControllerType.SNES or ControllerType.Genesis)
+            if (Type == ControllerType.JoyconRight)
             {
-                SetActualControllerType();
+                CheckIfRightIsRetro();
             }
 
             var ok = DumpCalibrationData();
@@ -746,7 +743,7 @@ public class Joycon
         return true;
     }
 
-    private void SetActualControllerType()
+    private void CheckIfRightIsRetro()
     {
         Span<byte> response = stackalloc byte[ReportLength];
 
@@ -763,16 +760,12 @@ public class Joycon
                 // NES Right: 0x0A
                 // Famicom I (Left): 0x07
                 // Famicom II (Right): 0x08
-                // Genesis: 0x0D
                 var deviceType = response[17];
 
                 switch (deviceType)
                 {
                     case 0x02:
-                        Type = ControllerType.JoyconRight;
-                        break;
-                    case 0x0D:
-                        Type = ControllerType.Genesis;
+                        // Do nothing, it's the right joycon
                         break;
                     case 0x09:
                     case 0x0A:
@@ -3372,18 +3365,15 @@ public class Joycon
     {
         return type switch
         {
-            ControllerType.JoyconLeft   => "Left joycon",
-            ControllerType.JoyconRight  => "Right joycon",
-            ControllerType.Pro          => "Pro controller",
-            ControllerType.SNES         => "SNES controller",
-            ControllerType.NES          => "NES controller",
-            ControllerType.FamicomI     => "Famicom I controller",
-            ControllerType.FamicomII    => "Famicom II controller",
-            ControllerType.N64          => "N64 controller",
-            ControllerType.Genesis      => "Genesis controller",
-            ControllerType.MegaDrive    => "MegaDrive controller",
-            ControllerType.SuperFamicom => "SuperFamicom controller",
-            _                           => "Controller"
+            ControllerType.JoyconLeft  => "Left joycon",
+            ControllerType.JoyconRight => "Right joycon",
+            ControllerType.Pro         => "Pro controller",
+            ControllerType.SNES        => "SNES controller",
+            ControllerType.NES         => "NES controller",
+            ControllerType.FamicomI    => "Famicom I controller",
+            ControllerType.FamicomII   => "Famicom II controller",
+            ControllerType.N64         => "N64 controller",
+            _                          => "Controller"
         };
     }
 

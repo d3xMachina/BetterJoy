@@ -49,9 +49,6 @@ public class JoyconManager
     private const ushort ProductFamicomI = 0x2007;
     private const ushort ProductFamicomII = 0x2007;
     private const ushort ProductN64 = 0x2019;
-    private const ushort ProductMegaDrive = 0x201E;
-    private const ushort ProductSuperFamicom = 0x2017;
-    private const ushort ProductGenesis = 0x201E;
 
     private readonly Logger _logger;
     private readonly MainForm _form;
@@ -237,7 +234,7 @@ public class JoyconManager
         bool validController = info is
         {
             VendorId: VendorId,
-            ProductId: ProductL or ProductR or ProductPro or ProductSNES or ProductN64 or ProductGenesis
+            ProductId: ProductL or ProductR or ProductPro or ProductSNES or ProductN64
         };
 
         SController thirdParty = null;
@@ -280,9 +277,6 @@ public class JoyconManager
                     break;
                 case ProductN64:
                     type = Joycon.ControllerType.N64;
-                    break;
-                case ProductGenesis:
-                    type = Joycon.ControllerType.Genesis;
                     break;
                 default:
                     _logger?.Log($"Invalid product ID: {info.ProductId}.", Logger.LogLevel.Error);
