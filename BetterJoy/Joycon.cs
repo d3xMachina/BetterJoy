@@ -61,6 +61,9 @@ public class Joycon
         NES = 0x06,
         FamicomI = 0x07,
         FamicomII = 0x08,
+        Genesis = 0x0D,
+        MegaDrive,
+        SuperFamicom
     }
 
     public enum DebugType
@@ -155,10 +158,10 @@ public class Joycon
 
     private readonly byte[] _sliderVal = [0, 0];
 
-    private StickRangeCalibration _stickCal = new LeftStickRangeCalibration(new ushort[] {0, 0, 0, 0, 0, 0});
+    private StickRangeCalibration _stickCal = new();
     private readonly ushort[] _stickPrecal = [0, 0];
 
-    private StickRangeCalibration _stick2Cal = new RightStickRangeCalibration(new ushort[] {0, 0, 0, 0, 0, 0});
+    private StickRangeCalibration _stick2Cal = new();
     private readonly ushort[] _stick2Precal = [0, 0];
 
     private Vector3 _accG = Vector3.Zero;
@@ -168,8 +171,8 @@ public class Joycon
     private bool _IMUCalibrated = false;
     private bool _SticksCalibrated = false;
     private readonly short[] _activeIMUData = new short[6];
-    private StickRangeCalibration _activeStick1 = new LeftStickRangeCalibration(new ushort[] {0, 0, 0, 0, 0, 0});
-    private StickRangeCalibration _activeStick2 = new RightStickRangeCalibration(new ushort[] {0, 0, 0, 0, 0, 0});
+    private StickRangeCalibration _activeStick1 = new();
+    private StickRangeCalibration _activeStick2 = new();
 
     public BatteryLevel Battery = BatteryLevel.Unknown;
     public bool Charging = false;
@@ -380,8 +383,8 @@ public class Joycon
         var activeSticksData = _form.ActiveCaliSticksData(SerialOrMac);
         if (activeSticksData != null)
         {
-            _activeStick1 = new LeftStickRangeCalibration(activeSticksData.Take(6).ToArray());
-            _activeStick2 = new RightStickRangeCalibration(activeSticksData.Skip(6).Take(6).ToArray());
+            _activeStick1 = new StickRangeCalibration(activeSticksData.AsSpan()[..6]);
+            _activeStick2 = new StickRangeCalibration(activeSticksData.AsSpan()[6..12]);
             _SticksCalibrated = true;
         }
         else
@@ -499,9 +502,9 @@ public class Joycon
             SetLowPowerState(false);
 
             //Make sure we're not actually a retro controller
-            if (Type == ControllerType.JoyconRight)
+            if (Type is ControllerType.JoyconRight or ControllerType.SNES or ControllerType.Genesis)
             {
-                CheckIfRightIsRetro();
+                SetActualControllerType();
             }
 
             var ok = DumpCalibrationData();
@@ -743,7 +746,7 @@ public class Joycon
         return true;
     }
 
-    private void CheckIfRightIsRetro()
+    private void SetActualControllerType()
     {
         Span<byte> response = stackalloc byte[ReportLength];
 
@@ -753,18 +756,23 @@ public class Joycon
 
             if (respLength > 0)
             {
-                // The NES and Famicom controllers both share the hardware id of a normal right joycon.
+                // Many retro controllers share hardware ids.
                 // To identify them, we need to query the hardware directly.
+                // Joycon Right: 0x02
                 // NES Left: 0x09
                 // NES Right: 0x0A
                 // Famicom I (Left): 0x07
                 // Famicom II (Right): 0x08
+                // Genesis: 0x0D
                 var deviceType = response[17];
 
                 switch (deviceType)
                 {
                     case 0x02:
-                        // Do nothing, it's the right joycon
+                        Type = ControllerType.JoyconRight;
+                        break;
+                    case 0x0D:
+                        Type = ControllerType.Genesis;
                         break;
                     case 0x09:
                     case 0x0A:
@@ -2555,10 +2563,6 @@ public class Joycon
             Array.Fill(_gyrSensiti, (short)13371);
             Array.Fill(_gyrNeutral, (short)0);
 
-            // Default stick calibration
-            _stickCal = new LeftStickRangeCalibration();
-            _stick2Cal = new RightStickRangeCalibration();
-
             _deadzone = Config.StickLeftDeadzone;
             _deadzone2 = Config.StickRightDeadzone;
 
@@ -2596,9 +2600,11 @@ public class Joycon
                 }
             }
 
-            _stickCal = IsLeft ? new LeftStickRangeCalibration(stick1Data[..9]) : new RightStickRangeCalibration(stick1Data[..9]);
+            _stickCal = IsLeft ? 
+                StickRangeCalibration.FromLeftStickCalibrationBytes(stick1Data[..9]) : 
+                StickRangeCalibration.FromRightStickCalibrationBytes(stick1Data[..9]);
 
-            DebugPrint($"Stick 1: {_stickCal}", DebugType.None);
+            DebugPrint(_stickCal, DebugType.None);
             
             if (IsPro) //If it is pro, then it is also always left
             {
@@ -2619,9 +2625,9 @@ public class Joycon
                     }
                 }
                 
-                _stick2Cal = new RightStickRangeCalibration(stick2Data[..9]);
+                _stick2Cal = StickRangeCalibration.FromRightStickCalibrationBytes(stick2Data[..9]);
 
-                DebugPrint($"Stick 2: {_stick2Cal}", DebugType.None);
+                DebugPrint(_stick2Cal, DebugType.None);
             }
         }
 
@@ -3366,15 +3372,18 @@ public class Joycon
     {
         return type switch
         {
-            ControllerType.JoyconLeft  => "Left joycon",
-            ControllerType.JoyconRight => "Right joycon",
-            ControllerType.Pro         => "Pro controller",
-            ControllerType.SNES        => "SNES controller",
-            ControllerType.NES         => "NES controller",
-            ControllerType.FamicomI    => "Famicom I controller",
-            ControllerType.FamicomII   => "Famicom II controller",
-            ControllerType.N64         => "N64 controller",
-            _                          => "Controller"
+            ControllerType.JoyconLeft   => "Left joycon",
+            ControllerType.JoyconRight  => "Right joycon",
+            ControllerType.Pro          => "Pro controller",
+            ControllerType.SNES         => "SNES controller",
+            ControllerType.NES          => "NES controller",
+            ControllerType.FamicomI     => "Famicom I controller",
+            ControllerType.FamicomII    => "Famicom II controller",
+            ControllerType.N64          => "N64 controller",
+            ControllerType.Genesis      => "Genesis controller",
+            ControllerType.MegaDrive    => "MegaDrive controller",
+            ControllerType.SuperFamicom => "SuperFamicom controller",
+            _                           => "Controller"
         };
     }
 
