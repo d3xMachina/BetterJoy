@@ -13,7 +13,6 @@ public class StickRangeCalibration
     public ushort YMin { get; private set; }
     private bool? _isLeft;
 
-
     public StickRangeCalibration(bool? isLeft = null)
     {
         InitFromValues(_defaultCalibration, isLeft);
@@ -81,7 +80,7 @@ public class StickRangeCalibration
 
     public override string ToString()
     {
-        string name = _isLeft == null ? "S" : (bool)(_isLeft) ? "Left s" : "Right s";
+        string name = _isLeft == null ? "S" : _isLeft.Value ? "Left s" : "Right s";
         return $"{name}tick calibration data: (XMin: {XMin:D}, XCenter: {XCenter:D}, XMax: {XMax:D}, YMin: {YMin:D}, YCenter: {YCenter:D}, YMax: {YMax:D})";
     }
 }
