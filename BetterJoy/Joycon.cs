@@ -12,9 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Net.NetworkInformation;
-using System.Net.Security;
 using System.Numerics;
 using System.Text;
 using System.Threading;
@@ -753,9 +751,8 @@ public class Joycon
 
             if (respLength > 0)
             {
-                // Many retro controllers share hardware ids.
+                // The NES and Famicom controllers both share the hardware id of a normal right joycon.
                 // To identify them, we need to query the hardware directly.
-                // Joycon Right: 0x02
                 // NES Left: 0x09
                 // NES Right: 0x0A
                 // Famicom I (Left): 0x07

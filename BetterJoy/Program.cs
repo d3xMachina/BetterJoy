@@ -230,7 +230,6 @@ public class JoyconManager
         }
 
         // Don't need to put NES or Famicom here because they are the same as the right Joycon
-        // Similarly, the super famicom shares the product id of the SNES and the MegaDrive of the Genesis
         bool validController = info is
         {
             VendorId: VendorId,
