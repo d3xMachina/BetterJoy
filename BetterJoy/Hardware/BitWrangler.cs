@@ -15,7 +15,7 @@ public static class BitWrangler
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static byte EncodeNibblesAsByteLittleEndian(byte low, byte high)
-        => (byte)(LowerToUpper(high) | LowerNibble(low) );
+        => (byte)(LowerToUpper(high) | LowerNibble(low));
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort EncodeBytesAsWordLittleEndian(byte low, byte high)
