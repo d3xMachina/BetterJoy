@@ -1483,50 +1483,6 @@ public class Joycon
         }
     }
 
-    // Must be done by the main controller (in the case they are joined)
-    private void DoThingsWithIMUMainController()
-    {
-        if (UseGyroAnalogSliders())
-        {
-            var leftT = IsLeft ? Button.Shoulder2 : Button.Shoulder22;
-            var rightT = IsLeft ? Button.Shoulder22 : Button.Shoulder2;
-            var left = IsLeft || !IsJoycon ? this : Other;
-            var right = !IsLeft || !IsJoycon ? this : Other;
-            float leftDt = left._AHRS.SamplePeriod;
-            float rightDt = right._AHRS.SamplePeriod;
-
-            int ldy, rdy;
-            if (Config.UseFilteredIMU)
-            {
-                ldy = (int)(Config.GyroAnalogSensitivity * (left._curRotation[0] - left._curRotation[3]));
-                rdy = (int)(Config.GyroAnalogSensitivity * (right._curRotation[0] - right._curRotation[3]));
-            }
-            else
-            {
-                ldy = (int)(Config.GyroAnalogSensitivity * (left._gyrG.Y * leftDt));
-                rdy = (int)(Config.GyroAnalogSensitivity * (right._gyrG.Y * rightDt));
-            }
-
-            if (_buttons[(int)leftT])
-            {
-                _sliderVal[0] = (byte)Math.Clamp(_sliderVal[0] + ldy, 0, byte.MaxValue);
-            }
-            else
-            {
-                _sliderVal[0] = 0;
-            }
-
-            if (_buttons[(int)rightT])
-            {
-                _sliderVal[1] = (byte)Math.Clamp(_sliderVal[1] + rdy, 0, byte.MaxValue);
-            }
-            else
-            {
-                _sliderVal[1] = 0;
-            }
-        }
-    }
-
     // Must be done by all controllers when their IMU is updated (in the case they are joined)
     private void DoThingsWithIMUEachController()
     {
@@ -1534,6 +1490,52 @@ public class Joycon
         _AHRS.GetEulerAngles(_curRotation);
 
         DetectShake();
+
+        if (UseGyroAnalogSliders())
+        {
+            int dy;
+
+            if (Config.UseFilteredIMU)
+            {
+                dy = (int)(Config.GyroAnalogSensitivity * (_curRotation[0] - _curRotation[3]));
+            }
+            else
+            {
+                float dt = _AHRS.SamplePeriod;
+                dy = (int)(Config.GyroAnalogSensitivity * (_gyrG.Y * dt));
+            }
+
+            if (_buttons[(int)Button.Shoulder2])
+            {
+                _sliderVal[IsLeft ? 0 : 1] = (byte)Math.Clamp(_sliderVal[IsLeft ? 0 : 1] + dy, 0, byte.MaxValue);
+            }
+            else
+            {
+                _sliderVal[IsLeft ? 0 : 1] = 0;
+            }
+
+            if (!IsJoycon)
+            {
+                if (_buttons[(int)Button.Shoulder22])
+                {
+                    _sliderVal[1] = (byte)Math.Clamp(_sliderVal[1] + dy, 0, byte.MaxValue);
+                }
+                else
+                {
+                    _sliderVal[1] = 0;
+                }
+            }
+            else
+            {
+                _sliderVal[IsLeft ? 1 : 0] = 0;
+            }
+
+            if (IsJoined)
+            {
+                var mainController = IsLeft ? this : Other;
+                mainController._sliderVal[1] = mainController.Other._sliderVal[1];
+            }
+        }
 
         if (IsPrimaryGyro)
         {
@@ -1602,9 +1604,6 @@ public class Joycon
     private void DoThingsWithIMU()
     {
         DoThingsWithIMUEachController();
-
-        var mainController = GetMainController();
-        mainController.DoThingsWithIMUMainController();
     }
 
     private void GetBatteryInfos(ReadOnlySpan<byte> reportBuf)
