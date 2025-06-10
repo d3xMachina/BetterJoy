@@ -45,7 +45,7 @@ public class StickRangeCalibration
             throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 9 bytes.");
         }
 
-        int offset = isLeft ? 0 : 2;
+        int offset = isLeft ? 0 : 6;
 
         InitFromValues([
             BitWrangler.Lower3NibblesLittleEndian(raw[IndexOffsetter(0, offset)], raw[IndexOffsetter(1, offset)]),
