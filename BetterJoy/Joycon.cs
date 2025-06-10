@@ -378,8 +378,8 @@ public class Joycon
         var activeSticksData = _form.ActiveCaliSticksData(SerialOrMac);
         if (activeSticksData != null)
         {
-            _activeStick1 = new StickRangeCalibration(activeSticksData.AsSpan()[..6]);
-            _activeStick2 = new StickRangeCalibration(activeSticksData.AsSpan()[6..12]);
+            _activeStick1 = new StickRangeCalibration(activeSticksData.AsSpan(0, 6));
+            _activeStick2 = new StickRangeCalibration(activeSticksData.AsSpan(6, 6));
             _SticksCalibrated = true;
         }
         else
@@ -2735,7 +2735,7 @@ public class Joycon
                 Log("Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
             }
 
-            PrintArray<short>(_gyrNeutral.AsSpan()[..3], type: DebugType.IMU, format: "Gyro neutral position: {0:S}");
+            PrintArray<short>(_gyrNeutral.AsSpan(0, 3), type: DebugType.IMU, format: "Gyro neutral position: {0:S}");
         }
 
         if (!ok)
@@ -2920,7 +2920,7 @@ public class Joycon
             response.Slice(20, page.PageSize).CopyTo(readBuf);
             if (print)
             {
-                PrintArray<byte>(readBuf.AsSpan()[..page.PageSize], DebugType.Comms);
+                PrintArray<byte>(readBuf.AsSpan(0, page.PageSize), DebugType.Comms);
             }
         }
         else
