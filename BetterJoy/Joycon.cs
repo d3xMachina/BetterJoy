@@ -1014,7 +1014,7 @@ public class Joycon
             return ReceiveError.Disconnected;
         }
 
-        if (packetType != (byte)InputReportMode.StandardFull && packetType != (byte)InputReportMode.SimpleHID)
+        if (packetType != (byte)InputReportMode.StandardFull/* && packetType != (byte)InputReportMode.SimpleHID*/)
         {
             return ReceiveError.InvalidPacket;
         }
