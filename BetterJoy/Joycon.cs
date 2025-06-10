@@ -1076,6 +1076,7 @@ public class Joycon
             UpdateInputActivity();
 
             UdpControllerReport controllerReport = null;
+            var sendReport = Program.Server != null && Program.Server.HasClients;
 
             // Process packets as soon as they come
             for (var n = 0; n < NbIMUPackets; ++n)
@@ -1086,19 +1087,25 @@ public class Joycon
                     Timestamp += deltaPacketsMicroseconds * NbIMUPackets;
                     PacketCounter++;
 
-                    controllerReport = UdpServer.MakeControllerReport(this);
+                    if (sendReport)
+                    {
+                        controllerReport = UdpServer.MakeControllerReport(this);
+                    }
                     break;
                 }
 
                 Timestamp += deltaPacketsMicroseconds;
                 PacketCounter++;
 
-                if (n == 0)
+                if (sendReport)
                 {
-                    controllerReport = UdpServer.MakeControllerReport(this, deltaPacketsMicroseconds);
-                }
+                    if (n == 0)
+                    {
+                        controllerReport = UdpServer.MakeControllerReport(this, deltaPacketsMicroseconds);
+                    }
 
-                UdpServer.AddMotionToControllerReport(controllerReport, this, n);
+                    UdpServer.AddMotionToControllerReport(controllerReport, this, n);
+                }
 
                 DoThingsWithIMU();
             }
@@ -1107,12 +1114,12 @@ public class Joycon
 
             mainController.UpdateInput();
 
-            if (controllerReport != null)
+            if (sendReport)
             {
                 // We add the input at the end to take the controller remapping into account
                 UdpServer.AddInputToControllerReport(controllerReport, this);
 
-                Program.Server?.SendControllerReport(controllerReport);
+                Program.Server.SendControllerReport(controllerReport);
             }
         }
         finally

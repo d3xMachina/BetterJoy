@@ -32,6 +32,8 @@ public class UdpServer
     private const int PacketHeaderSize = 16;
     private const int ControllerTimeoutSeconds = 5;
 
+    public bool HasClients => _hasClients;
+
     private readonly Dictionary<SocketAddress, ClientRequestTimes> _clients = [];
     private readonly IList<Joycon> _controllers;
 
