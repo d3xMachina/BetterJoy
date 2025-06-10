@@ -6,13 +6,14 @@ using BetterJoy.Forms;
 using BetterJoy.Hardware;
 using BetterJoy.Hardware.Calibration;
 using BetterJoy.Hardware.SubCommandUtils;
+using BetterJoy.Network;
+using BetterJoy.Network.Server;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Net.NetworkInformation;
 using System.Numerics;
 using System.Text;
 using System.Threading;
@@ -200,7 +201,7 @@ public class Joycon
     // For UdpServer
     public readonly int PadId;
 
-    public PhysicalAddress PadMacAddress = new([01, 02, 03, 04, 05, 06]);
+    public MacAddress MacAddress = new();
     public readonly string Path;
 
     private Thread _receiveReportsThread;
@@ -546,6 +547,8 @@ public class Joycon
 
     private void GetMAC()
     {
+        Span<byte> macBytes = MacAddress;
+
         if (IsUSB)
         {
             Span<byte> buf = stackalloc byte[ReportLength];
@@ -557,18 +560,18 @@ public class Joycon
                 throw new DeviceComFailedException("reset mac");
             }
 
-            PadMacAddress = new PhysicalAddress([buf[9], buf[8], buf[7], buf[6], buf[5], buf[4]]);
-            SerialOrMac = PadMacAddress.ToString().ToLower();
+            buf.Slice(4, macBytes.Length).CopyTo(macBytes);
+            macBytes.Reverse();
+            SerialOrMac = MacAddress.ToString();
             return;
         }
 
         // Serial = MAC address of the controller in bluetooth
-        var mac = new byte[6];
         try
         {
-            for (var n = 0; n < 6 && n < SerialNumber.Length; n++)
+            for (var n = 0; n < macBytes.Length && n < SerialNumber.Length; n++)
             {
-                mac[n] = byte.Parse(SerialNumber.AsSpan(n * 2, 2), NumberStyles.HexNumber);
+                macBytes[n] = byte.Parse(SerialNumber.AsSpan(n * 2, 2), NumberStyles.HexNumber);
             }
         }
         // could not parse mac address, ignore
@@ -576,8 +579,6 @@ public class Joycon
         {
             Log("Cannot parse MAC address.", e, Logger.LogLevel.Debug);
         }
-
-        PadMacAddress = new PhysicalAddress(mac);
     }
 
     private void USBPairing()
@@ -1074,26 +1075,45 @@ public class Joycon
             CopyInputFromJoinedController();
             UpdateInputActivity();
 
+            UdpControllerReport controllerReport = null;
+
             // Process packets as soon as they come
-            for (var n = 0; n < NbIMUPackets; n++)
+            for (var n = 0; n < NbIMUPackets; ++n)
             {
                 bool updateIMU = ExtractIMUValues(buf, n);
                 if (!updateIMU)
                 {
+                    Timestamp += deltaPacketsMicroseconds * NbIMUPackets;
+                    PacketCounter++;
+
+                    controllerReport = UdpServer.MakeControllerReport(this);
                     break;
                 }
-
-                DoThingsWithIMU();
 
                 Timestamp += deltaPacketsMicroseconds;
                 PacketCounter++;
 
-                Program.Server?.NewReportIncoming(this);
+                if (n == 0)
+                {
+                    controllerReport = UdpServer.MakeControllerReport(this, deltaPacketsMicroseconds);
+                }
+
+                UdpServer.AddMotionToControllerReport(controllerReport, this, n);
+
+                DoThingsWithIMU();
             }
 
             DoThingsWithButtons();
 
             mainController.UpdateInput();
+
+            if (controllerReport != null)
+            {
+                // We add the input at the end to take the controller remapping into account
+                UdpServer.AddInputToControllerReport(controllerReport, this);
+
+                Program.Server?.SendControllerReport(controllerReport);
+            }
         }
         finally
         {
