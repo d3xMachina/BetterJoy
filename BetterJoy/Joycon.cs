@@ -1089,7 +1089,7 @@ public class Joycon
 
                     if (sendReport)
                     {
-                        controllerReport = UdpServer.MakeControllerReport(this);
+                        controllerReport = new UdpControllerReport(this);
                     }
                     break;
                 }
@@ -1101,10 +1101,10 @@ public class Joycon
                 {
                     if (n == 0)
                     {
-                        controllerReport = UdpServer.MakeControllerReport(this, deltaPacketsMicroseconds);
+                        controllerReport = new UdpControllerReport(this, deltaPacketsMicroseconds);
                     }
 
-                    UdpServer.AddMotionToControllerReport(controllerReport, this, n);
+                    controllerReport.AddMotion(this, n);
                 }
 
                 DoThingsWithIMU();
@@ -1117,7 +1117,7 @@ public class Joycon
             if (sendReport)
             {
                 // We add the input at the end to take the controller remapping into account
-                UdpServer.AddInputToControllerReport(controllerReport, this);
+                controllerReport.AddInput(this);
 
                 Program.Server.SendControllerReport(controllerReport);
             }
