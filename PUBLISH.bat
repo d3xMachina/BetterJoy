@@ -18,6 +18,16 @@ echo Build hidapi 64 bits...
 if %ERRORLEVEL% NEQ 0 goto :ERROR
 
 echo.
+echo Build ViGEmClient 32 bits...
+"%MSBUILD_PATH%" "ViGEm.NET\ViGEmClientNative\src\ViGEmClient.vcxproj" -p:Configuration=Release_DLL -p:Platform=Win32 -t:Build
+if %ERRORLEVEL% NEQ 0 goto :ERROR
+
+echo.
+echo Build ViGEmClient 64 bits...
+"%MSBUILD_PATH%" "ViGEm.NET\ViGEmClientNative\src\ViGEmClient.vcxproj" -p:Configuration=Release_DLL -p:Platform=x64 -t:Build
+if %ERRORLEVEL% NEQ 0 goto :ERROR
+
+echo.
 echo Build ViGEm.NET...
 "%MSBUILD_PATH%" "ViGEm.NET\ViGEmClient\ViGEmClient.NET.csproj" -p:Configuration=Release -p:Platform=x64 -t:Build
 if %ERRORLEVEL% NEQ 0 goto :ERROR
