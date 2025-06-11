@@ -14,14 +14,14 @@ public struct MacAddress
 
         // Each byte is represented by 2 hex characters
         Span<char> hexChars = stackalloc char[macBytes.Length * 2];
-        
+
         for (int i = 0; i < macBytes.Length; i++)
         {
             byte b = macBytes[i];
             hexChars[i * 2] = ToHexChar((byte)(b >> 4)); // High nibble
             hexChars[i * 2 + 1] = ToHexChar((byte)(b & 0xF)); // Low nibble
         }
-        
+
         return new string(hexChars);
     }
 

@@ -3407,6 +3407,7 @@ public class Joycon
     {
         return type switch
         {
+#pragma warning disable IDE0055 // Disable formatting
             ControllerType.JoyconLeft  => "Left joycon",
             ControllerType.JoyconRight => "Right joycon",
             ControllerType.Pro         => "Pro controller",
@@ -3416,6 +3417,7 @@ public class Joycon
             ControllerType.FamicomII   => "Famicom II controller",
             ControllerType.N64         => "N64 controller",
             _                          => "Controller"
+#pragma warning restore IDE0055
         };
     }
 

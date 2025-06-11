@@ -11,6 +11,7 @@ public static class ExceptionExtensions
     {
         var message = "(";
 
+#pragma warning disable IDE0066 // Convert switch statement to expression
         switch (e)
         {
             case Win32Exception win32Ex:
@@ -32,6 +33,7 @@ public static class ExceptionExtensions
                 message += $"{e.GetType()} - {e.Message}";
                 break;
         }
+#pragma warning restore IDE0066
 
         message += ")";
 

@@ -2,6 +2,7 @@ namespace BetterJoy.Hardware.SubCommandUtils;
 
 public enum SubCommandOperation : byte
 {
+#pragma warning disable IDE0055 // Disable formatting
     GetControllerState              = 0x00,
     ManualBluetoothPairing          = 0x01,
     RequestDeviceInfo               = 0x02,
@@ -31,4 +32,5 @@ public enum SubCommandOperation : byte
     EnableVibration                 = 0x48,
 
     GetRegulatedVoltage             = 0x50
+#pragma warning restore IDE0055
 }

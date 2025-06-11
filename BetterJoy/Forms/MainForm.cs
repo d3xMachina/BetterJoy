@@ -103,7 +103,7 @@ public partial class MainForm : Form
             if (key == "DebugType")
             {
                 var enumValues = Enum.GetValues<Joycon.DebugType>();
-                items.AddRange(enumValues.Cast<Joycon.DebugType>().Select(e => e.ToString().ToLower()).ToList());
+                items.AddRange([.. enumValues.Cast<Joycon.DebugType>().Select(e => e.ToString().ToLower())]);
             }
             else if (key == "GyroToJoyOrMouse")
             {
@@ -112,7 +112,7 @@ public partial class MainForm : Form
             else if (key == "DoNotRejoinJoycons")
             {
                 var enumValues = Enum.GetValues<Joycon.Orientation>();
-                items.AddRange(enumValues.Cast<Joycon.Orientation>().Select(e => e.ToString().ToLower()).ToList());
+                items.AddRange([.. enumValues.Cast<Joycon.Orientation>().Select(e => e.ToString().ToLower())]);
             }
 
             int index = 0;
@@ -765,7 +765,7 @@ public partial class MainForm : Form
 
     private void ShowReassignDialog(Joycon controller)
     {
-        // Not implemented
+        throw new NotImplementedException();
     }
 
     private void CountDownIMU(object sender, EventArgs e)

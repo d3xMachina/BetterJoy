@@ -2,6 +2,7 @@ namespace BetterJoy.Hardware.SubCommandUtils;
 
 public enum InputReportMode : byte
 {
+#pragma warning disable IDE0055 // Disable formatting
     ActiveNFCIRData          = 0x00,
     ActiveNFCIRConfig        = 0x01,
     ActiveNFCIRDataAndConfig = 0x02,
@@ -13,4 +14,5 @@ public enum InputReportMode : byte
     Unknown35                = 0x35,
     SimpleHID                = 0x3F,
     USBHID                   = 0x81
+#pragma warning restore IDE0055
 }

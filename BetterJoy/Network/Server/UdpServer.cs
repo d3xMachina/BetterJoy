@@ -411,7 +411,7 @@ public class UdpServer
         outputData.Clear();
 
         var outIdx = BeginPacket(outputData);
-        
+
         BitConverter.TryWriteBytes(outputData.Slice(outIdx, 4), (uint)ResponseType.DsusPadData);
         outIdx += 4;
 
@@ -575,7 +575,7 @@ public class UdpServer
 
         outputData[outIdx++] = (byte)GetBattery(controller);
         outputData[outIdx++] = 0;
-        
+
         FinishPacket(outputData[..outIdx]);
 
         return outIdx;
@@ -593,7 +593,7 @@ public class UdpServer
         outIdx += 2;
         outputData[outIdx++] = 0;
         outputData[outIdx++] = 0;
-        
+
         FinishPacket(outputData[..outIdx]);
 
         return outIdx;
@@ -740,7 +740,7 @@ public class UdpServer
 
         var pendingReport = new PendingReport(report);
 
-        while (!_channelSendData.Writer.TryWrite(pendingReport) && _hasClients);
+        while (!_channelSendData.Writer.TryWrite(pendingReport) && _hasClients) ;
     }
 
     private static ControllerBattery GetBattery(Joycon controller)
