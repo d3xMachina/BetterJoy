@@ -48,7 +48,7 @@ public class MotionCalibration
     {
         if (raw.Length != 24)
         {
-            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 24 bytes.");
+            throw new ArgumentException($"{nameof(MotionCalibration)} expects 24 bytes.");
         }
 
         InitFromValues([
@@ -72,7 +72,7 @@ public class MotionCalibration
     {
         if (values.Length != 12)
         {
-            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 12 values");
+            throw new ArgumentException($"{nameof(MotionCalibration)} expects 12 values");
         }
 
         var inputAccelerometerNeutral     = new ThreeAxisShort(values[0], values[1],  values[2]);
