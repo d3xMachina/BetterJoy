@@ -14,10 +14,10 @@ public class MotionCalibration
         public bool Invalid => X == -1 || Y == -1 || Z == -1;
     }
     
-    private readonly ThreeAxisShort _defaultAccelerometerNeutralConfig =     new(    0,     0,     0);
+    private readonly ThreeAxisShort _defaultAccelerometerNeutralConfig     = new(    0,     0,     0);
     private readonly ThreeAxisShort _defaultAccelerometerSensitivityConfig = new(16384, 16384, 16384);
-    private readonly ThreeAxisShort _defaultGyroscopeNeutralConfig =         new(    0,     0,     0);
-    private readonly ThreeAxisShort _defaultGyroscopeSensitivityConfig =     new(13371, 13371, 13371);
+    private readonly ThreeAxisShort _defaultGyroscopeNeutralConfig         = new(    0,     0,     0);
+    private readonly ThreeAxisShort _defaultGyroscopeSensitivityConfig     = new(13371, 13371, 13371);
 
     public ThreeAxisShort AccelerometerNeutral { get; private set; }
     public ThreeAxisShort AccelerometerSensitivity { get; private set; }
