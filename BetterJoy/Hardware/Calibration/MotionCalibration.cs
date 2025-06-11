@@ -4,20 +4,10 @@ namespace BetterJoy.Hardware.Calibration;
 
 public class MotionCalibration
 {
-    public record ThreeAxisShort(short X, short Y, short Z)
-    {
-        public override string ToString()
-        {
-            return $"X: {X}, Y: {Y}, Z: {Z}";
-        }
-        
-        public bool Invalid => X == -1 || Y == -1 || Z == -1;
-    }
-    
-    private readonly ThreeAxisShort _defaultAccelerometerNeutralConfig     = new(    0,     0,     0);
+    private readonly ThreeAxisShort _defaultAccelerometerNeutralConfig = new(0, 0, 0);
     private readonly ThreeAxisShort _defaultAccelerometerSensitivityConfig = new(16384, 16384, 16384);
-    private readonly ThreeAxisShort _defaultGyroscopeNeutralConfig         = new(    0,     0,     0);
-    private readonly ThreeAxisShort _defaultGyroscopeSensitivityConfig     = new(13371, 13371, 13371);
+    private readonly ThreeAxisShort _defaultGyroscopeNeutralConfig = new(0, 0, 0);
+    private readonly ThreeAxisShort _defaultGyroscopeSensitivityConfig = new(13371, 13371, 13371);
 
     public ThreeAxisShort AccelerometerNeutral { get; private set; }
     public ThreeAxisShort AccelerometerSensitivity { get; private set; }
@@ -33,17 +23,17 @@ public class MotionCalibration
         GyroscopeSensitivity = _defaultGyroscopeSensitivityConfig;
         UsedDefaultValues = true;
     }
-    
+
     public MotionCalibration(ReadOnlySpan<short> values)
     {
         InitFromValues(values);
     }
-    
+
     public MotionCalibration(ReadOnlySpan<byte> raw)
     {
         InitFromBytes(raw);
     }
-    
+
     private void InitFromBytes(ReadOnlySpan<byte> raw)
     {
         if (raw.Length != 24)
@@ -66,7 +56,7 @@ public class MotionCalibration
             BitWrangler.EncodeBytesAsWordLittleEndianSigned(raw[22], raw[23]),
         ]);
     }
-    
+
 
     private void InitFromValues(ReadOnlySpan<short> values)
     {
@@ -75,20 +65,20 @@ public class MotionCalibration
             throw new ArgumentException($"{nameof(MotionCalibration)} expects 12 values");
         }
 
-        var inputAccelerometerNeutral     = new ThreeAxisShort(values[0], values[1],  values[2]);
-        var inputAccelerometerSensitivity = new ThreeAxisShort(values[3], values[4],  values[5]);
-        var inputGyroscopeNeutral         = new ThreeAxisShort(values[6], values[7],  values[8]);
-        var inputGyroscopeSensitivity     = new ThreeAxisShort(values[9], values[10], values[11]);
-        
+        var inputAccelerometerNeutral = new ThreeAxisShort(values[0], values[1], values[2]);
+        var inputAccelerometerSensitivity = new ThreeAxisShort(values[3], values[4], values[5]);
+        var inputGyroscopeNeutral = new ThreeAxisShort(values[6], values[7], values[8]);
+        var inputGyroscopeSensitivity = new ThreeAxisShort(values[9], values[10], values[11]);
+
 
         AccelerometerNeutral = inputAccelerometerNeutral.Invalid
-            ? _defaultAccelerometerNeutralConfig 
+            ? _defaultAccelerometerNeutralConfig
             : inputAccelerometerNeutral;
 
         AccelerometerSensitivity = inputAccelerometerSensitivity.Invalid
             ? _defaultAccelerometerSensitivityConfig
             : inputAccelerometerSensitivity;
-        
+
         GyroscopeNeutral = inputGyroscopeNeutral.Invalid
             ? _defaultGyroscopeNeutralConfig
             : inputGyroscopeNeutral;
@@ -96,10 +86,10 @@ public class MotionCalibration
         GyroscopeSensitivity = inputGyroscopeSensitivity.Invalid
             ? _defaultGyroscopeSensitivityConfig
             : inputGyroscopeSensitivity;
-        
-        UsedDefaultValues = 
-            inputAccelerometerNeutral.Invalid || 
-            inputAccelerometerSensitivity.Invalid || 
+
+        UsedDefaultValues =
+            inputAccelerometerNeutral.Invalid ||
+            inputAccelerometerSensitivity.Invalid ||
             inputGyroscopeNeutral.Invalid ||
             inputGyroscopeSensitivity.Invalid;
     }

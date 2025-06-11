@@ -70,12 +70,12 @@ public class StickRangeCalibration
         }
 
         _isLeft = isLeft;
-        XMax    = values[0];
-        YMax    = values[1];
+        XMax = values[0];
+        YMax = values[1];
         XCenter = values[2];
         YCenter = values[3];
-        XMin    = values[4];
-        YMin    = values[5];
+        XMin = values[4];
+        YMin = values[5];
     }
 
     public override string ToString()

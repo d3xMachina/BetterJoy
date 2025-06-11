@@ -121,8 +121,8 @@ public class Joycon
 
     private static readonly byte[] _ledById = [0b0001, 0b0011, 0b0111, 0b1111, 0b1001, 0b0101, 0b1101, 0b0110];
 
-    private readonly short[] _accRaw = [0, 0, 0];
-    private MotionCalibration MotionCalibration = new();
+    private ThreeAxisShort _accRaw = new(0, 0, 0);
+    private MotionCalibration _motionCalibration = new();
 
     private readonly MadgwickAHRS _AHRS; // for getting filtered Euler angles of rotation; 5ms sampling rate
 
@@ -138,7 +138,7 @@ public class Joycon
     private static readonly byte[] _stopRumbleBuf = [0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40]; // Stop rumble
     private readonly byte[] _rumbleBuf;
 
-    private readonly short[] _gyrRaw = [0, 0, 0];
+    private ThreeAxisShort _gyrRaw = new(0, 0, 0);
 
     private readonly Dictionary<int, bool> _mouseToggleBtn = [];
 
@@ -2226,12 +2226,15 @@ public class Joycon
 
         var offset = n * 12;
 
-        _gyrRaw[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[19 + offset], reportBuf[20 + offset]);
-        _gyrRaw[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[21 + offset], reportBuf[22 + offset]);
-        _gyrRaw[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[23 + offset], reportBuf[24 + offset]);
-        _accRaw[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[13 + offset], reportBuf[14 + offset]);
-        _accRaw[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[15 + offset], reportBuf[16 + offset]);
-        _accRaw[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[17 + offset], reportBuf[18 + offset]);
+        _gyrRaw = new ThreeAxisShort(
+            BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[19 + offset], reportBuf[20 + offset]),
+            BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[21 + offset], reportBuf[22 + offset]),
+            BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[23 + offset], reportBuf[24 + offset]));
+
+        _accRaw = new ThreeAxisShort(
+            BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[13 + offset], reportBuf[14 + offset]),
+            BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[15 + offset], reportBuf[16 + offset]),
+            BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[17 + offset], reportBuf[18 + offset]));
 
         if (_calibrateIMU)
         {
@@ -2251,12 +2254,12 @@ public class Joycon
             }
 
             var imuData = new IMUData(
-                _gyrRaw[0],
-                _gyrRaw[1],
-                _gyrRaw[2],
-                (short)(_accRaw[0] - accOffset[0]),
-                (short)(_accRaw[1] - accOffset[1]),
-                (short)(_accRaw[2] - accOffset[2])
+                _gyrRaw.X,
+                _gyrRaw.Y,
+                _gyrRaw.Z,
+                (short)(_accRaw.X - accOffset[0]),
+                (short)(_accRaw.Y - accOffset[1]),
+                (short)(_accRaw.Z - accOffset[2])
             );
             CalibrationIMUDatas.Add(imuData);
         }
@@ -2265,25 +2268,25 @@ public class Joycon
 
         if (_IMUCalibrated)
         {
-            _accG.X = (_accRaw[0] - _activeIMUData[3]) * (1.0f / (MotionCalibration.AccelerometerSensitivity.X - MotionCalibration.AccelerometerNeutral.X)) * 4.0f;
-            _gyrG.X = (_gyrRaw[0] - _activeIMUData[0]) * (816.0f / (MotionCalibration.GyroscopeSensitivity.X - _activeIMUData[0]));
+            _accG.X = (_accRaw.X - _activeIMUData[3]) * (1.0f / (_motionCalibration.AccelerometerSensitivity.X - _motionCalibration.AccelerometerNeutral.X)) * 4.0f;
+            _gyrG.X = (_gyrRaw.X - _activeIMUData[0]) * (816.0f / (_motionCalibration.GyroscopeSensitivity.X - _activeIMUData[0]));
 
-            _accG.Y = direction * (_accRaw[1] - _activeIMUData[4]) * (1.0f / (MotionCalibration.AccelerometerSensitivity.Y - MotionCalibration.AccelerometerNeutral.Y)) * 4.0f;
-            _gyrG.Y = -direction * (_gyrRaw[1] - _activeIMUData[1]) * (816.0f / (MotionCalibration.GyroscopeSensitivity.Y - _activeIMUData[1]));
+            _accG.Y = direction * (_accRaw.Y - _activeIMUData[4]) * (1.0f / (_motionCalibration.AccelerometerSensitivity.Y - _motionCalibration.AccelerometerNeutral.Y)) * 4.0f;
+            _gyrG.Y = -direction * (_gyrRaw.Y - _activeIMUData[1]) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Y - _activeIMUData[1]));
 
-            _accG.Z = direction * (_accRaw[2] - _activeIMUData[5]) * (1.0f / (MotionCalibration.AccelerometerSensitivity.Z - MotionCalibration.AccelerometerNeutral.Z)) * 4.0f;
-            _gyrG.Z = -direction * (_gyrRaw[2] - _activeIMUData[2]) * (816.0f / (MotionCalibration.GyroscopeSensitivity.Z - _activeIMUData[2]));
+            _accG.Z = direction * (_accRaw.Z - _activeIMUData[5]) * (1.0f / (_motionCalibration.AccelerometerSensitivity.Z - _motionCalibration.AccelerometerNeutral.Z)) * 4.0f;
+            _gyrG.Z = -direction * (_gyrRaw.Z - _activeIMUData[2]) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Z - _activeIMUData[2]));
         }
         else
         {
-            _accG.X = _accRaw[0] * (1.0f / (MotionCalibration.AccelerometerSensitivity.X - MotionCalibration.AccelerometerNeutral.X)) * 4.0f;
-            _gyrG.X = (_gyrRaw[0] - MotionCalibration.GyroscopeNeutral.X) * (816.0f / (MotionCalibration.GyroscopeSensitivity.X - MotionCalibration.GyroscopeNeutral.X));
+            _accG.X = _accRaw.X * (1.0f / (_motionCalibration.AccelerometerSensitivity.X - _motionCalibration.AccelerometerNeutral.X)) * 4.0f;
+            _gyrG.X = (_gyrRaw.X - _motionCalibration.GyroscopeNeutral.X) * (816.0f / (_motionCalibration.GyroscopeSensitivity.X - _motionCalibration.GyroscopeNeutral.X));
 
-            _accG.Y = direction * _accRaw[1] * (1.0f / (MotionCalibration.AccelerometerSensitivity.Y - MotionCalibration.AccelerometerNeutral.Y)) * 4.0f;
-            _gyrG.Y = -direction * (_gyrRaw[1] - MotionCalibration.GyroscopeNeutral.Y) * (816.0f / (MotionCalibration.GyroscopeSensitivity.Y - MotionCalibration.GyroscopeNeutral.Y));
+            _accG.Y = direction * _accRaw.Y * (1.0f / (_motionCalibration.AccelerometerSensitivity.Y - _motionCalibration.AccelerometerNeutral.Y)) * 4.0f;
+            _gyrG.Y = -direction * (_gyrRaw.Y - _motionCalibration.GyroscopeNeutral.Y) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Y - _motionCalibration.GyroscopeNeutral.Y));
 
-            _accG.Z = direction * _accRaw[2] * (1.0f / (MotionCalibration.AccelerometerSensitivity.Z - MotionCalibration.AccelerometerNeutral.Z)) * 4.0f;
-            _gyrG.Z = -direction * (_gyrRaw[2] - MotionCalibration.GyroscopeNeutral.Z) * (816.0f / (MotionCalibration.GyroscopeSensitivity.Z - MotionCalibration.GyroscopeNeutral.Z));
+            _accG.Z = direction * _accRaw.Z * (1.0f / (_motionCalibration.AccelerometerSensitivity.Z - _motionCalibration.AccelerometerNeutral.Z)) * 4.0f;
+            _gyrG.Z = -direction * (_gyrRaw.Z - _motionCalibration.GyroscopeNeutral.Z) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Z - _motionCalibration.GyroscopeNeutral.Z));
         }
 
         if (IsJoycon && Other == null)
@@ -2704,14 +2707,14 @@ public class Joycon
                 }
             }
 
-            MotionCalibration = new MotionCalibration(sensorData[..23]);
+            _motionCalibration = new MotionCalibration(sensorData[..23]);
 
-            if (MotionCalibration.UsedDefaultValues)
+            if (_motionCalibration.UsedDefaultValues)
             {
                 Log("Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
             }
 
-            DebugPrint(MotionCalibration, DebugType.IMU);
+            DebugPrint(_motionCalibration, DebugType.IMU);
         }
 
         if (!ok)
@@ -3356,15 +3359,15 @@ public class Joycon
     {
         return type switch
         {
-            ControllerType.JoyconLeft  => "Left joycon",
+            ControllerType.JoyconLeft => "Left joycon",
             ControllerType.JoyconRight => "Right joycon",
-            ControllerType.Pro         => "Pro controller",
-            ControllerType.SNES        => "SNES controller",
-            ControllerType.NES         => "NES controller",
-            ControllerType.FamicomI    => "Famicom I controller",
-            ControllerType.FamicomII   => "Famicom II controller",
-            ControllerType.N64         => "N64 controller",
-            _                          => "Controller"
+            ControllerType.Pro => "Pro controller",
+            ControllerType.SNES => "SNES controller",
+            ControllerType.NES => "NES controller",
+            ControllerType.FamicomI => "Famicom I controller",
+            ControllerType.FamicomII => "Famicom II controller",
+            ControllerType.N64 => "N64 controller",
+            _ => "Controller"
         };
     }
 
