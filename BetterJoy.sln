@@ -13,21 +13,21 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BetterJoy", "BetterJoy\Bett
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Thirdparty", "Thirdparty", "{6F6C51C3-D4F2-4F57-9454-24BC9C83FA15}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hidapi", "hidapi\windows\hidapi.vcxproj", "{A107C21C-418A-4697-BB10-20C3AA60E2E4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hidapi", "thirdparty\hidapi\windows\hidapi.vcxproj", "{A107C21C-418A-4697-BB10-20C3AA60E2E4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ViGEmClient.NET", "ViGEm.NET\ViGEmClient\ViGEmClient.NET.csproj", "{AA18EBCF-7E9D-4BC5-8760-E8C6E9A773E5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ViGEmClient.NET", "thirdparty\ViGEm.NET\ViGEmClient\ViGEmClient.NET.csproj", "{AA18EBCF-7E9D-4BC5-8760-E8C6E9A773E5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{7DB06674-1F4F-464B-8E1C-172E9587F9DC} = {7DB06674-1F4F-464B-8E1C-172E9587F9DC}
 		{84C931CF-00BE-4337-96EB-241A38A43A71} = {84C931CF-00BE-4337-96EB-241A38A43A71}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hidapi64", "hidapi\windows\hidapi64.vcxproj", "{3FBE01B2-3F36-419D-97D2-09DE503FEDA8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hidapi64", "thirdparty\hidapi\windows\hidapi64.vcxproj", "{3FBE01B2-3F36-419D-97D2-09DE503FEDA8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsInput", "WindowsInput\WindowsInput\WindowsInput.csproj", "{34810FEB-8BC0-ECDE-F6B4-3707E025DA35}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsInput", "thirdparty\WindowsInput\WindowsInput\WindowsInput.csproj", "{34810FEB-8BC0-ECDE-F6B4-3707E025DA35}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ViGEmClient", "ViGEm.NET\ViGEmClientNative\src\ViGEmClient.vcxproj", "{7DB06674-1F4F-464B-8E1C-172E9587F9DC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ViGEmClient", "thirdparty\ViGEm.NET\ViGEmClientNative\src\ViGEmClient.vcxproj", "{7DB06674-1F4F-464B-8E1C-172E9587F9DC}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ViGEmClient64", "ViGEm.NET\ViGEmClientNative\src\ViGEmClient64.vcxproj", "{84C931CF-00BE-4337-96EB-241A38A43A71}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ViGEmClient64", "thirdparty\ViGEm.NET\ViGEmClientNative\src\ViGEmClient64.vcxproj", "{84C931CF-00BE-4337-96EB-241A38A43A71}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
