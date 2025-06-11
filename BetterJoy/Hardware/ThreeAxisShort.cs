@@ -1,6 +1,6 @@
 namespace BetterJoy.Hardware;
 
-public record ThreeAxisShort(short X, short Y, short Z)
+public record struct ThreeAxisShort(short X, short Y, short Z)
 {
     public override string ToString()
     {
