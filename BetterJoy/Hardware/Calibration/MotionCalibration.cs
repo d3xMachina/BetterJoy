@@ -94,8 +94,8 @@ public class MotionCalibration
             : inputGyroscopeNeutral;
 
         GyroscopeSensitivity = inputGyroscopeSensitivity.Invalid
-                ? _defaultGyroscopeSensitivityConfig
-                : inputGyroscopeSensitivity;
+            ? _defaultGyroscopeSensitivityConfig
+            : inputGyroscopeSensitivity;
         
         UsedDefaultValues = 
             inputAccelerometerNeutral.Invalid || 
