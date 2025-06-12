@@ -57,7 +57,6 @@ public class MotionCalibration
         ]);
     }
 
-
     private void InitFromValues(ReadOnlySpan<short> values)
     {
         if (values.Length != 12)
