@@ -143,9 +143,9 @@ public class Joycon
     private readonly Dictionary<int, bool> _mouseToggleBtn = [];
 
     // Values from https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/blob/master/spi_flash_notes.md#6-axis-horizontal-offsets
-    private readonly short[] _accProHorOffset = [-688, 0, 4038];
-    private readonly short[] _accLeftHorOffset = [350, 0, 4081];
-    private readonly short[] _accRightHorOffset = [350, 0, -4081];
+    private readonly ThreeAxisShort _accProHorOffset = new(-688, 0, 4038);
+    private readonly ThreeAxisShort _accLeftHorOffset = new(350, 0, 4081);
+    private readonly ThreeAxisShort _accRightHorOffset = new(350, 0, -4081);
 
     private readonly Stopwatch _shakeTimer = Stopwatch.StartNew(); //Setup a timer for measuring shake in milliseconds
 
@@ -2236,7 +2236,7 @@ public class Joycon
         if (_calibrateIMU)
         {
             // We need to add the accelerometer offset from the origin position when it's on a flat surface
-            short[] accOffset;
+            ThreeAxisShort accOffset;
             if (IsPro)
             {
                 accOffset = _accProHorOffset;
@@ -2254,9 +2254,9 @@ public class Joycon
                 _gyrRaw.X,
                 _gyrRaw.Y,
                 _gyrRaw.Z,
-                (short)(_accRaw.X - accOffset[0]),
-                (short)(_accRaw.Y - accOffset[1]),
-                (short)(_accRaw.Z - accOffset[2])
+                (short)(_accRaw.X - accOffset.X),
+                (short)(_accRaw.Y - accOffset.Y),
+                (short)(_accRaw.Z - accOffset.Z)
             );
             CalibrationIMUDatas.Add(imuData);
         }
