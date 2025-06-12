@@ -1,4 +1,5 @@
 using BetterJoy.Config;
+using BetterJoy.Controller;
 using BetterJoy.Exceptions;
 using BetterJoy.Properties;
 using Microsoft.Win32;

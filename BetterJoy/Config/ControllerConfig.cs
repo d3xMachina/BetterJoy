@@ -1,5 +1,5 @@
 using System;
-using static BetterJoy.Joycon;
+using static BetterJoy.Controller.Joycon;
 
 namespace BetterJoy.Config;
 

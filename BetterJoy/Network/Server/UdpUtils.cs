@@ -1,3 +1,4 @@
+using BetterJoy.Controller;
 using System;
 using System.IO.Hashing;
 

@@ -1,5 +1,6 @@
 using BetterJoy.Collections;
 using BetterJoy.Config;
+using BetterJoy.Controller;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
 using BetterJoy.HIDApi.Exceptions;
