@@ -69,13 +69,15 @@ public class StickRangeCalibration
             throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 6 values");
         }
 
+#pragma warning disable IDE0055 // Disable formatting
         _isLeft = isLeft;
-        XMax = values[0];
-        YMax = values[1];
+        XMax    = values[0];
+        YMax    = values[1];
         XCenter = values[2];
         YCenter = values[3];
-        XMin = values[4];
-        YMin = values[5];
+        XMin    = values[4];
+        YMin    = values[5];
+#pragma warning restore IDE0055
     }
 
     public override string ToString()

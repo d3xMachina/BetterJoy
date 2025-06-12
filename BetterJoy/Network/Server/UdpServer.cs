@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO.Hashing;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
@@ -91,7 +90,7 @@ public class UdpServer
         // Clear CRC bytes to not include them in the CRC calculation
         packetBuffer.Slice(8, 4).Clear();
 
-        CalculateCrc32(packetBuffer, packetBuffer.Slice(8, 4));
+        UdpUtils.CalculateCrc32(packetBuffer, packetBuffer.Slice(8, 4));
     }
 
     private static bool CheckIncomingValidity(Span<byte> localMsg, out int currIdx)
@@ -135,7 +134,7 @@ public class UdpServer
         localMsg[currIdx++] = 0;
         localMsg[currIdx++] = 0;
 
-        var crcCalc = CalculateCrc32(localMsg[..(int)packetSize]);
+        var crcCalc = UdpUtils.CalculateCrc32(localMsg[..(int)packetSize]);
         if (crcValue != crcCalc)
         {
             return false;
@@ -573,7 +572,7 @@ public class UdpServer
 
         outIdx += 6;
 
-        outputData[outIdx++] = (byte)GetBattery(controller);
+        outputData[outIdx++] = (byte)UdpUtils.GetBattery(controller);
         outputData[outIdx++] = 0;
 
         FinishPacket(outputData[..outIdx]);
@@ -740,66 +739,7 @@ public class UdpServer
 
         var pendingReport = new PendingReport(report);
 
-        while (!_channelSendData.Writer.TryWrite(pendingReport) && _hasClients) ;
-    }
-
-    private static ControllerBattery GetBattery(Joycon controller)
-    {
-        if (controller.Charging)
-        {
-            return ControllerBattery.Charging;
-        }
-
-        return controller.Battery switch
-        {
-            Joycon.BatteryLevel.Critical => ControllerBattery.Critical,
-            Joycon.BatteryLevel.Low => ControllerBattery.Low,
-            Joycon.BatteryLevel.Medium => ControllerBattery.Medium,
-            Joycon.BatteryLevel.Full => ControllerBattery.Full,
-            _ => ControllerBattery.Empty,
-        };
-    }
-
-    public static UdpControllerReport MakeControllerReport(Joycon controller, ulong deltaPackets = 0)
-    {
-        var report = new UdpControllerReport
-        {
-            Timestamp = controller.Timestamp,
-            PacketCounter = controller.PacketCounter,
-            DeltaPackets = deltaPackets,
-            PadId = controller.PadId,
-            MacAddress = controller.MacAddress,
-            ConnectionType = controller.IsUSB ? ControllerConnection.USB : ControllerConnection.Bluetooth,
-            Battery = GetBattery(controller),
-        };
-
-        return report;
-    }
-
-    public static void AddInputToControllerReport(UdpControllerReport report, Joycon controller)
-    {
-        report.Input = Joycon.MapToDualShock4Input(controller);
-
-        // Invert Y axis
-        report.Input.ThumbLeftY = (byte)(byte.MaxValue - report.Input.ThumbLeftY);
-        report.Input.ThumbRightY = (byte)(byte.MaxValue - report.Input.ThumbRightY);
-    }
-
-    public static void AddMotionToControllerReport(UdpControllerReport report, Joycon controller, int packetNumber)
-    {
-        report.Motion[packetNumber] = new MotionData(controller.GetGyro(), controller.GetAccel());
-    }
-
-    private static int CalculateCrc32(ReadOnlySpan<byte> data, Span<byte> crc)
-    {
-        return Crc32.Hash(data, crc);
-    }
-
-    private static uint CalculateCrc32(ReadOnlySpan<byte> data)
-    {
-        Span<byte> crc = stackalloc byte[4];
-        Crc32.Hash(data, crc);
-        return BitConverter.ToUInt32(crc);
+        while (!_channelSendData.Writer.TryWrite(pendingReport) && _hasClients) { }
     }
 
     private class ClientRequestTimes

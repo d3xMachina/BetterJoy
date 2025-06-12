@@ -53,11 +53,11 @@
 			<Visible>false</Visible>
         </Content>
 
-        <ContentWithTargetPath Include="..\hidapi\windows\Win32\Release\hidapi.dll">
+        <ContentWithTargetPath Include="..\thirdparty\hidapi\windows\Win32\Release\hidapi.dll">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<TargetPath>x86\%(Filename)%(Extension)</TargetPath>
         </ContentWithTargetPath>
-        <ContentWithTargetPath Include="..\hidapi\windows\x64\Release\hidapi.dll">
+        <ContentWithTargetPath Include="..\thirdparty\hidapi\windows\x64\Release\hidapi.dll">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<TargetPath>x64\%(Filename)%(Extension)</TargetPath>
         </ContentWithTargetPath>

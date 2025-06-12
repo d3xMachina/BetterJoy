@@ -120,7 +120,9 @@ public class OutputControllerDualShock4
         }
 
         _controller.AutoSubmitReport = false;
+#pragma warning disable CS0618 // Type or member is obsolete
         _controller.FeedbackReceived += FeedbackReceivedRcv;
+#pragma warning restore CS0618
     }
 
     private void FeedbackReceivedRcv(object sender, DualShock4FeedbackReceivedEventArgs e)

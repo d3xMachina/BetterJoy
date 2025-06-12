@@ -1360,7 +1360,7 @@ internal class Program
     }
 
     [STAThread]
-    private static async Task Main(string[] args)
+    private static async Task Main()
     {
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 

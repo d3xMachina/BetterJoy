@@ -73,7 +73,6 @@ public static class Manager
             DeviceNotificationReceived?.Invoke(null, new DeviceNotificationEventArgs(deviceInfo, (HotplugEvent)events));
             return 0; // keep the callback registered
         }
-        ;
 
         int ret = Native.NativeMethods.HotplugRegisterCallback(
             0x0,

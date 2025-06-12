@@ -1,9 +1,9 @@
-[submodule "ViGEm.NET"]
-	path = ViGEm.NET
-	url = https://github.com/d3xMachina/ViGEm.NET
-[submodule "hidapi"]
-	path = hidapi
+[submodule "thirdparty/hidapi"]
+	path = thirdparty/hidapi
 	url = https://github.com/d3xMachina/hidapi.git
-[submodule "WindowsInput"]
-	path = WindowsInput
-	url = https://github.com/d3xMachina/WindowsInput
+[submodule "thirdparty/ViGEm.NET"]
+	path = thirdparty/ViGEm.NET
+	url = https://github.com/d3xMachina/ViGEm.NET.git
+[submodule "thirdparty/WindowsInput"]
+	path = thirdparty/WindowsInput
+	url = https://github.com/d3xMachina/WindowsInput.git

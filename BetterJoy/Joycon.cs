@@ -1086,7 +1086,7 @@ public class Joycon
 
                     if (sendReport)
                     {
-                        controllerReport = UdpServer.MakeControllerReport(this);
+                        controllerReport = new UdpControllerReport(this);
                     }
                     break;
                 }
@@ -1098,10 +1098,10 @@ public class Joycon
                 {
                     if (n == 0)
                     {
-                        controllerReport = UdpServer.MakeControllerReport(this, deltaPacketsMicroseconds);
+                        controllerReport = new UdpControllerReport(this, deltaPacketsMicroseconds);
                     }
 
-                    UdpServer.AddMotionToControllerReport(controllerReport, this, n);
+                    controllerReport.AddMotion(this, n);
                 }
 
                 DoThingsWithIMU();
@@ -1114,7 +1114,7 @@ public class Joycon
             if (sendReport)
             {
                 // We add the input at the end to take the controller remapping into account
-                UdpServer.AddInputToControllerReport(controllerReport, this);
+                controllerReport.AddInput(this);
 
                 Program.Server.SendControllerReport(controllerReport);
             }
@@ -3356,15 +3356,17 @@ public class Joycon
     {
         return type switch
         {
-            ControllerType.JoyconLeft => "Left joycon",
+#pragma warning disable IDE0055 // Disable formatting
+            ControllerType.JoyconLeft  => "Left joycon",
             ControllerType.JoyconRight => "Right joycon",
-            ControllerType.Pro => "Pro controller",
-            ControllerType.SNES => "SNES controller",
-            ControllerType.NES => "NES controller",
-            ControllerType.FamicomI => "Famicom I controller",
-            ControllerType.FamicomII => "Famicom II controller",
-            ControllerType.N64 => "N64 controller",
-            _ => "Controller"
+            ControllerType.Pro         => "Pro controller",
+            ControllerType.SNES        => "SNES controller",
+            ControllerType.NES         => "NES controller",
+            ControllerType.FamicomI    => "Famicom I controller",
+            ControllerType.FamicomII   => "Famicom II controller",
+            ControllerType.N64         => "N64 controller",
+            _                          => "Controller"
+#pragma warning restore IDE0055
         };
     }
 
