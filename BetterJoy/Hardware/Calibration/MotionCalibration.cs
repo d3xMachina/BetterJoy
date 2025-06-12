@@ -68,8 +68,7 @@ public class MotionCalibration
         var inputAccelerometerSensitivity = new ThreeAxisShort(values[3], values[4], values[5]);
         var inputGyroscopeNeutral = new ThreeAxisShort(values[6], values[7], values[8]);
         var inputGyroscopeSensitivity = new ThreeAxisShort(values[9], values[10], values[11]);
-
-
+        
         AccelerometerNeutral = inputAccelerometerNeutral.Invalid
             ? _defaultAccelerometerNeutralConfig
             : inputAccelerometerNeutral;
