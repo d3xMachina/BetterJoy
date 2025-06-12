@@ -2704,7 +2704,7 @@ public class Joycon
                 }
             }
 
-            _motionCalibration = new MotionCalibration(sensorData[..23]);
+            _motionCalibration = new MotionCalibration(sensorData[..24]);
 
             if (_motionCalibration.UsedDefaultValues)
             {
