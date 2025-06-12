@@ -1,10 +1,10 @@
 using BetterJoy.Collections;
 using BetterJoy.Config;
-using BetterJoy.Controller;
+using BetterJoy.Controller.Mapping;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
-using BetterJoy.Hardware;
 using BetterJoy.Hardware.Calibration;
+using BetterJoy.Hardware.Data;
 using BetterJoy.Hardware.SubCommandUtils;
 using BetterJoy.Network;
 using BetterJoy.Network.Server;
@@ -14,13 +14,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using WindowsInput.Events;
 
-namespace BetterJoy;
+namespace BetterJoy.Controller;
 
 public class Joycon
 {
@@ -68,10 +67,10 @@ public class Joycon
         All,
         Comms,
         Threading,
-        IMU,
+        Motion,
         Rumble,
         Shake,
-        Test
+        Dev
     }
 
     public enum Status : uint
@@ -81,7 +80,7 @@ public class Joycon
         Errored,
         Dropped,
         Attached,
-        IMUDataOk
+        MotionDataOk
     }
 
     public enum BatteryLevel
@@ -121,7 +120,6 @@ public class Joycon
 
     private static readonly byte[] _ledById = [0b0001, 0b0011, 0b0111, 0b1111, 0b1001, 0b0101, 0b1101, 0b0110];
 
-    private ThreeAxisShort _accRaw = new(0, 0, 0);
     private MotionCalibration _motionCalibration = new();
 
     private readonly MadgwickAHRS _AHRS; // for getting filtered Euler angles of rotation; 5ms sampling rate
@@ -133,12 +131,10 @@ public class Joycon
     private readonly bool[] _buttonsPrev = new bool[20];
     private readonly bool[] _buttonsRemapped = new bool[20];
 
-    private readonly float[] _curRotation = [0, 0, 0, 0, 0, 0]; // Filtered IMU data
+    private readonly float[] _curRotation = [0, 0, 0, 0, 0, 0]; // Filtered motion data
 
     private static readonly byte[] _stopRumbleBuf = [0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40]; // Stop rumble
     private readonly byte[] _rumbleBuf;
-
-    private ThreeAxisShort _gyrRaw = new(0, 0, 0);
 
     private readonly Dictionary<int, bool> _mouseToggleBtn = [];
 
@@ -152,18 +148,18 @@ public class Joycon
     private readonly byte[] _sliderVal = [0, 0];
 
     private StickRangeCalibration _stickCal = new();
-    private readonly ushort[] _stickPrecal = [0, 0];
+    private TwoAxisUShort _stickPrecal;
 
     private StickRangeCalibration _stick2Cal = new();
-    private readonly ushort[] _stick2Precal = [0, 0];
+    private TwoAxisUShort _stick2Precal;
 
-    private Vector3 _accG = Vector3.Zero;
+    private Motion _motion;
     public bool ActiveGyro;
 
     private bool _DumpedCalibration = false;
-    private bool _IMUCalibrated = false;
+    private bool _motionCalibrated = false;
     private bool _SticksCalibrated = false;
-    private readonly short[] _activeIMUData = new short[6];
+    private readonly short[] _activeMotionData = new short[6];
     private StickRangeCalibration _activeStick1 = new();
     private StickRangeCalibration _activeStick2 = new();
 
@@ -179,7 +175,6 @@ public class Joycon
     private readonly Logger _logger;
 
     private byte _globalCount;
-    private Vector3 _gyrG = Vector3.Zero;
 
     private readonly HIDApi.Device _device;
     private bool _hasShaked;
@@ -229,8 +224,8 @@ public class Joycon
         }
     }
 
-    private readonly float[] _stick = [0, 0];
-    private readonly float[] _stick2 = [0, 0];
+    private Stick _stick;
+    private Stick _stick2;
 
     private CancellationTokenSource _ctsCommunications;
     public ulong Timestamp { get; private set; }
@@ -242,10 +237,10 @@ public class Joycon
 
     public EventHandler<StateChangedEventArgs> StateChanged;
 
-    public readonly ConcurrentList<IMUData> CalibrationIMUDatas = [];
+    public readonly ConcurrentList<MotionShort> CalibrationMotionDatas = [];
     public readonly ConcurrentList<SticksData> CalibrationStickDatas = [];
     private bool _calibrateSticks = false;
-    private bool _calibrateIMU = false;
+    private bool _calibrateMotion = false;
 
     private readonly Stopwatch _timeSinceReceive = new();
     private readonly RollingAverage _avgReceiveDeltaMs = new(100); // delta is around 10-16ms, so rolling average over 1000-1600ms
@@ -356,18 +351,18 @@ public class Joycon
         _requestSetLEDByPadID = true;
     }
 
-    public void GetActiveIMUData()
+    public void GetActiveMotionData()
     {
-        var activeIMUData = _form.ActiveCaliIMUData(SerialOrMac);
+        var activeMotionData = _form.ActiveCalibrationMotionData(SerialOrMac);
 
-        if (activeIMUData != null)
+        if (activeMotionData != null)
         {
-            Array.Copy(activeIMUData, _activeIMUData, 6);
-            _IMUCalibrated = true;
+            Array.Copy(activeMotionData, _activeMotionData, 6);
+            _motionCalibrated = true;
         }
         else
         {
-            _IMUCalibrated = false;
+            _motionCalibrated = false;
         }
     }
 
@@ -449,14 +444,9 @@ public class Joycon
         Log(stringifyable.ToString(), Logger.LogLevel.Debug, type);
     }
 
-    public Vector3 GetGyro()
+    public Motion GetMotion()
     {
-        return _gyrG;
-    }
-
-    public Vector3 GetAccel()
-    {
-        return _accG;
+        return _motion;
     }
 
     public bool Reset()
@@ -514,8 +504,8 @@ public class Joycon
             BlinkHomeLight();
             SetLEDByPlayerNum(PadId);
 
-            SetIMU(true);
-            SetIMUSensitivity();
+            SetMotion(true);
+            SetMotionSensitivity();
 
             SetRumble(true);
             SetNFCIR(false);
@@ -682,9 +672,9 @@ public class Joycon
         return SubcommandCheck(SubCommandOperation.SetHCIState, [state]);
     }
 
-    private void SetIMU(bool enable)
+    private void SetMotion(bool enable)
     {
-        if (!IMUSupported())
+        if (!MotionSupported())
         {
             return;
         }
@@ -692,9 +682,9 @@ public class Joycon
         SubcommandCheck(SubCommandOperation.EnableIMU, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
-    private void SetIMUSensitivity()
+    private void SetMotionSensitivity()
     {
-        if (!IMUSupported())
+        if (!MotionSupported())
         {
             return;
         }
@@ -884,7 +874,7 @@ public class Joycon
         {
             if (IsDeviceReady)
             {
-                //SetIMU(false);
+                //SetMotion(false);
                 //SetRumble(false);
                 var sent = Retry(() => SetReportMode(InputReportMode.SimpleHID));
                 if (sent)
@@ -970,8 +960,8 @@ public class Joycon
     {
         try
         {
-            OutDs4.UpdateInput(MapToDualShock4Input(this));
-            OutXbox.UpdateInput(MapToXbox360Input(this));
+            OutDs4.UpdateInput(MapToDualShock4Input());
+            OutXbox.UpdateInput(MapToXbox360Input());
         }
         // ignore
         catch (Exception e)
@@ -1030,14 +1020,14 @@ public class Joycon
 
     private void ProcessInputReport(ReadOnlySpan<byte> buf)
     {
-        const int NbIMUPackets = 3;
+        const int NbMotionPackets = 3;
 
         ulong deltaPacketsMicroseconds = 0;
         byte packetType = buf[0];
 
         if (packetType == (byte)InputReportMode.StandardFull)
         {
-            // Determine the IMU timestamp with a rolling average instead of relying on the unreliable packet's timestamp
+            // Determine the motion timestamp with a rolling average instead of relying on the unreliable packet's timestamp
             // more detailed explanations on why : https://github.com/torvalds/linux/blob/52b1853b080a082ec3749c3a9577f6c71b1d4a90/drivers/hid/hid-nintendo.c#L1115
             if (_timeSinceReceive.IsRunning)
             {
@@ -1046,7 +1036,7 @@ public class Joycon
             }
             _timeSinceReceive.Restart();
 
-            var deltaPacketsMs = _avgReceiveDeltaMs.GetAverage() / NbIMUPackets;
+            var deltaPacketsMs = _avgReceiveDeltaMs.GetAverage() / NbMotionPackets;
             deltaPacketsMicroseconds = (ulong)(deltaPacketsMs * 1000);
 
             _AHRS.SamplePeriod = deltaPacketsMs / 1000;
@@ -1076,12 +1066,12 @@ public class Joycon
             var sendReport = Program.Server != null && Program.Server.HasClients;
 
             // Process packets as soon as they come
-            for (var n = 0; n < NbIMUPackets; ++n)
+            for (var n = 0; n < NbMotionPackets; ++n)
             {
-                bool updateIMU = ExtractIMUValues(buf, n);
-                if (!updateIMU)
+                bool updateMotion = ExtractMotionValues(buf, n);
+                if (!updateMotion)
                 {
-                    Timestamp += deltaPacketsMicroseconds * NbIMUPackets;
+                    Timestamp += deltaPacketsMicroseconds * NbMotionPackets;
                     PacketCounter++;
 
                     if (sendReport)
@@ -1104,7 +1094,7 @@ public class Joycon
                     controllerReport.AddMotion(this, n);
                 }
 
-                DoThingsWithIMU();
+                DoThingsWithMotion();
             }
 
             DoThingsWithButtons();
@@ -1151,7 +1141,7 @@ public class Joycon
         if (!_hasShaked)
         {
             // Shake detection logic
-            var isShaking = GetAccel().LengthSquared() >= Config.ShakeSensitivity;
+            var isShaking = _motion.Accelerometer.LengthSquared() >= Config.ShakeSensitivity;
             if (isShaking && (currentShakeTime >= _shakedTime + Config.ShakeDelay || _shakedTime == 0))
             {
                 _shakedTime = currentShakeTime;
@@ -1447,7 +1437,7 @@ public class Joycon
     // Must be done by all controllers when any button is updated (in the case they are joined)
     private void DoThingsWithButtonsEachController()
     {
-        if (Config.ChangeOrientationDoubleClick && IsJoycon && !_calibrateSticks && !_calibrateIMU)
+        if (Config.ChangeOrientationDoubleClick && IsJoycon && !_calibrateSticks && !_calibrateMotion)
         {
             const int MaxClickDelayMs = 300;
 
@@ -1513,10 +1503,10 @@ public class Joycon
         }
     }
 
-    // Must be done by all controllers when their IMU is updated (in the case they are joined)
-    private void DoThingsWithIMUEachController()
+    // Must be done by all controllers when their motion is updated (in the case they are joined)
+    private void DoThingsWithMotionEachController()
     {
-        // Filtered IMU data
+        // Filtered motion data
         _AHRS.GetEulerAngles(_curRotation);
 
         DetectShake();
@@ -1525,14 +1515,14 @@ public class Joycon
         {
             int dy;
 
-            if (Config.UseFilteredIMU)
+            if (Config.UseFilteredMotion)
             {
                 dy = (int)(Config.GyroAnalogSensitivity * (_curRotation[0] - _curRotation[3]));
             }
             else
             {
                 float dt = _AHRS.SamplePeriod;
-                dy = (int)(Config.GyroAnalogSensitivity * (_gyrG.Y * dt));
+                dy = (int)(Config.GyroAnalogSensitivity * (_motion.Gyroscope.Y * dt));
             }
 
             if (_buttons[(int)Button.Shoulder2])
@@ -1576,22 +1566,22 @@ public class Joycon
                 if (Settings.Value("active_gyro") == "0" || ActiveGyro)
                 {
                     var mainController = GetMainController();
-                    var controlStick = Config.ExtraGyroFeature == "joy_left" ? mainController._stick : mainController._stick2;
+                    ref var controlStick = ref (Config.ExtraGyroFeature == "joy_left" ? ref mainController._stick : ref mainController._stick2);
 
                     float dx, dy;
-                    if (Config.UseFilteredIMU)
+                    if (Config.UseFilteredMotion)
                     {
                         dx = Config.GyroStickSensitivity[0] * (_curRotation[1] - _curRotation[4]); // yaw
                         dy = -(Config.GyroStickSensitivity[1] * (_curRotation[0] - _curRotation[3])); // pitch
                     }
                     else
                     {
-                        dx = Config.GyroStickSensitivity[0] * (_gyrG.Z * dt); // yaw
-                        dy = -(Config.GyroStickSensitivity[1] * (_gyrG.Y * dt)); // pitch
+                        dx = Config.GyroStickSensitivity[0] * (_motion.Gyroscope.Z * dt); // yaw
+                        dy = -(Config.GyroStickSensitivity[1] * (_motion.Gyroscope.Y * dt)); // pitch
                     }
 
-                    controlStick[0] = Math.Clamp(controlStick[0] / Config.GyroStickReduction + dx, -1.0f, 1.0f);
-                    controlStick[1] = Math.Clamp(controlStick[1] / Config.GyroStickReduction + dy, -1.0f, 1.0f);
+                    controlStick.X = Math.Clamp(controlStick.X / Config.GyroStickReduction + dx, -1.0f, 1.0f);
+                    controlStick.Y = Math.Clamp(controlStick.Y / Config.GyroStickReduction + dy, -1.0f, 1.0f);
                 }
             }
             else if (Config.ExtraGyroFeature == "mouse")
@@ -1601,15 +1591,15 @@ public class Joycon
                 {
                     int dx, dy;
 
-                    if (Config.UseFilteredIMU)
+                    if (Config.UseFilteredMotion)
                     {
                         dx = (int)(Config.GyroMouseSensitivity[0] * (_curRotation[1] - _curRotation[4])); // yaw
                         dy = (int)-(Config.GyroMouseSensitivity[1] * (_curRotation[0] - _curRotation[3])); // pitch
                     }
                     else
                     {
-                        dx = (int)(Config.GyroMouseSensitivity[0] * (_gyrG.Z * dt));
-                        dy = (int)-(Config.GyroMouseSensitivity[1] * (_gyrG.Y * dt));
+                        dx = (int)(Config.GyroMouseSensitivity[0] * (_motion.Gyroscope.Z * dt));
+                        dy = (int)-(Config.GyroMouseSensitivity[1] * (_motion.Gyroscope.Y * dt));
                     }
 
                     WindowsInput.Simulate.Events().MoveBy(dx, dy).Invoke();
@@ -1631,9 +1621,9 @@ public class Joycon
         mainController.DoThingsWithButtonsMainController();
     }
 
-    private void DoThingsWithIMU()
+    private void DoThingsWithMotion()
     {
-        DoThingsWithIMUEachController();
+        DoThingsWithMotionEachController();
     }
 
     private void GetBatteryInfos(ReadOnlySpan<byte> reportBuf)
@@ -1738,7 +1728,7 @@ public class Joycon
         Stopwatch timeSinceRequest = new();
         int reconnectAttempts = 0;
 
-        // For IMU timestamp calculation
+        // For motion timestamp calculation
         _avgReceiveDeltaMs.Clear();
         _avgReceiveDeltaMs.AddValue(15); // default value of 15ms between packets
         _timeSinceReceive.Reset();
@@ -1859,7 +1849,7 @@ public class Joycon
 
                     if (IsDeviceReady)
                     {
-                        State = Status.IMUDataOk;
+                        State = Status.MotionDataOk;
                         timeSinceError.Reset();
                         reconnectAttempts = 0;
                         _pauseSendCommands = false;
@@ -1907,13 +1897,13 @@ public class Joycon
         {
             var offset = IsLeft ? 0 : 3;
 
-            _stickPrecal[0] = BitWrangler.Lower3NibblesLittleEndian(reportBuf[6 + offset], reportBuf[7 + offset]);
-            _stickPrecal[1] = BitWrangler.Upper3NibblesLittleEndian(reportBuf[7 + offset], reportBuf[8 + offset]);
+            _stickPrecal.X = BitWrangler.Lower3NibblesLittleEndian(reportBuf[6 + offset], reportBuf[7 + offset]);
+            _stickPrecal.Y = BitWrangler.Upper3NibblesLittleEndian(reportBuf[7 + offset], reportBuf[8 + offset]);
 
             if (IsPro)
             {
-                _stick2Precal[0] = BitWrangler.Lower3NibblesLittleEndian(reportBuf[9], reportBuf[10]);
-                _stick2Precal[1] = BitWrangler.Upper3NibblesLittleEndian(reportBuf[10], reportBuf[11]);
+                _stick2Precal.X = BitWrangler.Lower3NibblesLittleEndian(reportBuf[9], reportBuf[10]);
+                _stick2Precal.Y = BitWrangler.Upper3NibblesLittleEndian(reportBuf[10], reportBuf[11]);
             }
         }
         else if (reportType == (byte)InputReportMode.SimpleHID)
@@ -1922,11 +1912,11 @@ public class Joycon
             {
                 // Scale down to 12 bits to match the calibrations datas precision
                 // Invert y axis by substracting from 0xFFFF to match 0x30 reports 
-                _stickPrecal[0] = Scale16bitsTo12bits(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[4], reportBuf[5]));
-                _stickPrecal[1] = Scale16bitsTo12bits(BitWrangler.InvertWord(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[6], reportBuf[7])));
+                _stickPrecal.X = Scale16bitsTo12bits(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[4], reportBuf[5]));
+                _stickPrecal.Y = Scale16bitsTo12bits(BitWrangler.InvertWord(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[6], reportBuf[7])));
 
-                _stick2Precal[0] = Scale16bitsTo12bits(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[8], reportBuf[9]));
-                _stick2Precal[1] = Scale16bitsTo12bits(BitWrangler.InvertWord(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[10], (reportBuf[11]))));
+                _stick2Precal.X = Scale16bitsTo12bits(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[8], reportBuf[9]));
+                _stick2Precal.Y = Scale16bitsTo12bits(BitWrangler.InvertWord(BitWrangler.EncodeBytesAsWordLittleEndian(reportBuf[10], (reportBuf[11]))));
             }
             else
             {
@@ -1969,8 +1959,8 @@ public class Joycon
                     case 0x08: default: break; // center
                 }
 
-                _stickPrecal[0] = (ushort)(_stickCal.XCenter + offsetX);
-                _stickPrecal[1] = (ushort)(_stickCal.YCenter + offsetY);
+                _stickPrecal.X = (ushort)(_stickCal.XCenter + offsetX);
+                _stickPrecal.Y = (ushort)(_stickCal.YCenter + offsetY);
             }
         }
         else
@@ -2081,7 +2071,7 @@ public class Joycon
                 range = Config.StickLeftRange;
             }
 
-            CalculateStickCenter(_stickPrecal, cal, dz, range, antiDeadzone, _stick);
+            CalculateStickCenter(_stickPrecal, cal, dz, range, antiDeadzone, ref _stick);
 
             if (IsPro)
             {
@@ -2097,22 +2087,17 @@ public class Joycon
                     range = Config.StickRightRange;
                 }
 
-                CalculateStickCenter(_stick2Precal, cal, dz, range, antiDeadzone, _stick2);
+                CalculateStickCenter(_stick2Precal, cal, dz, range, antiDeadzone, ref _stick2);
             }
             // Read other Joycon's sticks
             else
             {
-                Array.Clear(_stick2);
+                _stick2 = Stick.Zero;
             }
 
             if (_calibrateSticks)
             {
-                var sticks = new SticksData(
-                    _stickPrecal[0],
-                    _stickPrecal[1],
-                    _stick2Precal[0],
-                    _stick2Precal[1]
-                );
+                var sticks = new SticksData(_stickPrecal, _stick2Precal);
                 CalibrationStickDatas.Add(sticks);
             }
             else
@@ -2148,7 +2133,7 @@ public class Joycon
         mainController._buttons[(int)Button.Home] = OtherController._buttons[(int)Button.Home];
         mainController._buttons[(int)Button.Plus] = OtherController._buttons[(int)Button.Plus];
 
-        Array.Copy(OtherController._stick, mainController._stick2, mainController._stick2.Length);
+        mainController._stick2 = OtherController._stick;
     }
 
     // Must be done by all controllers when their input is updated (in the case they are joined)
@@ -2160,10 +2145,10 @@ public class Joycon
         if (SticksSupported())
         {
             const float StickActivityThreshold = 0.1f;
-            if (MathF.Abs(_stick[0]) > StickActivityThreshold ||
-                MathF.Abs(_stick[1]) > StickActivityThreshold ||
-                MathF.Abs(_stick2[0]) > StickActivityThreshold ||
-                MathF.Abs(_stick2[1]) > StickActivityThreshold)
+            if (MathF.Abs(_stick.X) > StickActivityThreshold ||
+                MathF.Abs(_stick.Y) > StickActivityThreshold ||
+                MathF.Abs(_stick2.X) > StickActivityThreshold ||
+                MathF.Abs(_stick2.Y) > StickActivityThreshold)
             {
                 activity = true;
             }
@@ -2217,23 +2202,29 @@ public class Joycon
     }
 
     // Get Gyro/Accel data
-    private bool ExtractIMUValues(ReadOnlySpan<byte> reportBuf, int n = 0)
+    private bool ExtractMotionValues(ReadOnlySpan<byte> reportBuf, int n = 0)
     {
-        if (!IMUSupported() || reportBuf[0] != (byte)InputReportMode.StandardFull)
+        if (!MotionSupported() || reportBuf[0] != (byte)InputReportMode.StandardFull)
         {
             return false;
         }
 
         var offset = n * 12;
 
-        _gyrRaw.X = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[19 + offset], reportBuf[20 + offset]);
-        _gyrRaw.Y = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[21 + offset], reportBuf[22 + offset]);
-        _gyrRaw.Z = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[23 + offset], reportBuf[24 + offset]);
-        _accRaw.X = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[13 + offset], reportBuf[14 + offset]);
-        _accRaw.Y = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[15 + offset], reportBuf[16 + offset]);
-        _accRaw.Z = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[17 + offset], reportBuf[18 + offset]);
+        MotionShort motionRaw = new(
+            Gyroscope: new(
+                X: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[19 + offset], reportBuf[20 + offset]),
+                Y: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[21 + offset], reportBuf[22 + offset]),
+                Z: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[23 + offset], reportBuf[24 + offset])
+            ),
+            Accelerometer: new(
+                X: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[13 + offset], reportBuf[14 + offset]),
+                Y: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[15 + offset], reportBuf[16 + offset]),
+                Z: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[17 + offset], reportBuf[18 + offset])
+            )
+        );
 
-        if (_calibrateIMU)
+        if (_calibrateMotion)
         {
             // We need to add the accelerometer offset from the origin position when it's on a flat surface
             ThreeAxisShort accOffset;
@@ -2250,74 +2241,71 @@ public class Joycon
                 accOffset = _accRightHorOffset;
             }
 
-            var imuData = new IMUData(
-                _gyrRaw.X,
-                _gyrRaw.Y,
-                _gyrRaw.Z,
-                (short)(_accRaw.X - accOffset.X),
-                (short)(_accRaw.Y - accOffset.Y),
-                (short)(_accRaw.Z - accOffset.Z)
-            );
-            CalibrationIMUDatas.Add(imuData);
+            var motionData = new MotionShort(motionRaw.Gyroscope, motionRaw.Accelerometer - accOffset);
+            CalibrationMotionDatas.Add(motionData);
         }
 
         var direction = IsLeft ? 1 : -1;
 
-        if (_IMUCalibrated)
-        {
-            _accG.X = (_accRaw.X - _activeIMUData[3]) * (1.0f / (_motionCalibration.AccelerometerSensitivity.X - _motionCalibration.AccelerometerNeutral.X)) * 4.0f;
-            _gyrG.X = (_gyrRaw.X - _activeIMUData[0]) * (816.0f / (_motionCalibration.GyroscopeSensitivity.X - _activeIMUData[0]));
+        MotionShort neutral = _motionCalibrated
+            ? new(
+                Accelerometer: new(
+                    X: _activeMotionData[3],
+                    Y: _activeMotionData[4],
+                    Z: _activeMotionData[5]
+                ),
+                Gyroscope: new(
+                    X: _activeMotionData[0],
+                    Y: _activeMotionData[1],
+                    Z: _activeMotionData[2]
+                )
+            )
+            : new(
+                // Don't use neutral position with factory calibration for the accelerometer, it's more accurate
+                Accelerometer: ThreeAxisShort.Zero,
+                Gyroscope: _motionCalibration.GyroscopeNeutral
+            );
 
-            _accG.Y = direction * (_accRaw.Y - _activeIMUData[4]) * (1.0f / (_motionCalibration.AccelerometerSensitivity.Y - _motionCalibration.AccelerometerNeutral.Y)) * 4.0f;
-            _gyrG.Y = -direction * (_gyrRaw.Y - _activeIMUData[1]) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Y - _activeIMUData[1]));
+        _motion.Accelerometer.X = (motionRaw.Accelerometer.X - neutral.Accelerometer.X) * (1.0f / (_motionCalibration.AccelerometerSensitivity.X - _motionCalibration.AccelerometerNeutral.X)) * 4.0f;
+        _motion.Accelerometer.Y = direction * (motionRaw.Accelerometer.Y - neutral.Accelerometer.Y) * (1.0f / (_motionCalibration.AccelerometerSensitivity.Y - _motionCalibration.AccelerometerNeutral.Y)) * 4.0f;
+        _motion.Accelerometer.Z = direction * (motionRaw.Accelerometer.Z - neutral.Accelerometer.Z) * (1.0f / (_motionCalibration.AccelerometerSensitivity.Z - _motionCalibration.AccelerometerNeutral.Z)) * 4.0f;
 
-            _accG.Z = direction * (_accRaw.Z - _activeIMUData[5]) * (1.0f / (_motionCalibration.AccelerometerSensitivity.Z - _motionCalibration.AccelerometerNeutral.Z)) * 4.0f;
-            _gyrG.Z = -direction * (_gyrRaw.Z - _activeIMUData[2]) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Z - _activeIMUData[2]));
-        }
-        else
-        {
-            _accG.X = _accRaw.X * (1.0f / (_motionCalibration.AccelerometerSensitivity.X - _motionCalibration.AccelerometerNeutral.X)) * 4.0f;
-            _gyrG.X = (_gyrRaw.X - _motionCalibration.GyroscopeNeutral.X) * (816.0f / (_motionCalibration.GyroscopeSensitivity.X - _motionCalibration.GyroscopeNeutral.X));
-
-            _accG.Y = direction * _accRaw.Y * (1.0f / (_motionCalibration.AccelerometerSensitivity.Y - _motionCalibration.AccelerometerNeutral.Y)) * 4.0f;
-            _gyrG.Y = -direction * (_gyrRaw.Y - _motionCalibration.GyroscopeNeutral.Y) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Y - _motionCalibration.GyroscopeNeutral.Y));
-
-            _accG.Z = direction * _accRaw.Z * (1.0f / (_motionCalibration.AccelerometerSensitivity.Z - _motionCalibration.AccelerometerNeutral.Z)) * 4.0f;
-            _gyrG.Z = -direction * (_gyrRaw.Z - _motionCalibration.GyroscopeNeutral.Z) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Z - _motionCalibration.GyroscopeNeutral.Z));
-        }
+        _motion.Gyroscope.X = (motionRaw.Gyroscope.X - neutral.Gyroscope.X) * (816.0f / (_motionCalibration.GyroscopeSensitivity.X - neutral.Gyroscope.X));
+        _motion.Gyroscope.Y = -direction * (motionRaw.Gyroscope.Y - neutral.Gyroscope.Y) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Y - neutral.Gyroscope.Y));
+        _motion.Gyroscope.Z = -direction * (motionRaw.Gyroscope.Z - neutral.Gyroscope.Z) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Z - neutral.Gyroscope.Z));
 
         if (IsJoycon && Other == null)
         {
             // single joycon mode; Z do not swap, rest do
             if (IsLeft)
             {
-                _accG.X = -_accG.X;
-                _accG.Y = -_accG.Y;
-                _gyrG.X = -_gyrG.X;
+                _motion.Accelerometer.X = -_motion.Accelerometer.X;
+                _motion.Accelerometer.Y = -_motion.Accelerometer.Y;
+                _motion.Gyroscope.X = -_motion.Gyroscope.X;
             }
             else
             {
-                _gyrG.Y = -_gyrG.Y;
+                _motion.Gyroscope.Y = -_motion.Gyroscope.Y;
             }
 
-            var temp = _accG.X;
-            _accG.X = _accG.Y;
-            _accG.Y = -temp;
+            var temp = _motion.Accelerometer.X;
+            _motion.Accelerometer.X = _motion.Accelerometer.Y;
+            _motion.Accelerometer.Y = -temp;
 
-            temp = _gyrG.X;
-            _gyrG.X = _gyrG.Y;
-            _gyrG.Y = temp;
+            temp = _motion.Gyroscope.X;
+            _motion.Gyroscope.X = _motion.Gyroscope.Y;
+            _motion.Gyroscope.Y = temp;
         }
 
         // Update rotation Quaternion
         var degToRad = 0.0174533f;
         _AHRS.Update(
-            _gyrG.X * degToRad,
-            _gyrG.Y * degToRad,
-            _gyrG.Z * degToRad,
-            _accG.X,
-            _accG.Y,
-            _accG.Z
+            _motion.Gyroscope.X * degToRad,
+            _motion.Gyroscope.Y * degToRad,
+            _motion.Gyroscope.Z * degToRad,
+            _motion.Accelerometer.X,
+            _motion.Accelerometer.Y,
+            _motion.Accelerometer.Z
         );
 
         return true;
@@ -2388,10 +2376,10 @@ public class Joycon
         Log("Ready.");
     }
 
-    private void CalculateStickCenter(ushort[] vals, StickRangeCalibration cal, float deadzone, float range, float[] antiDeadzone, float[] stick)
+    private void CalculateStickCenter(TwoAxisUShort vals, StickRangeCalibration cal, float deadzone, float range, float[] antiDeadzone, ref Stick stick)
     {
-        float dx = vals[0] - cal.XCenter;
-        float dy = vals[1] - cal.YCenter;
+        float dx = vals.X - cal.XCenter;
+        float dy = vals.Y - cal.YCenter;
 
         float normalizedX = dx / (dx > 0 ? cal.XMax : cal.XMin);
         float normalizedY = dy / (dy > 0 ? cal.YMax : cal.YMin);
@@ -2401,8 +2389,8 @@ public class Joycon
         if (magnitude <= deadzone || range <= deadzone)
         {
             // Inner deadzone
-            stick[0] = 0.0f;
-            stick[1] = 0.0f;
+            stick.X = 0.0f;
+            stick.Y = 0.0f;
         }
         else
         {
@@ -2424,26 +2412,26 @@ public class Joycon
 
             if (!Config.SticksSquared || normalizedX == 0f || normalizedY == 0f)
             {
-                stick[0] = normalizedX;
-                stick[1] = normalizedY;
+                stick.X = normalizedX;
+                stick.Y = normalizedY;
             }
             else
             {
                 // Expand the circle to a square area
                 if (Math.Abs(normalizedX) > Math.Abs(normalizedY))
                 {
-                    stick[0] = Math.Sign(normalizedX) * normalizedMagnitudeX;
-                    stick[1] = stick[0] * normalizedY / normalizedX;
+                    stick.X = Math.Sign(normalizedX) * normalizedMagnitudeX;
+                    stick.Y = stick.X * normalizedY / normalizedX;
                 }
                 else
                 {
-                    stick[1] = Math.Sign(normalizedY) * normalizedMagnitudeY;
-                    stick[0] = stick[1] * normalizedX / normalizedY;
+                    stick.Y = Math.Sign(normalizedY) * normalizedMagnitudeY;
+                    stick.X = stick.Y * normalizedX / normalizedY;
                 }
             }
 
-            stick[0] = Math.Clamp(stick[0], -1.0f, 1.0f);
-            stick[1] = Math.Clamp(stick[1], -1.0f, 1.0f);
+            stick.X = Math.Clamp(stick.X, -1.0f, 1.0f);
+            stick.Y = Math.Clamp(stick.Y, -1.0f, 1.0f);
         }
     }
 
@@ -2570,7 +2558,7 @@ public class Joycon
         return IsJoycon || IsPro || IsN64;
     }
 
-    public bool IMUSupported()
+    public bool MotionSupported()
     {
         return IsJoycon || IsPro;
     }
@@ -2582,7 +2570,7 @@ public class Joycon
 
     private bool UseGyroAnalogSliders()
     {
-        return Config.GyroAnalogSliders && IMUSupported() && (!IsJoycon || Other != null);
+        return Config.GyroAnalogSliders && MotionSupported() && (!IsJoycon || Other != null);
     }
 
     private bool DumpCalibrationData()
@@ -2627,8 +2615,8 @@ public class Joycon
             }
 
             _stickCal = IsLeft ?
-                StickRangeCalibration.FromLeftStickCalibrationBytes(stick1Data[..9]) :
-                StickRangeCalibration.FromRightStickCalibrationBytes(stick1Data[..9]);
+                StickRangeCalibration.FromLeftStickCalibrationBytes(stick1Data) :
+                StickRangeCalibration.FromRightStickCalibrationBytes(stick1Data);
 
             DebugPrint(_stickCal, DebugType.None);
 
@@ -2651,7 +2639,7 @@ public class Joycon
                     }
                 }
 
-                _stick2Cal = StickRangeCalibration.FromRightStickCalibrationBytes(stick2Data[..9]);
+                _stick2Cal = StickRangeCalibration.FromRightStickCalibrationBytes(stick2Data);
 
                 DebugPrint(_stick2Cal, DebugType.None);
             }
@@ -2684,7 +2672,7 @@ public class Joycon
         }
 
         // Gyro and accelerometer
-        if (IMUSupported())
+        if (MotionSupported())
         {
             var userSensorData = ReadSPICheck(SPIPage.UserMotionCalibration, ref ok);
             var sensorData = new ReadOnlySpan<byte>(userSensorData, 2, 24);
@@ -2704,14 +2692,14 @@ public class Joycon
                 }
             }
 
-            _motionCalibration = new MotionCalibration(sensorData[..24]);
+            _motionCalibration = new MotionCalibration(sensorData);
 
             if (_motionCalibration.UsedDefaultValues)
             {
                 Log("Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
             }
 
-            DebugPrint(_motionCalibration, DebugType.IMU);
+            DebugPrint(_motionCalibration, DebugType.Motion);
         }
 
         if (!ok)
@@ -2728,21 +2716,21 @@ public class Joycon
     {
         if (userCalibration)
         {
-            GetActiveIMUData();
+            GetActiveMotionData();
             GetActiveSticksData();
         }
         else
         {
-            _IMUCalibrated = false;
+            _motionCalibrated = false;
             _SticksCalibrated = false;
         }
 
         var calibrationType = _SticksCalibrated ? "user" : _DumpedCalibration ? "controller" : "default";
         Log($"Using {calibrationType} sticks calibration.");
 
-        if (IMUSupported())
+        if (MotionSupported())
         {
-            calibrationType = _IMUCalibrated ? "user" : _DumpedCalibration ? "controller" : "default";
+            calibrationType = _motionCalibrated ? "user" : _DumpedCalibration ? "controller" : "default";
             Log($"Using {calibrationType} sensors calibration.");
         }
     }
@@ -2994,23 +2982,23 @@ public class Joycon
         return DpadDirection.None;
     }
 
-    private static OutputControllerXbox360InputState MapToXbox360Input(Joycon input)
+    private OutputControllerXbox360InputState MapToXbox360Input()
     {
         var output = new OutputControllerXbox360InputState();
 
-        var isN64 = input.IsN64;
-        var isJoycon = input.IsJoycon;
-        var isLeft = input.IsLeft;
-        var other = input.Other;
+        var isN64 = IsN64;
+        var isJoycon = IsJoycon;
+        var isLeft = IsLeft;
+        var other = Other;
 
-        var buttons = input._buttonsRemapped;
-        var stick = input._stick;
-        var stick2 = input._stick2;
-        var sliderVal = input._sliderVal;
+        var buttons = _buttonsRemapped;
+        var stick = _stick;
+        var stick2 = _stick2;
+        var sliderVal = _sliderVal;
 
-        var gyroAnalogSliders = input.UseGyroAnalogSliders();
-        var swapAB = input.Config.SwapAB;
-        var swapXY = input.Config.SwapXY;
+        var gyroAnalogSliders = UseGyroAnalogSliders();
+        var swapAB = Config.SwapAB;
+        var swapXY = Config.SwapXY;
 
         if (other != null && !isLeft)
         {
@@ -3101,17 +3089,17 @@ public class Joycon
             output.ThumbStickRight = buttons[(int)Button.Stick2];
         }
 
-        if (input.SticksSupported())
+        if (SticksSupported())
         {
             if (isJoycon && other == null)
             {
-                output.AxisLeftY = CastStickValue((isLeft ? 1 : -1) * stick[0]);
-                output.AxisLeftX = CastStickValue((isLeft ? -1 : 1) * stick[1]);
+                output.AxisLeftY = CastStickValue((isLeft ? 1 : -1) * stick.X);
+                output.AxisLeftX = CastStickValue((isLeft ? -1 : 1) * stick.Y);
             }
             else if (isN64)
             {
-                output.AxisLeftX = CastStickValue(stick[0]);
-                output.AxisLeftY = CastStickValue(stick[1]);
+                output.AxisLeftX = CastStickValue(stick.X);
+                output.AxisLeftY = CastStickValue(stick.Y);
 
                 // C buttons mapped to right stick
                 output.AxisRightX = CastStickValue((buttons[(int)Button.X] ? -1 : 0) + (buttons[(int)Button.Minus] ? 1 : 0));
@@ -3119,11 +3107,11 @@ public class Joycon
             }
             else
             {
-                output.AxisLeftX = CastStickValue(other == input && !isLeft ? stick2[0] : stick[0]);
-                output.AxisLeftY = CastStickValue(other == input && !isLeft ? stick2[1] : stick[1]);
+                output.AxisLeftX = CastStickValue(other == this && !isLeft ? stick2.X : stick.X);
+                output.AxisLeftY = CastStickValue(other == this && !isLeft ? stick2.Y : stick.Y);
 
-                output.AxisRightX = CastStickValue(other == input && !isLeft ? stick[0] : stick2[0]);
-                output.AxisRightY = CastStickValue(other == input && !isLeft ? stick[1] : stick2[1]);
+                output.AxisRightX = CastStickValue(other == this && !isLeft ? stick.X : stick2.X);
+                output.AxisRightY = CastStickValue(other == this && !isLeft ? stick.Y : stick2.Y);
             }
         }
 
@@ -3171,23 +3159,23 @@ public class Joycon
         return output;
     }
 
-    public static OutputControllerDualShock4InputState MapToDualShock4Input(Joycon input)
+    public OutputControllerDualShock4InputState MapToDualShock4Input()
     {
         var output = new OutputControllerDualShock4InputState();
 
-        var isN64 = input.IsN64;
-        var isJoycon = input.IsJoycon;
-        var isLeft = input.IsLeft;
-        var other = input.Other;
+        var isN64 = IsN64;
+        var isJoycon = IsJoycon;
+        var isLeft = IsLeft;
+        var other = Other;
 
-        var buttons = input._buttonsRemapped;
-        var stick = input._stick;
-        var stick2 = input._stick2;
-        var sliderVal = input._sliderVal;
+        var buttons = _buttonsRemapped;
+        var stick = _stick;
+        var stick2 = _stick2;
+        var sliderVal = _sliderVal;
 
-        var gyroAnalogSliders = input.UseGyroAnalogSliders();
-        var swapAB = input.Config.SwapAB;
-        var swapXY = input.Config.SwapXY;
+        var gyroAnalogSliders = UseGyroAnalogSliders();
+        var swapAB = Config.SwapAB;
+        var swapXY = Config.SwapXY;
 
         if (other != null && !isLeft)
         {
@@ -3285,20 +3273,20 @@ public class Joycon
             output.ThumbRight = buttons[(int)Button.Stick2];
         }
 
-        if (input.SticksSupported())
+        if (SticksSupported())
         {
             if (isJoycon && other == null)
             {
-                output.ThumbLeftY = CastStickValueByte((isLeft ? 1 : -1) * -stick[0]);
-                output.ThumbLeftX = CastStickValueByte((isLeft ? 1 : -1) * -stick[1]);
+                output.ThumbLeftY = CastStickValueByte((isLeft ? 1 : -1) * -stick.X);
+                output.ThumbLeftX = CastStickValueByte((isLeft ? 1 : -1) * -stick.Y);
 
                 output.ThumbRightX = CastStickValueByte(0);
                 output.ThumbRightY = CastStickValueByte(0);
             }
             else if (isN64)
             {
-                output.ThumbLeftX = CastStickValueByte(stick[0]);
-                output.ThumbLeftY = CastStickValueByte(-stick[1]);
+                output.ThumbLeftX = CastStickValueByte(stick.X);
+                output.ThumbLeftY = CastStickValueByte(-stick.Y);
 
                 // C buttons mapped to right stick
                 output.ThumbRightX = CastStickValueByte((buttons[(int)Button.X] ? -1 : 0) + (buttons[(int)Button.Minus] ? 1 : 0));
@@ -3306,14 +3294,14 @@ public class Joycon
             }
             else
             {
-                output.ThumbLeftX = CastStickValueByte(other == input && !isLeft ? stick2[0] : stick[0]);
-                output.ThumbLeftY = CastStickValueByte(other == input && !isLeft ? -stick2[1] : -stick[1]);
+                output.ThumbLeftX = CastStickValueByte(other == this && !isLeft ? stick2.X : stick.X);
+                output.ThumbLeftY = CastStickValueByte(other == this && !isLeft ? -stick2.Y : -stick.Y);
 
-                output.ThumbRightX = CastStickValueByte(other == input && !isLeft ? stick[0] : stick2[0]);
-                output.ThumbRightY = CastStickValueByte(other == input && !isLeft ? -stick[1] : -stick2[1]);
+                output.ThumbRightX = CastStickValueByte(other == this && !isLeft ? stick.X : stick2.X);
+                output.ThumbRightY = CastStickValueByte(other == this && !isLeft ? -stick.Y : -stick2.Y);
 
-                //input.DebugPrint($"X:{-stick[0]:0.00} Y:{stick[1]:0.00}", DebugType.Threading);
-                //input.DebugPrint($"X:{output.ThumbLeftX} Y:{output.ThumbLeftY}", DebugType.Threading);
+                //DebugPrint($"X:{-stick.X:0.00} Y:{stick.Y:0.00}", DebugType.Threading);
+                //DebugPrint($"X:{output.ThumbLeftX} Y:{output.ThumbLeftY}", DebugType.Threading);
             }
         }
 
@@ -3391,19 +3379,19 @@ public class Joycon
         }
     }
 
-    public void StartIMUCalibration()
+    public void StartMotionCalibration()
     {
-        CalibrationIMUDatas.Clear();
-        _calibrateIMU = true;
+        CalibrationMotionDatas.Clear();
+        _calibrateMotion = true;
     }
 
-    public void StopIMUCalibration(bool clean = false)
+    public void StopMotionCalibration(bool clean = false)
     {
-        _calibrateIMU = false;
+        _calibrateMotion = false;
 
         if (clean)
         {
-            CalibrationIMUDatas.Clear();
+            CalibrationMotionDatas.Clear();
         }
     }
 
@@ -3600,24 +3588,6 @@ public class Joycon
         }
     }
 
-    public struct IMUData(short xg, short yg, short zg, short xa, short ya, short za)
-    {
-        public short Xg = xg;
-        public short Yg = yg;
-        public short Zg = zg;
-        public short Xa = xa;
-        public short Ya = ya;
-        public short Za = za;
-    }
-
-    public struct SticksData(ushort x1, ushort y1, ushort x2, ushort y2)
-    {
-        public ushort Xs1 = x1;
-        public ushort Ys1 = y1;
-        public ushort Xs2 = x2;
-        public ushort Ys2 = y2;
-    }
-
     private class RollingAverage
     {
         private readonly Queue<int> _samples;
@@ -3660,3 +3630,5 @@ public class Joycon
         }
     }
 }
+
+public record struct SticksData(TwoAxisUShort Stick1, TwoAxisUShort Stick2);

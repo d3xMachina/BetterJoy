@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace BetterJoy.Hardware;
+namespace BetterJoy.Hardware.Data;
 
 public static class BitWrangler
 {

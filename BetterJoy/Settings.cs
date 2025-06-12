@@ -50,8 +50,8 @@ public static class Settings
     }
 
     public static void Init(
-        List<KeyValuePair<string, short[]>> caliIMUData,
-        List<KeyValuePair<string, ushort[]>> caliSticksData
+        List<KeyValuePair<string, short[]>> calibrationMotionData,
+        List<KeyValuePair<string, ushort[]>> calibrationSticksData
     )
     {
         foreach (var s in new[]
@@ -69,7 +69,7 @@ public static class Settings
             if (CountLinesInFile(_path) < SettingsNum)
             {
                 File.Delete(_path);
-                Init(caliIMUData, caliSticksData);
+                Init(calibrationMotionData, calibrationSticksData);
                 return;
             }
 
@@ -91,8 +91,8 @@ public static class Settings
                         // load in calibration presets
                         if (lineNo == SettingsNum)
                         {
-                            // IMU
-                            caliIMUData.Clear();
+                            // Motion
+                            calibrationMotionData.Clear();
                             for (var i = 0; i < vs.Length; i++)
                             {
                                 var caliArr = vs[i].Split(',');
@@ -102,7 +102,7 @@ public static class Settings
                                     newArr[j - 1] = short.Parse(caliArr[j]);
                                 }
 
-                                caliIMUData.Add(
+                                calibrationMotionData.Add(
                                     new KeyValuePair<string, short[]>(
                                         caliArr[0],
                                         newArr
@@ -113,7 +113,7 @@ public static class Settings
                         else if (lineNo == SettingsNum + 1)
                         {
                             // Sticks
-                            caliSticksData.Clear();
+                            calibrationSticksData.Clear();
                             for (var i = 0; i < vs.Length; i++)
                             {
                                 var caliArr = vs[i].Split(',');
@@ -123,7 +123,7 @@ public static class Settings
                                     newArr[j - 1] = ushort.Parse(caliArr[j]);
                                 }
 
-                                caliSticksData.Add(
+                                calibrationSticksData.Add(
                                     new KeyValuePair<string, ushort[]>(
                                         caliArr[0],
                                         newArr
@@ -146,9 +146,9 @@ public static class Settings
                 file.WriteLine("{0} {1}", k, _variables[k]);
             }
 
-            // IMU Calibration
+            // Motion Calibration
             var caliStr = "";
-            for (var i = 0; i < caliIMUData.Count; i++)
+            for (var i = 0; i < calibrationMotionData.Count; i++)
             {
                 var space = " ";
                 if (i == 0)
@@ -156,14 +156,14 @@ public static class Settings
                     space = "";
                 }
 
-                caliStr += space + caliIMUData[i].Key + "," + string.Join(",", caliIMUData[i].Value);
+                caliStr += space + calibrationMotionData[i].Key + "," + string.Join(",", calibrationMotionData[i].Value);
             }
 
             file.WriteLine(caliStr);
 
             // Stick Calibration
             caliStr = "";
-            for (var i = 0; i < caliSticksData.Count; i++)
+            for (var i = 0; i < calibrationSticksData.Count; i++)
             {
                 var space = " ";
                 if (i == 0)
@@ -171,7 +171,7 @@ public static class Settings
                     space = "";
                 }
 
-                caliStr += space + caliSticksData[i].Key + "," + string.Join(",", caliSticksData[i].Value);
+                caliStr += space + calibrationSticksData[i].Key + "," + string.Join(",", calibrationSticksData[i].Value);
             }
 
             file.WriteLine(caliStr);
@@ -209,10 +209,10 @@ public static class Settings
         return true;
     }
 
-    public static void SaveCaliIMUData(List<KeyValuePair<string, short[]>> caliData)
+    public static void SaveCalibrationMotionData(List<KeyValuePair<string, short[]>> caliData)
     {
         var txt = File.ReadAllLines(_path);
-        if (txt.Length < SettingsNum + 1) // no custom IMU calibrations yet
+        if (txt.Length < SettingsNum + 1) // no custom motion calibrations yet
         {
             Array.Resize(ref txt, txt.Length + 1);
         }

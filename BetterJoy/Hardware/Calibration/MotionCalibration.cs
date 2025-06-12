@@ -1,9 +1,11 @@
+using BetterJoy.Hardware.Data;
 using System;
 
 namespace BetterJoy.Hardware.Calibration;
 
 public class MotionCalibration
 {
+    // Default joycon values
     private readonly ThreeAxisShort _defaultAccelerometerNeutralConfig = new(0, 0, 0);
     private readonly ThreeAxisShort _defaultAccelerometerSensitivityConfig = new(16384, 16384, 16384);
     private readonly ThreeAxisShort _defaultGyroscopeNeutralConfig = new(0, 0, 0);
@@ -68,7 +70,7 @@ public class MotionCalibration
         var inputAccelerometerSensitivity = new ThreeAxisShort(values[3], values[4], values[5]);
         var inputGyroscopeNeutral = new ThreeAxisShort(values[6], values[7], values[8]);
         var inputGyroscopeSensitivity = new ThreeAxisShort(values[9], values[10], values[11]);
-        
+
         AccelerometerNeutral = inputAccelerometerNeutral.Invalid
             ? _defaultAccelerometerNeutralConfig
             : inputAccelerometerNeutral;

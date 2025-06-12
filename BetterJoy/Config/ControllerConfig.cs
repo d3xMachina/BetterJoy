@@ -36,7 +36,7 @@ public class ControllerConfig : Config
     public long PowerOffInactivityMins;
     public bool SwapAB;
     public bool SwapXY;
-    public bool UseFilteredIMU;
+    public bool UseFilteredMotion;
     public DebugType DebugType;
     public Orientation DoNotRejoin;
     public bool AutoPowerOff;
@@ -77,7 +77,7 @@ public class ControllerConfig : Config
         PowerOffInactivityMins = config.PowerOffInactivityMins;
         SwapAB = config.SwapAB;
         SwapXY = config.SwapXY;
-        UseFilteredIMU = config.UseFilteredIMU;
+        UseFilteredMotion = config.UseFilteredMotion;
         DebugType = config.DebugType;
         DoNotRejoin = config.DoNotRejoin;
         AutoPowerOff = config.AutoPowerOff;
@@ -117,7 +117,7 @@ public class ControllerConfig : Config
         UpdateSetting("PowerOffInactivity", ref PowerOffInactivityMins, -1);
         UpdateSetting("SwapAB", ref SwapAB, false);
         UpdateSetting("SwapXY", ref SwapXY, false);
-        UpdateSetting("UseFilteredIMU", ref UseFilteredIMU, true);
+        UpdateSetting("UseFilteredIMU", ref UseFilteredMotion, true);
         UpdateSetting("DebugType", ref DebugType, DebugType.None);
         UpdateSetting("DoNotRejoinJoycons", ref DoNotRejoin, Orientation.None);
         UpdateSetting("AutoPowerOff", ref AutoPowerOff, false);

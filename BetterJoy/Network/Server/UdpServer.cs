@@ -1,4 +1,5 @@
 using BetterJoy.Controller;
+using BetterJoy.Controller.Mapping;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -434,10 +435,10 @@ public class UdpServer
 
         outputData[outIdx] = 0;
 
-        if (ds4.DPad == Controller.DpadDirection.West || ds4.DPad == Controller.DpadDirection.Northwest || ds4.DPad == Controller.DpadDirection.Southwest) outputData[outIdx] |= 0x80;
-        if (ds4.DPad == Controller.DpadDirection.South || ds4.DPad == Controller.DpadDirection.Southwest || ds4.DPad == Controller.DpadDirection.Southeast) outputData[outIdx] |= 0x40;
-        if (ds4.DPad == Controller.DpadDirection.East || ds4.DPad == Controller.DpadDirection.Northeast || ds4.DPad == Controller.DpadDirection.Southeast) outputData[outIdx] |= 0x20;
-        if (ds4.DPad == Controller.DpadDirection.North || ds4.DPad == Controller.DpadDirection.Northwest || ds4.DPad == Controller.DpadDirection.Northeast) outputData[outIdx] |= 0x10;
+        if (ds4.DPad == DpadDirection.West || ds4.DPad == DpadDirection.Northwest || ds4.DPad == DpadDirection.Southwest) outputData[outIdx] |= 0x80;
+        if (ds4.DPad == DpadDirection.South || ds4.DPad == DpadDirection.Southwest || ds4.DPad == DpadDirection.Southeast) outputData[outIdx] |= 0x40;
+        if (ds4.DPad == DpadDirection.East || ds4.DPad == DpadDirection.Northeast || ds4.DPad == DpadDirection.Southeast) outputData[outIdx] |= 0x20;
+        if (ds4.DPad == DpadDirection.North || ds4.DPad == DpadDirection.Northwest || ds4.DPad == DpadDirection.Northeast) outputData[outIdx] |= 0x10;
 
         if (ds4.Options) outputData[outIdx] |= 0x08;
         if (ds4.ThumbRight) outputData[outIdx] |= 0x04;
@@ -465,10 +466,10 @@ public class UdpServer
         outputData[++outIdx] = ds4.ThumbRightY;
 
         // We don't have analog buttons so just use the Button enums (which give either 0 or 0xFF)
-        outputData[++outIdx] = ds4.DPad == Controller.DpadDirection.West || ds4.DPad == Controller.DpadDirection.Northwest || ds4.DPad == Controller.DpadDirection.Southwest ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = ds4.DPad == Controller.DpadDirection.South || ds4.DPad == Controller.DpadDirection.Southwest || ds4.DPad == Controller.DpadDirection.Southeast ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = ds4.DPad == Controller.DpadDirection.East || ds4.DPad == Controller.DpadDirection.Northeast || ds4.DPad == Controller.DpadDirection.Southeast ? (byte)0xFF : (byte)0;
-        outputData[++outIdx] = ds4.DPad == Controller.DpadDirection.North || ds4.DPad == Controller.DpadDirection.Northwest || ds4.DPad == Controller.DpadDirection.Northeast ? (byte)0xFF : (byte)0; ;
+        outputData[++outIdx] = ds4.DPad == DpadDirection.West || ds4.DPad == DpadDirection.Northwest || ds4.DPad == DpadDirection.Southwest ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = ds4.DPad == DpadDirection.South || ds4.DPad == DpadDirection.Southwest || ds4.DPad == DpadDirection.Southeast ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = ds4.DPad == DpadDirection.East || ds4.DPad == DpadDirection.Northeast || ds4.DPad == DpadDirection.Southeast ? (byte)0xFF : (byte)0;
+        outputData[++outIdx] = ds4.DPad == DpadDirection.North || ds4.DPad == DpadDirection.Northwest || ds4.DPad == DpadDirection.Northeast ? (byte)0xFF : (byte)0; ;
 
         outputData[++outIdx] = ds4.Square ? (byte)0xFF : (byte)0;
         outputData[++outIdx] = ds4.Cross ? (byte)0xFF : (byte)0;
@@ -522,7 +523,7 @@ public class UdpServer
         ref var motion = ref report.Motion[packetNumber];
 
         // Accelerometer
-        var accel = motion.Accel;
+        var accel = motion.Accelerometer;
         if (accel != Vector3.Zero)
         {
             BitConverter.TryWriteBytes(outputData.Slice(outIdx, 4), accel.Y);
@@ -538,7 +539,7 @@ public class UdpServer
         }
 
         // Gyroscope
-        var gyro = motion.Gyro;
+        var gyro = motion.Gyroscope;
         if (gyro != Vector3.Zero)
         {
             BitConverter.TryWriteBytes(outputData.Slice(outIdx, 4), gyro.Y);

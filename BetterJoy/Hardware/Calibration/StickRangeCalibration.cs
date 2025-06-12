@@ -1,3 +1,4 @@
+using BetterJoy.Hardware.Data;
 using System;
 
 namespace BetterJoy.Hardware.Calibration;

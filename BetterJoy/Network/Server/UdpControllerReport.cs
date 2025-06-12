@@ -1,9 +1,7 @@
 using BetterJoy.Controller;
-using System.Numerics;
+using BetterJoy.Controller.Mapping;
 
 namespace BetterJoy.Network.Server;
-
-public readonly record struct MotionData(Vector3 Gyro, Vector3 Accel);
 
 public class UdpControllerReport
 {
@@ -18,7 +16,7 @@ public class UdpControllerReport
 
     public OutputControllerDualShock4InputState Input;
 
-    public readonly MotionData[] Motion = new MotionData[3];
+    public readonly Motion[] Motion = new Motion[3];
 
     public UdpControllerReport(Joycon controller, ulong deltaPackets = 0)
     {
@@ -33,7 +31,7 @@ public class UdpControllerReport
 
     public void AddInput(Joycon controller)
     {
-        Input = Joycon.MapToDualShock4Input(controller);
+        Input = controller.MapToDualShock4Input();
 
         // Invert Y axis
         Input.ThumbLeftY = (byte)(byte.MaxValue - Input.ThumbLeftY);
@@ -42,6 +40,6 @@ public class UdpControllerReport
 
     public void AddMotion(Joycon controller, int packetNumber)
     {
-        Motion[packetNumber] = new MotionData(controller.GetGyro(), controller.GetAccel());
+        Motion[packetNumber] = controller.GetMotion();
     }
 }

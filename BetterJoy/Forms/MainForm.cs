@@ -28,7 +28,7 @@ public partial class MainForm : Form
 
     public readonly MainFormConfig Config;
 
-    public readonly List<KeyValuePair<string, short[]>> CaliIMUData = [];
+    public readonly List<KeyValuePair<string, short[]>> CalibrationMotionData = [];
     public readonly List<KeyValuePair<string, ushort[]>> CaliSticksData = [];
 
     private int _count;
@@ -253,7 +253,7 @@ public partial class MainForm : Form
 
     private void MainForm_Load(object sender, EventArgs e)
     {
-        Settings.Init(CaliIMUData, CaliSticksData);
+        Settings.Init(CalibrationMotionData, CaliSticksData);
 
         startInTrayBox.Checked = Settings.IntValue("StartInTray") == 1;
 
@@ -743,10 +743,10 @@ public partial class MainForm : Form
         _countDown.Interval = 1000;
         _countDown.Tag = controller;
 
-        if (controller.IMUSupported())
+        if (controller.MotionSupported())
         {
-            _countDown.Tick += CountDownIMU;
-            CountDownIMU(null, null);
+            _countDown.Tick += CountDownMotion;
+            CountDownMotion(null, null);
         }
         else
         {
@@ -769,11 +769,11 @@ public partial class MainForm : Form
         throw new NotImplementedException();
     }
 
-    private void CountDownIMU(object sender, EventArgs e)
+    private void CountDownMotion(object sender, EventArgs e)
     {
         var controller = (Joycon)_countDown.Tag;
 
-        if (controller.State != Joycon.Status.IMUDataOk)
+        if (controller.State != Joycon.Status.MotionDataOk)
         {
             CancelCalibrate(controller, true);
             return;
@@ -781,13 +781,13 @@ public partial class MainForm : Form
 
         if (_count == 0)
         {
-            console.Text = $"Calibrating IMU...{Environment.NewLine}";
+            console.Text = $"Calibrating motion...{Environment.NewLine}";
             _countDown.Stop();
 
-            controller.StartIMUCalibration();
+            controller.StartMotionCalibration();
             _count = 3;
             _countDown = new Timer();
-            _countDown.Tick += CalcIMUData;
+            _countDown.Tick += CalcMotionData;
             _countDown.Interval = 1000;
             _countDown.Tag = controller;
             _countDown.Start();
@@ -800,11 +800,11 @@ public partial class MainForm : Form
         }
     }
 
-    private void CalcIMUData(object sender, EventArgs e)
+    private void CalcMotionData(object sender, EventArgs e)
     {
         var controller = (Joycon)_countDown.Tag;
 
-        if (controller.State != Joycon.Status.IMUDataOk)
+        if (controller.State != Joycon.Status.MotionDataOk)
         {
             CancelCalibrate(controller, true);
             return;
@@ -813,15 +813,15 @@ public partial class MainForm : Form
         if (_count == 0)
         {
             _countDown.Stop();
-            controller.StopIMUCalibration();
+            controller.StopMotionCalibration();
 
-            if (controller.CalibrationIMUDatas.Count == 0)
+            if (controller.CalibrationMotionDatas.Count == 0)
             {
-                _logger?.Log("No IMU data received, proceed to stick calibration anyway. Is the controller working ?", Logger.LogLevel.Warning);
+                _logger?.Log("No motion data received, proceed to stick calibration anyway. Is the controller working ?", Logger.LogLevel.Warning);
             }
             else
             {
-                var imuData = ActiveCaliIMUData(controller.SerialOrMac, true);
+                var motionData = ActiveCalibrationMotionData(controller.SerialOrMac, true);
 
                 var rnd = new Random();
 
@@ -832,27 +832,27 @@ public partial class MainForm : Form
                 var yA = new List<int>();
                 var zA = new List<int>();
 
-                foreach (var calibrationData in controller.CalibrationIMUDatas)
+                foreach (var calibrationData in controller.CalibrationMotionDatas)
                 {
-                    xG.Add(calibrationData.Xg);
-                    yG.Add(calibrationData.Yg);
-                    zG.Add(calibrationData.Zg);
-                    xA.Add(calibrationData.Xa);
-                    yA.Add(calibrationData.Ya);
-                    zA.Add(calibrationData.Za);
+                    xG.Add(calibrationData.Gyroscope.X);
+                    yG.Add(calibrationData.Gyroscope.Y);
+                    zG.Add(calibrationData.Gyroscope.Z);
+                    xA.Add(calibrationData.Accelerometer.X);
+                    yA.Add(calibrationData.Accelerometer.Y);
+                    zA.Add(calibrationData.Accelerometer.Z);
                 }
 
-                imuData[0] = (short)QuickselectMedian(xG, rnd.Next);
-                imuData[1] = (short)QuickselectMedian(yG, rnd.Next);
-                imuData[2] = (short)QuickselectMedian(zG, rnd.Next);
-                imuData[3] = (short)QuickselectMedian(xA, rnd.Next);
-                imuData[4] = (short)QuickselectMedian(yA, rnd.Next);
-                imuData[5] = (short)QuickselectMedian(zA, rnd.Next);
+                motionData[0] = (short)QuickselectMedian(xG, rnd.Next);
+                motionData[1] = (short)QuickselectMedian(yG, rnd.Next);
+                motionData[2] = (short)QuickselectMedian(zG, rnd.Next);
+                motionData[3] = (short)QuickselectMedian(xA, rnd.Next);
+                motionData[4] = (short)QuickselectMedian(yA, rnd.Next);
+                motionData[5] = (short)QuickselectMedian(zA, rnd.Next);
 
-                console.Text += $"IMU calibration completed!!!{Environment.NewLine}";
+                console.Text += $"Motion calibration completed!!!{Environment.NewLine}";
 
-                Settings.SaveCaliIMUData(CaliIMUData);
-                controller.GetActiveIMUData();
+                Settings.SaveCalibrationMotionData(CalibrationMotionData);
+                controller.GetActiveMotionData();
             }
 
             ClearCalibrateDatas(controller);
@@ -875,7 +875,7 @@ public partial class MainForm : Form
     {
         var controller = (Joycon)_countDown.Tag;
 
-        if (controller.State != Joycon.Status.IMUDataOk)
+        if (controller.State != Joycon.Status.MotionDataOk)
         {
             CancelCalibrate(controller, true);
             return;
@@ -907,7 +907,7 @@ public partial class MainForm : Form
     {
         var controller = (Joycon)_countDown.Tag;
 
-        if (controller.State != Joycon.Status.IMUDataOk)
+        if (controller.State != Joycon.Status.MotionDataOk)
         {
             CancelCalibrate(controller, true);
             return;
@@ -938,10 +938,10 @@ public partial class MainForm : Form
 
             foreach (var calibrationData in controller.CalibrationStickDatas)
             {
-                xS1.Add(calibrationData.Xs1);
-                yS1.Add(calibrationData.Ys1);
-                xS2.Add(calibrationData.Xs2);
-                yS2.Add(calibrationData.Ys2);
+                xS1.Add(calibrationData.Stick1.X);
+                yS1.Add(calibrationData.Stick1.Y);
+                xS2.Add(calibrationData.Stick2.X);
+                yS2.Add(calibrationData.Stick2.Y);
             }
 
             leftStickData[2] = (ushort)Math.Round(QuickselectMedian(xS1, rnd.Next));
@@ -972,7 +972,7 @@ public partial class MainForm : Form
     {
         var controller = (Joycon)_countDown.Tag;
 
-        if (controller.State != Joycon.Status.IMUDataOk)
+        if (controller.State != Joycon.Status.MotionDataOk)
         {
             CancelCalibrate(controller, true);
             return;
@@ -1004,7 +1004,7 @@ public partial class MainForm : Form
     {
         var controller = (Joycon)_countDown.Tag;
 
-        if (controller.State != Joycon.Status.IMUDataOk)
+        if (controller.State != Joycon.Status.MotionDataOk)
         {
             CancelCalibrate(controller, true);
             return;
@@ -1033,10 +1033,10 @@ public partial class MainForm : Form
 
             foreach (var calibrationData in controller.CalibrationStickDatas)
             {
-                xS1.Add(calibrationData.Xs1);
-                yS1.Add(calibrationData.Ys1);
-                xS2.Add(calibrationData.Xs2);
-                yS2.Add(calibrationData.Ys2);
+                xS1.Add(calibrationData.Stick1.X);
+                yS1.Add(calibrationData.Stick1.Y);
+                xS2.Add(calibrationData.Stick2.X);
+                yS2.Add(calibrationData.Stick2.Y);
             }
 
             leftStickData[0] = (ushort)Math.Abs(xS1.Max() - leftStickData[2]);
@@ -1066,7 +1066,7 @@ public partial class MainForm : Form
 
     private static void ClearCalibrateDatas(Joycon controller)
     {
-        controller.StopIMUCalibration(true);
+        controller.StopMotionCalibration(true);
         controller.StopSticksCalibration(true);
     }
 
@@ -1123,20 +1123,20 @@ public partial class MainForm : Form
         return Quickselect(highs, k - lows.Count - pivots.Count, pivotFn);
     }
 
-    public short[] ActiveCaliIMUData(string serNum, bool init = false)
+    public short[] ActiveCalibrationMotionData(string serNum, bool init = false)
     {
-        for (var i = 0; i < CaliIMUData.Count; i++)
+        for (var i = 0; i < CalibrationMotionData.Count; i++)
         {
-            if (CaliIMUData[i].Key == serNum)
+            if (CalibrationMotionData[i].Key == serNum)
             {
-                return CaliIMUData[i].Value;
+                return CalibrationMotionData[i].Value;
             }
         }
 
         if (init)
         {
             var arr = new short[6];
-            CaliIMUData.Add(
+            CalibrationMotionData.Add(
                 new KeyValuePair<string, short[]>(
                     serNum,
                     arr

@@ -1,4 +1,5 @@
 #nullable enable
+using BetterJoy.Hardware.Data;
 using System;
 using System.Runtime.CompilerServices;
 using System.Text;
