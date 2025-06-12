@@ -121,9 +121,8 @@ public class Joycon
 
     private static readonly byte[] _ledById = [0b0001, 0b0011, 0b0111, 0b1111, 0b1001, 0b0101, 0b1101, 0b0110];
 
-    private readonly short[] _accNeutral = [0, 0, 0];
-    private readonly short[] _accRaw = [0, 0, 0];
-    private readonly short[] _accSensiti = [0, 0, 0];
+    private ThreeAxisShort _accRaw = new(0, 0, 0);
+    private MotionCalibration _motionCalibration = new();
 
     private readonly MadgwickAHRS _AHRS; // for getting filtered Euler angles of rotation; 5ms sampling rate
 
@@ -139,16 +138,14 @@ public class Joycon
     private static readonly byte[] _stopRumbleBuf = [0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40]; // Stop rumble
     private readonly byte[] _rumbleBuf;
 
-    private readonly short[] _gyrNeutral = [0, 0, 0];
-    private readonly short[] _gyrRaw = [0, 0, 0];
-    private readonly short[] _gyrSensiti = [0, 0, 0];
+    private ThreeAxisShort _gyrRaw = new(0, 0, 0);
 
     private readonly Dictionary<int, bool> _mouseToggleBtn = [];
 
     // Values from https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/blob/master/spi_flash_notes.md#6-axis-horizontal-offsets
-    private readonly short[] _accProHorOffset = [-688, 0, 4038];
-    private readonly short[] _accLeftHorOffset = [350, 0, 4081];
-    private readonly short[] _accRightHorOffset = [350, 0, -4081];
+    private readonly ThreeAxisShort _accProHorOffset = new(-688, 0, 4038);
+    private readonly ThreeAxisShort _accLeftHorOffset = new(350, 0, 4081);
+    private readonly ThreeAxisShort _accRightHorOffset = new(350, 0, -4081);
 
     private readonly Stopwatch _shakeTimer = Stopwatch.StartNew(); //Setup a timer for measuring shake in milliseconds
 
@@ -2229,17 +2226,17 @@ public class Joycon
 
         var offset = n * 12;
 
-        _gyrRaw[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[19 + offset], reportBuf[20 + offset]);
-        _gyrRaw[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[21 + offset], reportBuf[22 + offset]);
-        _gyrRaw[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[23 + offset], reportBuf[24 + offset]);
-        _accRaw[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[13 + offset], reportBuf[14 + offset]);
-        _accRaw[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[15 + offset], reportBuf[16 + offset]);
-        _accRaw[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[17 + offset], reportBuf[18 + offset]);
+        _gyrRaw.X = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[19 + offset], reportBuf[20 + offset]);
+        _gyrRaw.Y = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[21 + offset], reportBuf[22 + offset]);
+        _gyrRaw.Z = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[23 + offset], reportBuf[24 + offset]);
+        _accRaw.X = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[13 + offset], reportBuf[14 + offset]);
+        _accRaw.Y = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[15 + offset], reportBuf[16 + offset]);
+        _accRaw.Z = BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[17 + offset], reportBuf[18 + offset]);
 
         if (_calibrateIMU)
         {
             // We need to add the accelerometer offset from the origin position when it's on a flat surface
-            short[] accOffset;
+            ThreeAxisShort accOffset;
             if (IsPro)
             {
                 accOffset = _accProHorOffset;
@@ -2254,12 +2251,12 @@ public class Joycon
             }
 
             var imuData = new IMUData(
-                _gyrRaw[0],
-                _gyrRaw[1],
-                _gyrRaw[2],
-                (short)(_accRaw[0] - accOffset[0]),
-                (short)(_accRaw[1] - accOffset[1]),
-                (short)(_accRaw[2] - accOffset[2])
+                _gyrRaw.X,
+                _gyrRaw.Y,
+                _gyrRaw.Z,
+                (short)(_accRaw.X - accOffset.X),
+                (short)(_accRaw.Y - accOffset.Y),
+                (short)(_accRaw.Z - accOffset.Z)
             );
             CalibrationIMUDatas.Add(imuData);
         }
@@ -2268,25 +2265,25 @@ public class Joycon
 
         if (_IMUCalibrated)
         {
-            _accG.X = (_accRaw[0] - _activeIMUData[3]) * (1.0f / (_accSensiti[0] - _accNeutral[0])) * 4.0f;
-            _gyrG.X = (_gyrRaw[0] - _activeIMUData[0]) * (816.0f / (_gyrSensiti[0] - _activeIMUData[0]));
+            _accG.X = (_accRaw.X - _activeIMUData[3]) * (1.0f / (_motionCalibration.AccelerometerSensitivity.X - _motionCalibration.AccelerometerNeutral.X)) * 4.0f;
+            _gyrG.X = (_gyrRaw.X - _activeIMUData[0]) * (816.0f / (_motionCalibration.GyroscopeSensitivity.X - _activeIMUData[0]));
 
-            _accG.Y = direction * (_accRaw[1] - _activeIMUData[4]) * (1.0f / (_accSensiti[1] - _accNeutral[1])) * 4.0f;
-            _gyrG.Y = -direction * (_gyrRaw[1] - _activeIMUData[1]) * (816.0f / (_gyrSensiti[1] - _activeIMUData[1]));
+            _accG.Y = direction * (_accRaw.Y - _activeIMUData[4]) * (1.0f / (_motionCalibration.AccelerometerSensitivity.Y - _motionCalibration.AccelerometerNeutral.Y)) * 4.0f;
+            _gyrG.Y = -direction * (_gyrRaw.Y - _activeIMUData[1]) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Y - _activeIMUData[1]));
 
-            _accG.Z = direction * (_accRaw[2] - _activeIMUData[5]) * (1.0f / (_accSensiti[2] - _accNeutral[2])) * 4.0f;
-            _gyrG.Z = -direction * (_gyrRaw[2] - _activeIMUData[2]) * (816.0f / (_gyrSensiti[2] - _activeIMUData[2]));
+            _accG.Z = direction * (_accRaw.Z - _activeIMUData[5]) * (1.0f / (_motionCalibration.AccelerometerSensitivity.Z - _motionCalibration.AccelerometerNeutral.Z)) * 4.0f;
+            _gyrG.Z = -direction * (_gyrRaw.Z - _activeIMUData[2]) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Z - _activeIMUData[2]));
         }
         else
         {
-            _accG.X = _accRaw[0] * (1.0f / (_accSensiti[0] - _accNeutral[0])) * 4.0f;
-            _gyrG.X = (_gyrRaw[0] - _gyrNeutral[0]) * (816.0f / (_gyrSensiti[0] - _gyrNeutral[0]));
+            _accG.X = _accRaw.X * (1.0f / (_motionCalibration.AccelerometerSensitivity.X - _motionCalibration.AccelerometerNeutral.X)) * 4.0f;
+            _gyrG.X = (_gyrRaw.X - _motionCalibration.GyroscopeNeutral.X) * (816.0f / (_motionCalibration.GyroscopeSensitivity.X - _motionCalibration.GyroscopeNeutral.X));
 
-            _accG.Y = direction * _accRaw[1] * (1.0f / (_accSensiti[1] - _accNeutral[1])) * 4.0f;
-            _gyrG.Y = -direction * (_gyrRaw[1] - _gyrNeutral[1]) * (816.0f / (_gyrSensiti[1] - _gyrNeutral[1]));
+            _accG.Y = direction * _accRaw.Y * (1.0f / (_motionCalibration.AccelerometerSensitivity.Y - _motionCalibration.AccelerometerNeutral.Y)) * 4.0f;
+            _gyrG.Y = -direction * (_gyrRaw.Y - _motionCalibration.GyroscopeNeutral.Y) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Y - _motionCalibration.GyroscopeNeutral.Y));
 
-            _accG.Z = direction * _accRaw[2] * (1.0f / (_accSensiti[2] - _accNeutral[2])) * 4.0f;
-            _gyrG.Z = -direction * (_gyrRaw[2] - _gyrNeutral[2]) * (816.0f / (_gyrSensiti[2] - _gyrNeutral[2]));
+            _accG.Z = direction * _accRaw.Z * (1.0f / (_motionCalibration.AccelerometerSensitivity.Z - _motionCalibration.AccelerometerNeutral.Z)) * 4.0f;
+            _gyrG.Z = -direction * (_gyrRaw.Z - _motionCalibration.GyroscopeNeutral.Z) * (816.0f / (_motionCalibration.GyroscopeSensitivity.Z - _motionCalibration.GyroscopeNeutral.Z));
         }
 
         if (IsJoycon && Other == null)
@@ -2592,12 +2589,6 @@ public class Joycon
     {
         if (!CalibrationDataSupported())
         {
-            // Use default joycon values for sensors
-            Array.Fill(_accSensiti, (short)16384);
-            Array.Fill(_accNeutral, (short)0);
-            Array.Fill(_gyrSensiti, (short)13371);
-            Array.Fill(_gyrNeutral, (short)0);
-
             _deadzone = Config.StickLeftDeadzone;
             _deadzone2 = Config.StickRightDeadzone;
 
@@ -2713,56 +2704,14 @@ public class Joycon
                 }
             }
 
-            _accNeutral[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[0], sensorData[1]);
-            _accNeutral[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[2], sensorData[3]);
-            _accNeutral[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[4], sensorData[5]);
+            _motionCalibration = new MotionCalibration(sensorData[..24]);
 
-            _accSensiti[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[6], sensorData[7]);
-            _accSensiti[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[8], sensorData[9]);
-            _accSensiti[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[10], sensorData[11]);
-
-            _gyrNeutral[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[12], sensorData[13]);
-            _gyrNeutral[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[14], sensorData[15]);
-            _gyrNeutral[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[16], sensorData[17]);
-
-            _gyrSensiti[0] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[18], sensorData[19]);
-            _gyrSensiti[1] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[20], sensorData[21]);
-            _gyrSensiti[2] = BitWrangler.EncodeBytesAsWordLittleEndianSigned(sensorData[22], sensorData[23]);
-
-            bool noCalibration = false;
-
-            if (_accNeutral[0] == -1 || _accNeutral[1] == -1 || _accNeutral[2] == -1)
-            {
-                Array.Fill(_accNeutral, (short)0);
-                noCalibration = true;
-            }
-
-            if (_accSensiti[0] == -1 || _accSensiti[1] == -1 || _accSensiti[2] == -1)
-            {
-                // Default accelerometer sensitivity for joycons
-                Array.Fill(_accSensiti, (short)16384);
-                noCalibration = true;
-            }
-
-            if (_gyrNeutral[0] == -1 || _gyrNeutral[1] == -1 || _gyrNeutral[2] == -1)
-            {
-                Array.Fill(_gyrNeutral, (short)0);
-                noCalibration = true;
-            }
-
-            if (_gyrSensiti[0] == -1 || _gyrSensiti[1] == -1 || _gyrSensiti[2] == -1)
-            {
-                // Default gyroscope sensitivity for joycons
-                Array.Fill(_gyrSensiti, (short)13371);
-                noCalibration = true;
-            }
-
-            if (noCalibration)
+            if (_motionCalibration.UsedDefaultValues)
             {
                 Log("Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
             }
 
-            PrintArray<short>(_gyrNeutral.AsSpan(0, 3), type: DebugType.IMU, format: "Gyro neutral position: {0:S}");
+            DebugPrint(_motionCalibration, DebugType.IMU);
         }
 
         if (!ok)

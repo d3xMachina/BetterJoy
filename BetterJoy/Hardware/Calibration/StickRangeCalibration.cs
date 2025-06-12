@@ -42,7 +42,7 @@ public class StickRangeCalibration
     {
         if (raw.Length != 9)
         {
-            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 9 bytes.");
+            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 9 bytes, got {raw.Length}.");
         }
 
         int offset = isLeft ? 0 : 6;
@@ -66,7 +66,7 @@ public class StickRangeCalibration
     {
         if (values.Length != 6)
         {
-            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 6 values");
+            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 6 values, got {values.Length}.");
         }
 
 #pragma warning disable IDE0055 // Disable formatting
