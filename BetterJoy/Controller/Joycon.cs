@@ -2648,7 +2648,7 @@ public class Joycon
 
             var offset = IsLeft ? 0 : 0x12;
 
-            _deadZone = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan()[offset..]);
+            _deadZone = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset)[..2]);
 
             var range = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
             _range = CalculateRange(range);
@@ -2657,7 +2657,7 @@ public class Joycon
             {
                 offset = 0x12;
 
-                _deadZone2 = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan()[offset..]);
+                _deadZone2 = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset)[..2]);
 
                 var range2 = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
                 _range2 = CalculateRange(range2);
