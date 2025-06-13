@@ -15,7 +15,7 @@ public class StickDeadZoneCalibration
 
     public StickDeadZoneCalibration(float value)
     {
-        this._value = value;
+        _value = value;
     }
 
     public StickDeadZoneCalibration(StickRangeCalibration stickRangeCalibration, Span<byte> raw)
