@@ -166,8 +166,8 @@ public class Joycon
     public BatteryLevel Battery = BatteryLevel.Unknown;
     public bool Charging = false;
 
-    private float _deadzone;
-    private float _deadzone2;
+    private StickDeadZoneCalibration _deadZone;
+    private StickDeadZoneCalibration _deadZone2;
     private float _range;
     private float _range2;
 
@@ -2060,14 +2060,14 @@ public class Joycon
             ExtractSticksValues(reportBuf);
 
             var cal = _stickCal;
-            var dz = _deadzone;
+            var dz = _deadZone;
             var range = _range;
             var antiDeadzone = Config.StickLeftAntiDeadzone;
 
             if (_SticksCalibrated)
             {
                 cal = _activeStick1;
-                dz = Config.StickLeftDeadzone;
+                dz = StickDeadZoneCalibration.FromConfigLeft(Config);
                 range = Config.StickLeftRange;
             }
 
@@ -2076,14 +2076,14 @@ public class Joycon
             if (IsPro)
             {
                 cal = _stick2Cal;
-                dz = _deadzone2;
+                dz = _deadZone2;
                 range = _range2;
                 antiDeadzone = Config.StickRightAntiDeadzone;
 
                 if (_SticksCalibrated)
                 {
                     cal = _activeStick2;
-                    dz = Config.StickRightDeadzone;
+                    dz = StickDeadZoneCalibration.FromConfigRight(Config);
                     range = Config.StickRightRange;
                 }
 
@@ -2538,11 +2538,6 @@ public class Joycon
         return length;
     }
 
-    private static float CalculateDeadzone(StickRangeCalibration cal, ushort deadzone)
-    {
-        return 2.0f * deadzone / Math.Max(cal.XMax + cal.XMin, cal.YMax + cal.YMin);
-    }
-
     private static float CalculateRange(ushort range)
     {
         return (float)range / 0xFFF;
@@ -2577,8 +2572,8 @@ public class Joycon
     {
         if (!CalibrationDataSupported())
         {
-            _deadzone = Config.StickLeftDeadzone;
-            _deadzone2 = Config.StickRightDeadzone;
+            _deadZone = StickDeadZoneCalibration.FromConfigLeft(Config);
+            _deadZone2 = StickDeadZoneCalibration.FromConfigRight(Config);
 
             _range = Config.StickLeftRange;
             _range2 = Config.StickRightRange;
@@ -2653,18 +2648,16 @@ public class Joycon
 
             var offset = IsLeft ? 0 : 0x12;
 
-            var deadzone = BitWrangler.Lower3NibblesLittleEndian(factoryDeadzoneData[0 + offset], factoryDeadzoneData[1 + offset]);
-            _deadzone = CalculateDeadzone(_stickCal, deadzone);
+            _deadZone = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
 
             var range = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
             _range = CalculateRange(range);
 
-            if (IsPro)
+            if (IsPro) //If it is pro, then it is also always left
             {
-                offset = !IsLeft ? 0 : 0x12;
+                offset = 0x12;
 
-                var deadzone2 = BitWrangler.Lower3NibblesLittleEndian(factoryDeadzoneData[0 + offset], factoryDeadzoneData[1 + offset]);
-                _deadzone2 = CalculateDeadzone(_stick2Cal, deadzone2);
+                _deadZone2 = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
 
                 var range2 = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
                 _range2 = CalculateRange(range2);
@@ -3446,12 +3439,12 @@ public class Joycon
         {
             if (oldConfig.StickLeftDeadzone != Config.StickLeftDeadzone)
             {
-                _deadzone = Config.StickLeftDeadzone;
+                _deadZone = StickDeadZoneCalibration.FromConfigLeft(Config);
             }
 
             if (oldConfig.StickRightDeadzone != Config.StickRightDeadzone)
             {
-                _deadzone2 = Config.StickRightDeadzone;
+                _deadZone2 = StickDeadZoneCalibration.FromConfigRight(Config);
             }
 
             if (oldConfig.StickLeftRange != Config.StickLeftRange)
