@@ -4,7 +4,7 @@ using System;
 
 namespace BetterJoy.Hardware.Calibration;
 
-public class StickDeadZoneCalibration
+public struct StickDeadZoneCalibration
 {
     private float _value;
 
