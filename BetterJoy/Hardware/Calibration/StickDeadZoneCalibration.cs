@@ -18,14 +18,14 @@ public struct StickDeadZoneCalibration
         _value = value;
     }
 
-    public StickDeadZoneCalibration(StickRangeCalibration stickRangeCalibration, Span<byte> raw)
+    public StickDeadZoneCalibration(StickLimitsCalibration stickLimitsCalibration, Span<byte> raw)
     {
         if (raw.Length != 2)
         {
             throw new ArgumentException($"{nameof(StickDeadZoneCalibration)} expects 2 bytes, got {raw.Length}.");
         }
 
-        _value = CalculateDeadZone(stickRangeCalibration, BitWrangler.Lower3NibblesLittleEndian(raw[0], raw[1]));
+        _value = CalculateDeadZone(stickLimitsCalibration, BitWrangler.Lower3NibblesLittleEndian(raw[0], raw[1]));
     }
 
     public static StickDeadZoneCalibration FromConfigRight(ControllerConfig config)
@@ -40,8 +40,8 @@ public struct StickDeadZoneCalibration
 
     public static implicit operator float(StickDeadZoneCalibration deadZone) => deadZone._value;
 
-    private static float CalculateDeadZone(StickRangeCalibration stickRangeCalibration, ushort deadZone)
+    private static float CalculateDeadZone(StickLimitsCalibration stickLimitsCalibration, ushort deadZone)
     {
-        return 2.0f * deadZone / Math.Max(stickRangeCalibration.XMax + stickRangeCalibration.XMin, stickRangeCalibration.YMax + stickRangeCalibration.YMin);
+        return 2.0f * deadZone / Math.Max(stickLimitsCalibration.XMax + stickLimitsCalibration.XMin, stickLimitsCalibration.YMax + stickLimitsCalibration.YMin);
     }
 }

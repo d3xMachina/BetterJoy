@@ -3,7 +3,7 @@ using System;
 
 namespace BetterJoy.Hardware.Calibration;
 
-public class StickRangeCalibration
+public class StickLimitsCalibration
 {
     private static readonly ushort[] _defaultCalibration = [2048, 2048, 2048, 2048, 2048, 2048]; // Default stick calibration
     public ushort XMax { get; private set; }
@@ -14,27 +14,27 @@ public class StickRangeCalibration
     public ushort YMin { get; private set; }
     private bool? _isLeft;
 
-    public StickRangeCalibration(bool? isLeft = null)
+    public StickLimitsCalibration(bool? isLeft = null)
     {
         InitFromValues(_defaultCalibration, isLeft);
     }
 
-    public StickRangeCalibration(ReadOnlySpan<ushort> values, bool? isLeft = null)
+    public StickLimitsCalibration(ReadOnlySpan<ushort> values, bool? isLeft = null)
     {
         InitFromValues(values, isLeft);
     }
 
-    public static StickRangeCalibration FromRightStickCalibrationBytes(ReadOnlySpan<byte> raw)
+    public static StickLimitsCalibration FromRightStickCalibrationBytes(ReadOnlySpan<byte> raw)
     {
-        return new StickRangeCalibration(raw, false);
+        return new StickLimitsCalibration(raw, false);
     }
 
-    public static StickRangeCalibration FromLeftStickCalibrationBytes(ReadOnlySpan<byte> raw)
+    public static StickLimitsCalibration FromLeftStickCalibrationBytes(ReadOnlySpan<byte> raw)
     {
-        return new StickRangeCalibration(raw, true);
+        return new StickLimitsCalibration(raw, true);
     }
 
-    private StickRangeCalibration(ReadOnlySpan<byte> raw, bool isLeft)
+    private StickLimitsCalibration(ReadOnlySpan<byte> raw, bool isLeft)
     {
         InitFromBytes(raw, isLeft);
     }
@@ -43,7 +43,7 @@ public class StickRangeCalibration
     {
         if (raw.Length != 9)
         {
-            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 9 bytes, got {raw.Length}.");
+            throw new ArgumentException($"{nameof(StickLimitsCalibration)} expects 9 bytes, got {raw.Length}.");
         }
 
         int offset = isLeft ? 0 : 6;
@@ -67,7 +67,7 @@ public class StickRangeCalibration
     {
         if (values.Length != 6)
         {
-            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 6 values, got {values.Length}.");
+            throw new ArgumentException($"{nameof(StickLimitsCalibration)} expects 6 values, got {values.Length}.");
         }
 
 #pragma warning disable IDE0055 // Disable formatting
