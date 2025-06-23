@@ -168,8 +168,8 @@ public class Joycon
 
     private StickDeadZoneCalibration _deadZone;
     private StickDeadZoneCalibration _deadZone2;
-    private float _range;
-    private float _range2;
+    private StickRangeCalibration _range;
+    private StickRangeCalibration _range2;
 
     private readonly MainForm _form;
     private readonly Logger _logger;
@@ -2068,7 +2068,7 @@ public class Joycon
             {
                 cal = _activeStick1;
                 dz = StickDeadZoneCalibration.FromConfigLeft(Config);
-                range = Config.StickLeftRange;
+                range = StickRangeCalibration.FromConfigLeft(Config);
             }
 
             CalculateStickCenter(_stickPrecal, cal, dz, range, antiDeadzone, ref _stick);
@@ -2084,7 +2084,7 @@ public class Joycon
                 {
                     cal = _activeStick2;
                     dz = StickDeadZoneCalibration.FromConfigRight(Config);
-                    range = Config.StickRightRange;
+                    range = StickRangeCalibration.FromConfigRight(Config);
                 }
 
                 CalculateStickCenter(_stick2Precal, cal, dz, range, antiDeadzone, ref _stick2);
@@ -2538,11 +2538,6 @@ public class Joycon
         return length;
     }
 
-    private static float CalculateRange(ushort range)
-    {
-        return (float)range / 0xFFF;
-    }
-
     private bool CalibrationDataSupported()
     {
         return !IsThirdParty && (IsJoycon || IsPro || IsN64);
@@ -2575,8 +2570,8 @@ public class Joycon
             _deadZone = StickDeadZoneCalibration.FromConfigLeft(Config);
             _deadZone2 = StickDeadZoneCalibration.FromConfigRight(Config);
 
-            _range = Config.StickLeftRange;
-            _range2 = Config.StickRightRange;
+            _range = StickRangeCalibration.FromConfigLeft(Config);
+            _range2 = StickRangeCalibration.FromConfigLeft(Config);
 
             _DumpedCalibration = false;
 
@@ -2650,8 +2645,7 @@ public class Joycon
 
             _deadZone = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
 
-            var range = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
-            _range = CalculateRange(range);
+            _range = new StickRangeCalibration(factoryDeadzoneData.AsSpan(offset + 1, 2));
 
             if (IsPro) //If it is pro, then it is also always left
             {
@@ -2660,7 +2654,7 @@ public class Joycon
                 _deadZone2 = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
 
                 var range2 = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
-                _range2 = CalculateRange(range2);
+                _range2 = new StickRangeCalibration(factoryDeadzoneData.AsSpan(offset + 1, 2));
             }
         }
 
@@ -3449,12 +3443,12 @@ public class Joycon
 
             if (oldConfig.StickLeftRange != Config.StickLeftRange)
             {
-                _range = Config.StickLeftRange;
+                _range = StickRangeCalibration.FromConfigLeft(Config);
             }
 
             if (oldConfig.StickRightRange != Config.StickRightRange)
             {
-                _range2 = Config.StickRightRange;
+                _range2 = StickRangeCalibration.FromConfigRight(Config);
             }
         }
 
