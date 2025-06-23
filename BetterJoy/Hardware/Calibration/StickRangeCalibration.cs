@@ -38,7 +38,7 @@ public struct StickRangeCalibration
         return new StickRangeCalibration(config.StickLeftRange);
     }
 
-    public static implicit operator float(StickRangeCalibration deadZone) => deadZone._value;
+    public static implicit operator float(StickRangeCalibration range) => range._value;
 
     private static float CalculateRange(ushort value)
     {
