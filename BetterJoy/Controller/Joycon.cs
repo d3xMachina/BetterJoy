@@ -2571,7 +2571,7 @@ public class Joycon
             _deadZone2 = StickDeadZoneCalibration.FromConfigRight(Config);
 
             _range = StickRangeCalibration.FromConfigLeft(Config);
-            _range2 = StickRangeCalibration.FromConfigLeft(Config);
+            _range2 = StickRangeCalibration.FromConfigRight(Config);
 
             _DumpedCalibration = false;
 
