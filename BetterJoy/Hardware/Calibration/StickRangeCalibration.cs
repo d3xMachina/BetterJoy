@@ -1,89 +1,47 @@
+using BetterJoy.Config;
 using BetterJoy.Hardware.Data;
 using System;
 
 namespace BetterJoy.Hardware.Calibration;
 
-public class StickRangeCalibration
+public struct StickRangeCalibration
 {
-    private static readonly ushort[] _defaultCalibration = [2048, 2048, 2048, 2048, 2048, 2048]; // Default stick calibration
-    public ushort XMax { get; private set; }
-    public ushort YMax { get; private set; }
-    public ushort XCenter { get; private set; }
-    public ushort YCenter { get; private set; }
-    public ushort XMin { get; private set; }
-    public ushort YMin { get; private set; }
-    private bool? _isLeft;
-
-    public StickRangeCalibration(bool? isLeft = null)
+    private float _value;
+    
+    public StickRangeCalibration()
     {
-        InitFromValues(_defaultCalibration, isLeft);
+        _value = 0;
     }
 
-    public StickRangeCalibration(ReadOnlySpan<ushort> values, bool? isLeft = null)
+    public StickRangeCalibration(float value)
     {
-        InitFromValues(values, isLeft);
+        _value = value;
     }
 
-    public static StickRangeCalibration FromRightStickCalibrationBytes(ReadOnlySpan<byte> raw)
+    public StickRangeCalibration(Span<byte> raw)
     {
-        return new StickRangeCalibration(raw, false);
-    }
-
-    public static StickRangeCalibration FromLeftStickCalibrationBytes(ReadOnlySpan<byte> raw)
-    {
-        return new StickRangeCalibration(raw, true);
-    }
-
-    private StickRangeCalibration(ReadOnlySpan<byte> raw, bool isLeft)
-    {
-        InitFromBytes(raw, isLeft);
-    }
-
-    private void InitFromBytes(ReadOnlySpan<byte> raw, bool isLeft)
-    {
-        if (raw.Length != 9)
+        if (raw.Length != 2)
         {
-            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 9 bytes, got {raw.Length}.");
+            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 2 bytes, got {raw.Length}.");
         }
 
-        int offset = isLeft ? 0 : 6;
-
-        InitFromValues([
-            BitWrangler.Lower3NibblesLittleEndian(raw[IndexOffsetter(0, offset)], raw[IndexOffsetter(1, offset)]),
-            BitWrangler.Upper3NibblesLittleEndian(raw[IndexOffsetter(1, offset)], raw[IndexOffsetter(2, offset)]),
-            BitWrangler.Lower3NibblesLittleEndian(raw[IndexOffsetter(3, offset)], raw[IndexOffsetter(4, offset)]),
-            BitWrangler.Upper3NibblesLittleEndian(raw[IndexOffsetter(4, offset)], raw[IndexOffsetter(5, offset)]),
-            BitWrangler.Lower3NibblesLittleEndian(raw[IndexOffsetter(6, offset)], raw[IndexOffsetter(7, offset)]),
-            BitWrangler.Upper3NibblesLittleEndian(raw[IndexOffsetter(7, offset)], raw[IndexOffsetter(8, offset)]),
-        ], isLeft);
+        _value = CalculateRange(BitWrangler.Upper3NibblesLittleEndian(raw[0], raw[1]));
     }
 
-    private static int IndexOffsetter(int index, int offset)
+    public static StickRangeCalibration FromConfigRight(ControllerConfig config)
     {
-        return (index + offset) % 9;
+        return new StickRangeCalibration(config.StickRightRange);
     }
 
-    private void InitFromValues(ReadOnlySpan<ushort> values, bool? isLeft)
+    public static StickRangeCalibration FromConfigLeft(ControllerConfig config)
     {
-        if (values.Length != 6)
-        {
-            throw new ArgumentException($"{nameof(StickRangeCalibration)} expects 6 values, got {values.Length}.");
-        }
-
-#pragma warning disable IDE0055 // Disable formatting
-        _isLeft = isLeft;
-        XMax    = values[0];
-        YMax    = values[1];
-        XCenter = values[2];
-        YCenter = values[3];
-        XMin    = values[4];
-        YMin    = values[5];
-#pragma warning restore IDE0055
+        return new StickRangeCalibration(config.StickLeftRange);
     }
 
-    public override string ToString()
+    public static implicit operator float(StickRangeCalibration range) => range._value;
+
+    private static float CalculateRange(ushort value)
     {
-        string name = _isLeft == null ? "S" : _isLeft.Value ? "Left s" : "Right s";
-        return $"{name}tick calibration data: (XMin: {XMin:D}, XCenter: {XCenter:D}, XMax: {XMax:D}, YMin: {YMin:D}, YCenter: {YCenter:D}, YMax: {YMax:D})";
+        return (float)value / 0xFFF;
     }
 }
