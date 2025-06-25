@@ -452,7 +452,7 @@ public class Joycon
     public bool Reset()
     {
         Log("Resetting connection.");
-        return SetHCIState(0x01) > 0;
+        return SetHCIState(0x01);
     }
 
     public void Attach()
@@ -597,20 +597,18 @@ public class Joycon
 
     private void BTManualPairing()
     {
-        Span<byte> buf = stackalloc byte[ReportLength];
-
         // Bluetooth manual pairing
         byte[] btmac_host = Program.BtMac.GetAddressBytes();
 
         // send host MAC and acquire Joycon MAC
-        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]], buf);
-        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x02], buf); // LTKhash
-        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x03], buf); // save pairing info
+        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]]);
+        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x02]); // LTKhash
+        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x03]); // save pairing info
     }
 
     public bool SetPlayerLED(byte leds = 0x00)
     {
-        return SubcommandCheck(SubCommandOperation.SetPlayerLights, [leds]) > 0;
+        return SubcommandCheck(SubCommandOperation.SetPlayerLights, [leds]) != null;
     }
 
     // Do not call after initial setup
@@ -666,10 +664,10 @@ public class Joycon
         return true;
     }
 
-    private int SetHCIState(byte state)
+    private bool SetHCIState(byte state)
     {
         StopRumbleInSubcommands();
-        return SubcommandCheck(SubCommandOperation.SetHCIState, [state]);
+        return SubcommandCheck(SubCommandOperation.SetHCIState, [state]) != null;
     }
 
     private void SetMotion(bool enable)
@@ -728,7 +726,7 @@ public class Joycon
     {
         if (checkResponse)
         {
-            return SubcommandCheck(SubCommandOperation.SetReportMode, [(byte)reportMode]) > 0;
+            return SubcommandCheck(SubCommandOperation.SetReportMode, [(byte)reportMode]) != null;
         }
         Subcommand(SubCommandOperation.SetReportMode, [(byte)reportMode]);
         return true;
@@ -736,13 +734,9 @@ public class Joycon
 
     private void CheckIfRightIsRetro()
     {
-        Span<byte> response = stackalloc byte[ReportLength];
-
         for (var i = 0; i < 5; ++i)
         {
-            var respLength = SubcommandCheck(SubCommandOperation.RequestDeviceInfo, [], response, false);
-
-            if (respLength > 0)
+            if (SubcommandCheck(SubCommandOperation.RequestDeviceInfo, [], false) is SubCommandReturnPacket response)
             {
                 // The NES and Famicom controllers both share the hardware id of a normal right joycon.
                 // To identify them, we need to query the hardware directly.
@@ -750,7 +744,7 @@ public class Joycon
                 // NES Right: 0x0A
                 // Famicom I (Left): 0x07
                 // Famicom II (Right): 0x08
-                var deviceType = response[17];
+                var deviceType = response.Payload[2];
 
                 switch (deviceType)
                 {
@@ -802,9 +796,8 @@ public class Joycon
         {
             Log("Powering off.");
 
-            // < 0 = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
-            var length = SetHCIState(0x00);
-            if (length != 0)
+            // false = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
+            if (!SetHCIState(0x00))
             {
                 Drop(false, false);
                 return true;
@@ -2469,11 +2462,13 @@ public class Joycon
         Write(buf);
     }
 
-    private int Subcommand(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
+    private bool Subcommand(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
     {
         if (!_device.IsValid)
         {
-            return DeviceErroredCode;
+            //TODO: This should probably be an exception, but that will come later
+            DebugPrint($"Device is not valid. Code: {DeviceErroredCode}", DebugType.Comms);
+            return false;
         }
 
         var subCommandPacket = new SubCommandPacket(sc, _globalCount, bufParameters, _rumbleBuf, IsUSB);
@@ -2484,58 +2479,42 @@ public class Joycon
             DebugPrint(subCommandPacket, DebugType.Comms);
         }
 
-        int length = Write(subCommandPacket);
-
-        return length;
+        return Write(subCommandPacket) >= 0;
     }
 
-    private int SubcommandCheck(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
+    private SubCommandReturnPacket? SubcommandCheck(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
     {
-        Span<byte> response = stackalloc byte[ReportLength];
+        Span<byte> responseBuf = stackalloc byte[ReportLength];
 
-        return SubcommandCheck(sc, bufParameters, response, print);
-    }
-
-    private int SubcommandCheck(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, Span<byte> response, bool print = true)
-    {
-        int length = Subcommand(sc, bufParameters, print);
-        if (length <= 0)
+        if (!Subcommand(sc, bufParameters, print))
         {
             DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
-            return length;
+            return null;
         }
 
-        int tries = 0;
-        bool responseFound;
-        do
+        for (int tries = 0; tries < 10; tries++)
         {
-            length = Read(response, 100); // don't set the timeout lower than 100 or might not always work
-            responseFound = length >= 20 && response[0] == 0x21 && response[14] == (byte)sc;
-
+            int length = Read(responseBuf, 100);
+            
             if (length < 0)
             {
                 DebugPrint($"Subcommand read error: {ErrorMessage()}", DebugType.Comms);
+                break;
             }
 
-            tries++;
-        } while (tries < 10 && !responseFound && length >= 0);
+            if (SubCommandReturnPacket.TryConstruct(sc, responseBuf, length, out SubCommandReturnPacket? response))
+            {
+                if (print)
+                {
+                    DebugPrint(response.ToString(), DebugType.Comms);
+                }
 
-        if (!responseFound)
-        {
-            DebugPrint("No response.", DebugType.Comms);
-            return length <= 0 ? length : 0;
+                return response;
+            }
         }
 
-        if (print)
-        {
-            PrintArray<byte>(
-                response[1..length],
-                DebugType.Comms,
-                $"Response ID {response[0]:X2}. Data: {{0:S}}"
-            );
-        }
-
-        return length;
+        DebugPrint("No response.", DebugType.Comms);
+        return null;
     }
 
     private bool CalibrationDataSupported()
@@ -2847,39 +2826,37 @@ public class Joycon
 
     private byte[] ReadSPICheck(SPIPage page, ref bool ok, bool print = false)
     {
-        var readBuf = new byte[page.PageSize];
         if (!ok)
         {
-            return readBuf;
+            return [];
         }
-
-        Span<byte> response = stackalloc byte[ReportLength];
 
         ok = false;
-        for (var i = 0; i < 5; ++i)
+        for (var attempts = 0; attempts < 5; ++attempts)
         {
-            int length = SubcommandCheck(SubCommandOperation.SPIFlashRead, page, response, false);
-            if (length >= 20 + page.PageSize && response[15] == page.LowAddress && response[16] == page.HighAddress)
+            SubCommandReturnPacket? response = SubcommandCheck(SubCommandOperation.SPIFlashRead, page, false);
+            if (response != null &&
+                response.Payload.Length >= page.PageSize + 5 &&
+                response.Payload[0] == page.LowAddress && 
+                response.Payload[1] == page.HighAddress)
             {
                 ok = true;
-                break;
-            }
-        }
+                
+                if (print)
+                {
+                    PrintArray(response.Payload[..page.PageSize], DebugType.Comms);
+                }
 
-        if (ok)
-        {
-            response.Slice(20, page.PageSize).CopyTo(readBuf);
-            if (print)
-            {
-                PrintArray<byte>(readBuf.AsSpan(0, page.PageSize), DebugType.Comms);
+                return response.Payload.ToArray();
             }
         }
-        else
+        
+        if(!ok)
         {
             Log("ReadSPI error.", Logger.LogLevel.Error);
         }
 
-        return readBuf;
+        return [];
     }
 
     private void PrintArray<T>(
