@@ -2479,7 +2479,7 @@ public class Joycon
             DebugPrint(subCommandPacket, DebugType.Comms);
         }
 
-        return Write(subCommandPacket) >= 0;
+        return Write(subCommandPacket) > 0;
     }
 
     private SubCommandReturnPacket? SubcommandCheck(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
