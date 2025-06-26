@@ -2847,7 +2847,7 @@ public class Joycon
                     PrintArray(response.Payload[..page.PageSize], DebugType.Comms);
                 }
 
-                return response.Payload.ToArray();
+                return response.Payload[5..].ToArray();
             }
         }
         
