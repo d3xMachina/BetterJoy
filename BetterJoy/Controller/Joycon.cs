@@ -2844,10 +2844,10 @@ public class Joycon
                 
                 if (print)
                 {
-                    PrintArray(response.Payload[..page.PageSize], DebugType.Comms);
+                    PrintArray(response.Payload[5..page.PageSize], DebugType.Comms);
                 }
 
-                return response.Payload[5..].ToArray();
+                return response.Payload[5..page.PageSize].ToArray();
             }
         }
         
