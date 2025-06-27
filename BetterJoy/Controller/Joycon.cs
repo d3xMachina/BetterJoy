@@ -13,6 +13,7 @@ using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Threading;
@@ -597,15 +598,13 @@ public class Joycon
 
     private void BTManualPairing()
     {
-        Span<byte> buf = stackalloc byte[ReportLength];
-
         // Bluetooth manual pairing
         byte[] btmac_host = Program.BtMac.GetAddressBytes();
 
         // send host MAC and acquire Joycon MAC
-        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]], buf);
-        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x02], buf); // LTKhash
-        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x03], buf); // save pairing info
+        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]]);
+        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x02]); // LTKhash
+        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x03]); // save pairing info
     }
 
     public bool SetPlayerLED(byte leds = 0x00)
@@ -736,13 +735,13 @@ public class Joycon
 
     private void CheckIfRightIsRetro()
     {
-        Span<byte> response = stackalloc byte[ReportLength];
+        SubCommandReturnPacket? response = null;
 
         for (var i = 0; i < 5; ++i)
         {
-            var respLength = SubcommandCheck(SubCommandOperation.RequestDeviceInfo, [], response, false);
+            var respLength = SubcommandCheck(SubCommandOperation.RequestDeviceInfo, [], out response, false);
 
-            if (respLength > 0)
+            if (respLength > 0 && response != null)
             {
                 // The NES and Famicom controllers both share the hardware id of a normal right joycon.
                 // To identify them, we need to query the hardware directly.
@@ -750,7 +749,7 @@ public class Joycon
                 // NES Right: 0x0A
                 // Famicom I (Left): 0x07
                 // Famicom II (Right): 0x08
-                var deviceType = response[17];
+                var deviceType = response.Payload[2];
 
                 switch (deviceType)
                 {
@@ -2489,38 +2488,41 @@ public class Joycon
         return length;
     }
 
-    private int SubcommandCheck(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
-    {
-        Span<byte> response = stackalloc byte[ReportLength];
+    private int SubcommandCheck(SubCommandOperation operation, ReadOnlySpan<byte> bufParameters, bool print = true) => 
+        SubcommandCheck(operation, bufParameters, out _, print);
 
-        return SubcommandCheck(sc, bufParameters, response, print);
-    }
-
-    private int SubcommandCheck(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, Span<byte> response, bool print = true)
+    private int SubcommandCheck(
+        SubCommandOperation operation, 
+        ReadOnlySpan<byte> bufParameters, 
+        out SubCommandReturnPacket? response, 
+        bool print = true)
     {
-        int length = Subcommand(sc, bufParameters, print);
+        Span<byte> responseBuf = stackalloc byte[ReportLength];
+        response = null;
+        int length = Subcommand(operation, bufParameters, print);
         if (length <= 0)
         {
             DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
             return length;
         }
 
-        int tries = 0;
-        bool responseFound;
-        do
+        for (int tries = 0; tries < 10; tries++)
         {
-            length = Read(response, 100); // don't set the timeout lower than 100 or might not always work
-            responseFound = length >= 20 && response[0] == 0x21 && response[14] == (byte)sc;
-
+            length = Read(responseBuf, 100); // don't set the timeout lower than 100 or might not always work
+            
             if (length < 0)
             {
                 DebugPrint($"Subcommand read error: {ErrorMessage()}", DebugType.Comms);
+                break;
             }
 
-            tries++;
-        } while (tries < 10 && !responseFound && length >= 0);
+            if (SubCommandReturnPacket.TryConstruct(operation, responseBuf, length, out response))
+            {
+                break;
+            }
+        } 
 
-        if (!responseFound)
+        if (response == null)
         {
             DebugPrint("No response.", DebugType.Comms);
             return length <= 0 ? length : 0;
@@ -2528,11 +2530,7 @@ public class Joycon
 
         if (print)
         {
-            PrintArray<byte>(
-                response[1..length],
-                DebugType.Comms,
-                $"Response ID {response[0]:X2}. Data: {{0:S}}"
-            );
+            DebugPrint(response.ToString(), DebugType.Comms);
         }
 
         return length;
@@ -2853,22 +2851,25 @@ public class Joycon
             return readBuf;
         }
 
-        Span<byte> response = stackalloc byte[ReportLength];
+        SubCommandReturnPacket? response = null;
 
         ok = false;
         for (var i = 0; i < 5; ++i)
         {
-            int length = SubcommandCheck(SubCommandOperation.SPIFlashRead, page, response, false);
-            if (length >= 20 + page.PageSize && response[15] == page.LowAddress && response[16] == page.HighAddress)
+            int length = SubcommandCheck(SubCommandOperation.SPIFlashRead, page, out response, false);
+            if (length >= 20 + page.PageSize && //Optimization question, is there a response that is not null, and 20-(20+page.PageSize) long?
+                response != null && 
+                response.Payload[0] == page.LowAddress && 
+                response.Payload[1] == page.HighAddress)
             {
                 ok = true;
                 break;
             }
         }
 
-        if (ok)
+        if (ok && response != null)
         {
-            response.Slice(20, page.PageSize).CopyTo(readBuf);
+            response.Payload.Slice(5, page.PageSize).CopyTo(readBuf);
             if (print)
             {
                 PrintArray<byte>(readBuf.AsSpan(0, page.PageSize), DebugType.Comms);
