@@ -37,9 +37,11 @@ public class SubCommandReturnPacket : IncomingPacket
 
     private static bool IsValidSubCommandReturnPacket(SubCommandOperation operation, ReadOnlySpan<byte> buffer, int length)
     {
-        return !(length >= PayloadStartIndex &&
-                 buffer[ResponseCodeIndex] == SubCommandReturnPacketResponseCode &&
-                 buffer[SubCommandEchoIndex] == (byte)operation);
+        //Optimization question: Is there a message in 0x21 format, that echos the correct subcommand that is not 20+ bytes long?
+        //Said another way, can we remove this first check?
+        return length >= PayloadStartIndex + 5 && 
+               buffer[ResponseCodeIndex] == SubCommandReturnPacketResponseCode &&
+               buffer[SubCommandEchoIndex] == (byte)operation;
     }
     
     public bool IsSubCommandReply => Raw[ResponseCodeIndex] == SubCommandReturnPacketResponseCode;

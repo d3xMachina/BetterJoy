@@ -13,6 +13,7 @@ using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Threading;
@@ -452,7 +453,7 @@ public class Joycon
     public bool Reset()
     {
         Log("Resetting connection.");
-        return SetHCIState(0x01);
+        return SetHCIState(0x01) > 0;
     }
 
     public void Attach()
@@ -608,7 +609,7 @@ public class Joycon
 
     public bool SetPlayerLED(byte leds = 0x00)
     {
-        return SubcommandCheck(SubCommandOperation.SetPlayerLights, [leds]) != null;
+        return SubcommandCheck(SubCommandOperation.SetPlayerLights, [leds]) > 0;
     }
 
     // Do not call after initial setup
@@ -664,10 +665,10 @@ public class Joycon
         return true;
     }
 
-    private bool SetHCIState(byte state)
+    private int SetHCIState(byte state)
     {
         StopRumbleInSubcommands();
-        return SubcommandCheck(SubCommandOperation.SetHCIState, [state]) != null;
+        return SubcommandCheck(SubCommandOperation.SetHCIState, [state]);
     }
 
     private void SetMotion(bool enable)
@@ -726,7 +727,7 @@ public class Joycon
     {
         if (checkResponse)
         {
-            return SubcommandCheck(SubCommandOperation.SetReportMode, [(byte)reportMode]) != null;
+            return SubcommandCheck(SubCommandOperation.SetReportMode, [(byte)reportMode]) > 0;
         }
         Subcommand(SubCommandOperation.SetReportMode, [(byte)reportMode]);
         return true;
@@ -734,9 +735,13 @@ public class Joycon
 
     private void CheckIfRightIsRetro()
     {
+        SubCommandReturnPacket? response = null;
+
         for (var i = 0; i < 5; ++i)
         {
-            if (SubcommandCheck(SubCommandOperation.RequestDeviceInfo, [], false) is SubCommandReturnPacket response)
+            var respLength = SubcommandCheck(SubCommandOperation.RequestDeviceInfo, [], out response, false);
+
+            if (respLength > 0 && response != null)
             {
                 // The NES and Famicom controllers both share the hardware id of a normal right joycon.
                 // To identify them, we need to query the hardware directly.
@@ -796,8 +801,9 @@ public class Joycon
         {
             Log("Powering off.");
 
-            // false = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
-            if (!SetHCIState(0x00))
+            // < 0 = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
+            var length = SetHCIState(0x00);
+            if (length != 0)
             {
                 Drop(false, false);
                 return true;
@@ -2462,13 +2468,11 @@ public class Joycon
         Write(buf);
     }
 
-    private bool Subcommand(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
+    private int Subcommand(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
     {
         if (!_device.IsValid)
         {
-            //TODO: This should probably be an exception, but that will come later
-            DebugPrint($"Device is not valid. Code: {DeviceErroredCode}", DebugType.Comms);
-            return false;
+            return DeviceErroredCode;
         }
 
         var subCommandPacket = new SubCommandPacket(sc, _globalCount, bufParameters, _rumbleBuf, IsUSB);
@@ -2479,22 +2483,32 @@ public class Joycon
             DebugPrint(subCommandPacket, DebugType.Comms);
         }
 
-        return Write(subCommandPacket) > 0;
+        int length = Write(subCommandPacket);
+
+        return length;
     }
 
-    private SubCommandReturnPacket? SubcommandCheck(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
+    private int SubcommandCheck(SubCommandOperation operation, ReadOnlySpan<byte> bufParameters, bool print = true) => 
+        SubcommandCheck(operation, bufParameters, out _, print);
+
+    private int SubcommandCheck(
+        SubCommandOperation operation, 
+        ReadOnlySpan<byte> bufParameters, 
+        out SubCommandReturnPacket? response, 
+        bool print = true)
     {
         Span<byte> responseBuf = stackalloc byte[ReportLength];
-
-        if (!Subcommand(sc, bufParameters, print))
+        response = null;
+        int length = Subcommand(operation, bufParameters, print);
+        if (length <= 0)
         {
             DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
-            return null;
+            return length;
         }
 
         for (int tries = 0; tries < 10; tries++)
         {
-            int length = Read(responseBuf, 100);
+            length = Read(responseBuf, 100); // don't set the timeout lower than 100 or might not always work
             
             if (length < 0)
             {
@@ -2502,19 +2516,24 @@ public class Joycon
                 break;
             }
 
-            if (SubCommandReturnPacket.TryConstruct(sc, responseBuf, length, out SubCommandReturnPacket? response))
+            if (SubCommandReturnPacket.TryConstruct(operation, responseBuf, length, out response))
             {
-                if (print)
-                {
-                    DebugPrint(response.ToString(), DebugType.Comms);
-                }
-
-                return response;
+                break;
             }
+        } 
+
+        if (response == null)
+        {
+            DebugPrint("No response.", DebugType.Comms);
+            return length <= 0 ? length : 0;
         }
 
-        DebugPrint("No response.", DebugType.Comms);
-        return null;
+        if (print)
+        {
+            DebugPrint(response.ToString(), DebugType.Comms);
+        }
+
+        return length;
     }
 
     private bool CalibrationDataSupported()
@@ -2566,60 +2585,49 @@ public class Joycon
             var userStickData = ReadSPICheck(SPIPage.UserStickCalibration, ref ok);
             var factoryStickData = ReadSPICheck(SPIPage.FactoryStickCalibration, ref ok);
 
+            var stick1Data = new ReadOnlySpan<byte>(userStickData, IsLeft ? 2 : 13, 9);
             var stick1Name = IsLeft ? "left" : "right";
-            
-            if (userStickData.Length > 0 && userStickData[IsLeft ? 0 : 11] == 0xB2 && userStickData[IsLeft ? 1 : 12] == 0xA1)
+
+            if (ok)
             {
-                var  stick1Data = new ReadOnlySpan<byte>(userStickData, IsLeft ? 2 : 13, 9);
-                
-                DebugPrint($"Retrieve user {stick1Name} stick calibration data.", DebugType.Comms);
-                
-                _stickCal = IsLeft ?
-                    StickLimitsCalibration.FromLeftStickCalibrationBytes(stick1Data) :
-                    StickLimitsCalibration.FromRightStickCalibrationBytes(stick1Data);
+                if (userStickData[IsLeft ? 0 : 11] == 0xB2 && userStickData[IsLeft ? 1 : 12] == 0xA1)
+                {
+                    DebugPrint($"Retrieve user {stick1Name} stick calibration data.", DebugType.Comms);
+                }
+                else
+                {
+                    stick1Data = new ReadOnlySpan<byte>(factoryStickData, IsLeft ? 0 : 9, 9);
+
+                    DebugPrint($"Retrieve factory {stick1Name} stick calibration data.", DebugType.Comms);
+                }
             }
-            else if (factoryStickData.Length > 0)
-            {
-                var  stick1Data = new ReadOnlySpan<byte>(factoryStickData, IsLeft ? 0 : 9, 9);
-                
-                DebugPrint($"Retrieve factory {stick1Name} stick calibration data.", DebugType.Comms);
-                
-                _stickCal = IsLeft ?
-                    StickLimitsCalibration.FromLeftStickCalibrationBytes(stick1Data) :
-                    StickLimitsCalibration.FromRightStickCalibrationBytes(stick1Data);
-            }
-            else
-            {
-                _stickCal = new StickLimitsCalibration(IsLeft);
-            }
-            
+
+            _stickCal = IsLeft ?
+                StickLimitsCalibration.FromLeftStickCalibrationBytes(stick1Data) :
+                StickLimitsCalibration.FromRightStickCalibrationBytes(stick1Data);
+
             DebugPrint(_stickCal, DebugType.None);
 
             if (IsPro) //If it is pro, then it is also always left
             {
-                
+                var stick2Data = new ReadOnlySpan<byte>(userStickData, 13, 9);
                 var stick2Name = "right";
-                
-                if (userStickData.Length > 0 && userStickData[11] == 0xB2 && userStickData[12] == 0xA1)
+
+                if (ok)
                 {
-                    var stick2Data = new ReadOnlySpan<byte>(userStickData, 13, 9);
-                    
-                    DebugPrint($"Retrieve user {stick2Name} stick calibration data.", DebugType.Comms);
-                    
-                    _stick2Cal = StickLimitsCalibration.FromRightStickCalibrationBytes(stick2Data);
+                    if (userStickData[11] == 0xB2 && userStickData[12] == 0xA1)
+                    {
+                        DebugPrint($"Retrieve user {stick2Name} stick calibration data.", DebugType.Comms);
+                    }
+                    else
+                    {
+                        stick2Data = new ReadOnlySpan<byte>(factoryStickData, 9, 9);
+
+                        DebugPrint($"Retrieve factory {stick2Name} stick calibration data.", DebugType.Comms);
+                    }
                 }
-                else if (factoryStickData.Length > 0)
-                {
-                    var stick2Data = new ReadOnlySpan<byte>(factoryStickData, 9, 9);
-                    
-                    DebugPrint($"Retrieve factory {stick2Name} stick calibration data.", DebugType.Comms);
-                    
-                    _stick2Cal = StickLimitsCalibration.FromRightStickCalibrationBytes(stick2Data);
-                }
-                else
-                {
-                    _stick2Cal = new StickLimitsCalibration(false);
-                }
+
+                _stick2Cal = StickLimitsCalibration.FromRightStickCalibrationBytes(stick2Data);
 
                 DebugPrint(_stick2Cal, DebugType.None);
             }
@@ -2631,37 +2639,20 @@ public class Joycon
         {
             var factoryDeadzoneData = ReadSPICheck(SPIPage.StickDeadZone, ref ok);
 
-            if (factoryDeadzoneData.Length > 0)
+            var offset = IsLeft ? 0 : 0x12;
+
+            _deadZone = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
+
+            _range = new StickRangeCalibration(factoryDeadzoneData.AsSpan(offset + 1, 2));
+
+            if (IsPro) //If it is pro, then it is also always left
             {
-                var offset = IsLeft ? 0 : 0x12;
+                offset = 0x12;
 
-                _deadZone = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
+                _deadZone2 = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
 
-                _range = new StickRangeCalibration(factoryDeadzoneData.AsSpan(offset + 1, 2));
-
-                if (IsPro) //If it is pro, then it is also always left
-                {
-                    offset = 0x12;
-
-                    _deadZone2 = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
-
-                    _range2 = new StickRangeCalibration(factoryDeadzoneData.AsSpan(offset + 1, 2));
-                }
-            }
-            else
-            {
-                DebugPrint("Error reading SPI deadzone data. Falling back to application config", DebugType.Comms);
-                
-                _deadZone = StickDeadZoneCalibration.FromConfigLeft(Config);
-                
-                _range = StickRangeCalibration.FromConfigLeft(Config);
-
-                if (IsPro) //If it is pro, then it is also always left
-                {
-                    _deadZone2 = StickDeadZoneCalibration.FromConfigRight(Config);
-
-                    _range = StickRangeCalibration.FromConfigRight(Config);
-                }
+                var range2 = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
+                _range2 = new StickRangeCalibration(factoryDeadzoneData.AsSpan(offset + 1, 2));
             }
         }
 
@@ -2669,29 +2660,24 @@ public class Joycon
         if (MotionSupported())
         {
             var userSensorData = ReadSPICheck(SPIPage.UserMotionCalibration, ref ok);
-            var factorySensorData = ReadSPICheck(SPIPage.FactoryMotionCalibration, ref ok);
-            
-            if (userSensorData.Length > 0 && userSensorData[0] == 0xB2 && userSensorData[1] == 0xA1)
-            {
-                var sensorData = new ReadOnlySpan<byte>(userSensorData, 2, 24);
-                    
-                DebugPrint("Retrieve user sensors calibration data.", DebugType.Comms);
-                
-                _motionCalibration = new MotionCalibration(sensorData);
-            }
-            else if (factorySensorData.Length > 0)
-            {
-                
-                var sensorData = new ReadOnlySpan<byte>(factorySensorData, 0, 24);
+            var sensorData = new ReadOnlySpan<byte>(userSensorData, 2, 24);
 
-                DebugPrint("Retrieve factory sensors calibration data.", DebugType.Comms);
-                
-                _motionCalibration = new MotionCalibration(sensorData);
-            }
-            else
+            if (ok)
             {
-                _motionCalibration = new MotionCalibration();
+                if (userSensorData[0] == 0xB2 && userSensorData[1] == 0xA1)
+                {
+                    DebugPrint("Retrieve user sensors calibration data.", DebugType.Comms);
+                }
+                else
+                {
+                    var factorySensorData = ReadSPICheck(SPIPage.FactoryMotionCalibration, ref ok);
+                    sensorData = new ReadOnlySpan<byte>(factorySensorData, 0, 24);
+
+                    DebugPrint("Retrieve factory sensors calibration data.", DebugType.Comms);
+                }
             }
+
+            _motionCalibration = new MotionCalibration(sensorData);
 
             if (_motionCalibration.UsedDefaultValues)
             {
@@ -2859,38 +2845,42 @@ public class Joycon
 
     private byte[] ReadSPICheck(SPIPage page, ref bool ok, bool print = false)
     {
+        var readBuf = new byte[page.PageSize];
         if (!ok)
         {
-            return [];
+            return readBuf;
         }
 
-        ok = false;
         SubCommandReturnPacket? response = null;
-        for (var attempts = 0; attempts < 5; ++attempts)
+
+        ok = false;
+        for (var i = 0; i < 5; ++i)
         {
-            response = SubcommandCheck(SubCommandOperation.SPIFlashRead, page, false);
-            if (response != null &&
-                response.Payload.Length >= page.PageSize + 5 &&
+            int length = SubcommandCheck(SubCommandOperation.SPIFlashRead, page, out response, false);
+            if (length >= 20 + page.PageSize && 
+                response != null && 
                 response.Payload[0] == page.LowAddress && 
                 response.Payload[1] == page.HighAddress)
             {
                 ok = true;
-                
-                if (print)
-                {
-                    PrintArray(response.Payload.Slice(5, page.PageSize), DebugType.Comms);
-                }
-
-                return response.Payload.Slice(5, page.PageSize).ToArray();
+                break;
             }
         }
-        
-        if(!ok)
+
+        if (ok && response != null)
+        {
+            response.Payload.Slice(5, page.PageSize).CopyTo(readBuf);
+            if (print)
+            {
+                PrintArray<byte>(readBuf.AsSpan(0, page.PageSize), DebugType.Comms);
+            }
+        }
+        else
         {
             Log("ReadSPI error.", Logger.LogLevel.Error);
         }
 
-        return [];
+        return readBuf;
     }
 
     private void PrintArray<T>(
