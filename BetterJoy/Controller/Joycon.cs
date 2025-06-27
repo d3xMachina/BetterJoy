@@ -2857,7 +2857,7 @@ public class Joycon
         for (var i = 0; i < 5; ++i)
         {
             int length = SubcommandCheck(SubCommandOperation.SPIFlashRead, page, out response, false);
-            if (length >= 20 + page.PageSize && 
+            if (length >= 20 + page.PageSize && //Optimization question, is there a response that is not null, and 20-(20+page.PageSize) long?
                 response != null && 
                 response.Payload[0] == page.LowAddress && 
                 response.Payload[1] == page.HighAddress)
