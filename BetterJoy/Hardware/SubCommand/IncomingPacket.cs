@@ -23,11 +23,20 @@ public abstract class IncomingPacket
         private byte _firstElement;
     }
 
-    protected readonly ResponseBuffer Raw;
+    private readonly ResponseBuffer _raw;
+    private readonly int _length;
+    protected ReadOnlySpan<byte> Raw => _raw[.._length];
 
-    protected IncomingPacket(ReadOnlySpan<byte> buffer)
+    protected IncomingPacket(ReadOnlySpan<byte> buffer, int length)
     {
-        buffer.CopyTo(Raw);
+        if (length < 0)
+        {
+            throw new ArgumentException("Provided length cannot be negative.");
+        }
+        
+        _length = length;
+        
+        buffer.CopyTo(_raw);
     }
     
     public byte MessageCode => Raw[ResponseCodeIndex];
@@ -37,6 +46,8 @@ public abstract class IncomingPacket
     
     //TODO: Clean this up once we have objects to represent the inputs
     public ReadOnlySpan<byte> InputData => ((ReadOnlySpan<byte>)Raw)[ButtonStateStartIndex..(RumbleStateIndex - ButtonStateStartIndex)];
+    
+    public int Length => Raw.Length;
     
     public override string ToString()
     {

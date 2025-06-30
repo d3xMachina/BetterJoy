@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -453,7 +454,14 @@ public class Joycon
     public bool Reset()
     {
         Log("Resetting connection.");
-        return SetHCIState(0x01) > 0;
+        try
+        {
+            return SetHCIState(0x01) != null;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
     }
 
     public void Attach()
@@ -602,14 +610,14 @@ public class Joycon
         byte[] btmac_host = Program.BtMac.GetAddressBytes();
 
         // send host MAC and acquire Joycon MAC
-        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]]);
-        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x02]); // LTKhash
-        SubcommandCheck(SubCommandOperation.ManualBluetoothPairing, [0x03]); // save pairing info
+        SubcommandWithResponseIgnoreContent(SubCommandOperation.ManualBluetoothPairing, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]]);
+        SubcommandWithResponseIgnoreContent(SubCommandOperation.ManualBluetoothPairing, [0x02]); // LTKhash
+        SubcommandWithResponseIgnoreContent(SubCommandOperation.ManualBluetoothPairing, [0x03]); // save pairing info
     }
 
     public bool SetPlayerLED(byte leds = 0x00)
     {
-        return SubcommandCheck(SubCommandOperation.SetPlayerLights, [leds]) > 0;
+        return SubcommandWithResponseIgnoreContent(SubCommandOperation.SetPlayerLights, [leds]);
     }
 
     // Do not call after initial setup
@@ -633,7 +641,8 @@ public class Joycon
             0xFF,
             0xFF,
         ];
-        SubcommandCheck(SubCommandOperation.SetHomeLight, buf);
+        
+        SubcommandWithResponseIgnoreContent(SubCommandOperation.SetHomeLight, buf);
     }
 
     public bool SetHomeLight(bool on)
@@ -665,10 +674,10 @@ public class Joycon
         return true;
     }
 
-    private int SetHCIState(byte state)
+    private SubCommandReturnPacket? SetHCIState(byte state)
     {
         StopRumbleInSubcommands();
-        return SubcommandCheck(SubCommandOperation.SetHCIState, [state]);
+        return SubcommandWithResponse(SubCommandOperation.SetHCIState, [state]);
     }
 
     private void SetMotion(bool enable)
@@ -678,7 +687,7 @@ public class Joycon
             return;
         }
 
-        SubcommandCheck(SubCommandOperation.EnableIMU, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandWithResponseIgnoreContent(SubCommandOperation.EnableIMU, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void SetMotionSensitivity()
@@ -695,12 +704,12 @@ public class Joycon
             0x01, // gyroscope performance rate : 0x00 = 833hz, 0x01 = 208hz (default)
             0x01  // accelerometer anti-aliasing filter bandwidth : 0x00 = 200hz, 0x01 = 100hz (default)
         ];
-        SubcommandCheck(SubCommandOperation.SetIMUSensitivity, buf);
+        SubcommandWithResponseIgnoreContent(SubCommandOperation.SetIMUSensitivity, buf);
     }
 
     private void SetRumble(bool enable)
     {
-        SubcommandCheck(SubCommandOperation.EnableVibration, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandWithResponseIgnoreContent(SubCommandOperation.EnableVibration, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void IgnoreRumbleInSubcommands()
@@ -720,14 +729,14 @@ public class Joycon
             return;
         }
 
-        SubcommandCheck(SubCommandOperation.SetMCUState, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandWithResponse(SubCommandOperation.SetMCUState, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private bool SetReportMode(InputReportMode reportMode, bool checkResponse = true)
     {
         if (checkResponse)
         {
-            return SubcommandCheck(SubCommandOperation.SetReportMode, [(byte)reportMode]) > 0;
+            return SubcommandWithResponseIgnoreContent(SubCommandOperation.SetReportMode, [(byte)reportMode]);
         }
         Subcommand(SubCommandOperation.SetReportMode, [(byte)reportMode]);
         return true;
@@ -739,40 +748,49 @@ public class Joycon
 
         for (var i = 0; i < 5; ++i)
         {
-            var respLength = SubcommandCheck(SubCommandOperation.RequestDeviceInfo, [], out response, false);
-
-            if (respLength > 0 && response != null)
+            try
             {
-                // The NES and Famicom controllers both share the hardware id of a normal right joycon.
-                // To identify them, we need to query the hardware directly.
-                // NES Left: 0x09
-                // NES Right: 0x0A
-                // Famicom I (Left): 0x07
-                // Famicom II (Right): 0x08
-                var deviceType = response.Payload[2];
-
-                switch (deviceType)
-                {
-                    case 0x02:
-                        // Do nothing, it's the right joycon
-                        break;
-                    case 0x09:
-                    case 0x0A:
-                        Type = ControllerType.NES;
-                        break;
-                    case 0x07:
-                        Type = ControllerType.FamicomI;
-                        break;
-                    case 0x08:
-                        Type = ControllerType.FamicomII;
-                        break;
-                    default:
-                        Log($"Unknown device type: {deviceType:X2}", Logger.LogLevel.Warning);
-                        break;
-                }
-
-                return;
+                response = SubcommandWithResponse(SubCommandOperation.RequestDeviceInfo, [], false); //Uses response
             }
+            catch (IOException)
+            {
+                continue;
+            }
+
+            if (response == null)
+            {
+                continue;
+            }
+
+            // The NES and Famicom controllers both share the hardware id of a normal right joycon.
+            // To identify them, we need to query the hardware directly.
+            // NES Left: 0x09
+            // NES Right: 0x0A
+            // Famicom I (Left): 0x07
+            // Famicom II (Right): 0x08
+            var deviceType = response.Payload[2];
+
+            switch (deviceType)
+            {
+                case 0x02:
+                    // Do nothing, it's the right joycon
+                    break;
+                case 0x09:
+                case 0x0A:
+                    Type = ControllerType.NES;
+                    break;
+                case 0x07:
+                    Type = ControllerType.FamicomI;
+                    break;
+                case 0x08:
+                    Type = ControllerType.FamicomII;
+                    break;
+                default:
+                    Log($"Unknown device type: {deviceType:X2}", Logger.LogLevel.Warning);
+                    break;
+            }
+
+            return;
         }
 
         throw new DeviceComFailedException("reset device info");
@@ -780,7 +798,7 @@ public class Joycon
 
     private void SetLowPowerState(bool enable)
     {
-        SubcommandCheck(SubCommandOperation.EnableLowPowerMode, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandWithResponseIgnoreContent(SubCommandOperation.EnableLowPowerMode, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void BTActivate()
@@ -797,20 +815,27 @@ public class Joycon
 
     public bool PowerOff()
     {
-        if (IsDeviceReady)
+        if (!IsDeviceReady)
         {
-            Log("Powering off.");
-
-            // < 0 = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
-            var length = SetHCIState(0x00);
-            if (length != 0)
-            {
-                Drop(false, false);
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        Log("Powering off.");
+            
+        try
+        {
+            if (SetHCIState(0x00) == null)
+            {
+                return false;
+            }
+        }
+        catch (IOException)
+        {
+            // IOException = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
+        }
+            
+        Drop(false, false);
+        return true;
     }
 
     public void RequestPowerOff()
@@ -978,7 +1003,7 @@ public class Joycon
         }
 
         // The controller should report back at 60hz or between 60-120hz for the Pro Controller in USB
-        var length = Read(buf, 100);
+        var length = Read(buf);
 
         if (length < 0)
         {
@@ -2488,52 +2513,59 @@ public class Joycon
         return length;
     }
 
-    private int SubcommandCheck(SubCommandOperation operation, ReadOnlySpan<byte> bufParameters, bool print = true) => 
-        SubcommandCheck(operation, bufParameters, out _, print);
+    private bool SubcommandWithResponseIgnoreContent(SubCommandOperation operation, ReadOnlySpan<byte> bufParameters)
+    {
+        try
+        {
+            return SubcommandWithResponse(operation, bufParameters) != null;
+        }
+        catch (IOException e)
+        {
+            DebugPrint(e.ToString(), DebugType.Comms);
+            
+            return false;
+        }
+    }
 
-    private int SubcommandCheck(
+    private SubCommandReturnPacket? SubcommandWithResponse(
         SubCommandOperation operation, 
-        ReadOnlySpan<byte> bufParameters, 
-        out SubCommandReturnPacket? response, 
+        ReadOnlySpan<byte> bufParameters,
         bool print = true)
     {
         Span<byte> responseBuf = stackalloc byte[ReportLength];
-        response = null;
+        SubCommandReturnPacket? response = null;
         int length = Subcommand(operation, bufParameters, print);
+        
         if (length <= 0)
         {
             DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
-            return length;
+            throw new IOException("Write subcommand failure.");
         }
 
         for (int tries = 0; tries < 10; tries++)
         {
-            length = Read(responseBuf, 100); // don't set the timeout lower than 100 or might not always work
+            length = Read(responseBuf); //Returns < 1 on error, 0 on timeout
             
             if (length < 0)
             {
                 DebugPrint($"Subcommand read error: {ErrorMessage()}", DebugType.Comms);
-                break;
+                throw new IOException("Read subcommand failure.");
             }
 
             if (SubCommandReturnPacket.TryConstruct(operation, responseBuf, length, out response))
             {
-                break;
+                if (print)
+                {
+                    DebugPrint(response.ToString(), DebugType.Comms);
+                }
+                
+                return response;
             }
         } 
 
-        if (response == null)
-        {
-            DebugPrint("No response.", DebugType.Comms);
-            return length <= 0 ? length : 0;
-        }
-
-        if (print)
-        {
-            DebugPrint(response.ToString(), DebugType.Comms);
-        }
-
-        return length;
+        DebugPrint("No response.", DebugType.Comms);
+        
+        return response;
     }
 
     private bool CalibrationDataSupported()
@@ -2720,7 +2752,7 @@ public class Joycon
         }
     }
 
-    private int Read(Span<byte> response, int timeout = 100)
+    private int Read(Span<byte> response)
     {
         if (response.Length < ReportLength)
         {
@@ -2732,12 +2764,7 @@ public class Joycon
             return DeviceErroredCode;
         }
 
-        if (timeout >= 0)
-        {
-            return _device.ReadTimeout(response, ReportLength, timeout);
-        }
-
-        return _device.Read(response, ReportLength);
+        return _device.ReadTimeout(response, ReportLength, 100); // don't set the timeout lower than 100 or might not always work
     }
 
     private int Write(ReadOnlySpan<byte> command)
@@ -2814,7 +2841,7 @@ public class Joycon
 
         do
         {
-            length = Read(response, 100);
+            length = Read(response);
             responseFound = length > 1 && response[0] == 0x81 && response[1] == command;
 
             if (length < 0)
@@ -2856,29 +2883,26 @@ public class Joycon
         ok = false;
         for (var i = 0; i < 5; ++i)
         {
-            int length = SubcommandCheck(SubCommandOperation.SPIFlashRead, page, out response, false);
-            if (length >= 20 + page.PageSize && //Optimization question, is there a response that is not null, and 20-(20+page.PageSize) long?
-                response != null && 
+            response = SubcommandWithResponse(SubCommandOperation.SPIFlashRead, page, false); //Uses response
+            if (response != null && 
+                response.Length >= 20 + page.PageSize &&
                 response.Payload[0] == page.LowAddress && 
                 response.Payload[1] == page.HighAddress)
             {
                 ok = true;
-                break;
+                
+                if (print)
+                {
+                    PrintArray<byte>(readBuf.AsSpan(0, page.PageSize), DebugType.Comms);
+                }
+                
+                response.Payload.Slice(5, page.PageSize).CopyTo(readBuf);
+
+                return readBuf;
             }
         }
 
-        if (ok && response != null)
-        {
-            response.Payload.Slice(5, page.PageSize).CopyTo(readBuf);
-            if (print)
-            {
-                PrintArray<byte>(readBuf.AsSpan(0, page.PageSize), DebugType.Comms);
-            }
-        }
-        else
-        {
-            Log("ReadSPI error.", Logger.LogLevel.Error);
-        }
+        Log("ReadSPI error.", Logger.LogLevel.Error);
 
         return readBuf;
     }

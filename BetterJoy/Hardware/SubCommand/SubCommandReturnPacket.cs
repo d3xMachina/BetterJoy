@@ -27,7 +27,7 @@ public class SubCommandReturnPacket : IncomingPacket
         return valid;
     }
 
-    protected SubCommandReturnPacket(SubCommandOperation operation, ReadOnlySpan<byte> buffer, int length) : base(buffer)
+    protected SubCommandReturnPacket(SubCommandOperation operation, ReadOnlySpan<byte> buffer, int length) : base(buffer, length)
     {
         if (!IsValidSubCommandReturnPacket(operation, buffer, length))
         {
