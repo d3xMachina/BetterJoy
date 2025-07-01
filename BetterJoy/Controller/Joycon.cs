@@ -5,7 +5,7 @@ using BetterJoy.Exceptions;
 using BetterJoy.Forms;
 using BetterJoy.Hardware.Calibration;
 using BetterJoy.Hardware.Data;
-using BetterJoy.Hardware.SubCommandUtils;
+using BetterJoy.Hardware.SubCommand;
 using BetterJoy.Network;
 using BetterJoy.Network.Server;
 using Nefarius.ViGEm.Client.Targets.DualShock4;

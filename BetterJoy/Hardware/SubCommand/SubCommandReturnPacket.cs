@@ -1,9 +1,8 @@
-using BetterJoy.Hardware.Data;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
-namespace BetterJoy.Hardware.SubCommandUtils;
+namespace BetterJoy.Hardware.SubCommand;
 
 public class SubCommandReturnPacket : IncomingPacket
 {
@@ -37,8 +36,6 @@ public class SubCommandReturnPacket : IncomingPacket
 
     private static bool IsValidSubCommandReturnPacket(SubCommandOperation operation, ReadOnlySpan<byte> buffer, int length)
     {
-        //Optimization question: Is there a message in 0x21 format, that echos the correct subcommand that is not 20+ bytes long?
-        //Said another way, can we remove this first check?
         return length >= PayloadStartIndex + 5 && 
                buffer[ResponseCodeIndex] == SubCommandReturnPacketResponseCode &&
                buffer[SubCommandEchoIndex] == (byte)operation;
@@ -47,15 +44,20 @@ public class SubCommandReturnPacket : IncomingPacket
     public bool IsSubCommandReply => Raw[ResponseCodeIndex] == SubCommandReturnPacketResponseCode;
     
     public bool SubCommandSucceeded => Raw[AckIndex] == 0x01;
-    public SubCommandOperation Operation => (SubCommandOperation)Raw[SubCommandEchoIndex];
-    public ReadOnlySpan<byte> Payload => ((ReadOnlySpan<byte>)Raw)[PayloadStartIndex..];
+    public SubCommandOperation Operation => Enum.IsDefined(
+        typeof(SubCommandOperation), 
+        Raw[SubCommandEchoIndex] is var subCommandByte) 
+        ? (SubCommandOperation) subCommandByte 
+        : SubCommandOperation.Unknown;
+    public ReadOnlySpan<byte> Payload => Raw[PayloadStartIndex..];
     
     
     public override string ToString()
     {
         var output = new StringBuilder();
 
-        output.Append($"Response for subcommand {(byte)Operation:X2} received. ({(SubCommandSucceeded ? "Success" : "Failure")})");
+        output.Append($"Subcommand Echo: {(byte)Operation:X2} ({(SubCommandSucceeded ? "Success" : "Failure")})");
+        output.Append($"Status: {(SubCommandSucceeded ? "Success" : "Failure")}");
 
         output.Append(base.ToString());
 

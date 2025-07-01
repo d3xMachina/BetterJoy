@@ -1,10 +1,10 @@
 using BetterJoy.Hardware.Data;
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Windows.Forms.VisualStyles;
 
-namespace BetterJoy.Hardware.SubCommandUtils;
+namespace BetterJoy.Hardware.SubCommand;
 
 public abstract class IncomingPacket
 {
@@ -14,9 +14,9 @@ public abstract class IncomingPacket
     protected const int ButtonStateStartIndex = 3;
     protected const int StickStateStartIndex = 6;
     protected const int RumbleStateIndex = 12;
-    
+
     private const int USBPacketSize = 64;
-    
+
     [InlineArray(USBPacketSize)]
     protected struct ResponseBuffer
     {
@@ -29,23 +29,28 @@ public abstract class IncomingPacket
 
     protected IncomingPacket(ReadOnlySpan<byte> buffer, int length)
     {
-        if (length < 0)
+        if (length < RumbleStateIndex)
         {
-            throw new ArgumentException("Provided length cannot be negative.");
+            throw new ArgumentException($"Provided length cannot be less than {RumbleStateIndex}.");
         }
-        
+
         _length = length;
-        
+
         buffer.CopyTo(_raw);
     }
-    
+
     public byte MessageCode => Raw[ResponseCodeIndex];
     public byte Timer => Raw[TimerIndex];
-    public BatteryLevel BatteryLevel => (BatteryLevel)BitWrangler.UpperNibble(Raw[BatteryAndConnectionIndex]);
+    public BatteryLevel BatteryLevel => 
+        Enum.IsDefined(
+            typeof(BatteryLevel), 
+            BitWrangler.UpperNibble(Raw[BatteryAndConnectionIndex]) is var batteryByte) 
+            ? (BatteryLevel) batteryByte 
+            : BatteryLevel.Unknown;
     public bool IsCharging => (Raw[BatteryAndConnectionIndex] & 1) > 0;
     
     //TODO: Clean this up once we have objects to represent the inputs
-    public ReadOnlySpan<byte> InputData => ((ReadOnlySpan<byte>)Raw)[ButtonStateStartIndex..(RumbleStateIndex - ButtonStateStartIndex)];
+    public ReadOnlySpan<byte> InputData => Raw[ButtonStateStartIndex..(RumbleStateIndex - ButtonStateStartIndex)];
     
     public int Length => Raw.Length;
     

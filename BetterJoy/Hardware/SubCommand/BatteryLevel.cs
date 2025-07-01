@@ -1,10 +1,11 @@
-namespace BetterJoy.Hardware.SubCommandUtils;
+namespace BetterJoy.Hardware.SubCommand;
 
 public enum BatteryLevel : byte
 {
-    Empty = 0x0,
-    Critical = 0x2,
-    Low = 0x4,
-    Medium = 0x6,
-    Full = 0x8
+    Empty = 0x00,
+    Critical = 0x02,
+    Low = 0x04,
+    Medium = 0x06,
+    Full = 0x08,
+    Unknown = 0xFF,
 }
