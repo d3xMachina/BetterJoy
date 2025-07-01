@@ -1,3 +1,4 @@
+using BetterJoy.Hardware.Data;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -46,20 +47,8 @@ public class SubCommandReturnPacket : IncomingPacket
     
     public bool SubCommandSucceeded => Raw[AckIndex] == 0x01;
 
-    public SubCommandOperation Operation
-    {
-        get
-        {
-            try
-            {
-                return (SubCommandOperation)Raw[SubCommandEchoIndex];
-            }
-            catch (Exception)
-            {
-                return SubCommandOperation.Unknown;
-            }
-        }
-    }
+    public SubCommandOperation Operation =>
+        BitWrangler.ByteToEnumOrDefault(Raw[SubCommandEchoIndex], SubCommandOperation.Unknown);
         
     public ReadOnlySpan<byte> Payload => Raw[PayloadStartIndex..];
     

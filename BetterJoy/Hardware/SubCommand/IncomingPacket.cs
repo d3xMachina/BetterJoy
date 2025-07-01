@@ -41,20 +41,8 @@ public abstract class IncomingPacket
 
     public byte MessageCode => Raw[ResponseCodeIndex];
     public byte Timer => Raw[TimerIndex];
-    public BatteryLevel BatteryLevel
-    {
-        get
-        {
-            try
-            {
-                return (BatteryLevel)Raw[BatteryAndConnectionIndex];
-            }
-            catch (Exception)
-            {
-                return BatteryLevel.Unknown;
-            }
-        }
-    }
+    public BatteryLevel BatteryLevel => BitWrangler.ByteToEnumOrDefault(Raw[BatteryAndConnectionIndex], BatteryLevel.Unknown);
+    
     public bool IsCharging => (Raw[BatteryAndConnectionIndex] & 1) > 0;
     
     //TODO: Clean this up once we have objects to represent the inputs

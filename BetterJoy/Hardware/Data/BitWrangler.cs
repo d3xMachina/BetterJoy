@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 
 namespace BetterJoy.Hardware.Data;
@@ -44,4 +45,12 @@ public static class BitWrangler
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort InvertWord(ushort word)
         => (ushort)(ushort.MaxValue - word);
+    
+    public static TEnum ByteToEnumOrDefault<TEnum>(byte value, TEnum defaultValue)
+        where TEnum : struct, Enum
+    {
+        return Enum.IsDefined(typeof(TEnum), value)
+            ? Unsafe.As<byte, TEnum>(ref value)
+            : defaultValue;
+    }
 }
