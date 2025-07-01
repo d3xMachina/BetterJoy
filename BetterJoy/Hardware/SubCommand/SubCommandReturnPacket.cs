@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Text;
 
 namespace BetterJoy.Hardware.SubCommand;
@@ -44,11 +45,22 @@ public class SubCommandReturnPacket : IncomingPacket
     public bool IsSubCommandReply => Raw[ResponseCodeIndex] == SubCommandReturnPacketResponseCode;
     
     public bool SubCommandSucceeded => Raw[AckIndex] == 0x01;
-    public SubCommandOperation Operation => Enum.IsDefined(
-        typeof(SubCommandOperation), 
-        Raw[SubCommandEchoIndex] is var subCommandByte) 
-        ? (SubCommandOperation) subCommandByte 
-        : SubCommandOperation.Unknown;
+
+    public SubCommandOperation Operation
+    {
+        get
+        {
+            try
+            {
+                return (SubCommandOperation)Raw[SubCommandEchoIndex];
+            }
+            catch (Exception)
+            {
+                return SubCommandOperation.Unknown;
+            }
+        }
+    }
+        
     public ReadOnlySpan<byte> Payload => Raw[PayloadStartIndex..];
     
     
