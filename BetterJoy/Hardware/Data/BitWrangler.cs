@@ -45,7 +45,7 @@ public static class BitWrangler
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort InvertWord(ushort word)
         => (ushort)(ushort.MaxValue - word);
-    
+
     public static TEnum ByteToEnumOrDefault<TEnum>(byte value, TEnum defaultValue)
         where TEnum : struct, Enum
     {

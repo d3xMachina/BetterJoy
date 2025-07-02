@@ -641,7 +641,7 @@ public class Joycon
             0xFF,
             0xFF,
         ];
-        
+
         SubcommandWithResponseIgnoreContent(SubCommandOperation.SetHomeLight, buf);
     }
 
@@ -821,7 +821,7 @@ public class Joycon
         }
 
         Log("Powering off.");
-            
+
         try
         {
             if (SetHCIState(0x00) == null)
@@ -833,7 +833,7 @@ public class Joycon
         {
             // IOException = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
         }
-            
+
         Drop(false, false);
         return true;
     }
@@ -2522,20 +2522,20 @@ public class Joycon
         catch (IOException e)
         {
             DebugPrint(e.ToString(), DebugType.Comms);
-            
+
             return false;
         }
     }
 
     private SubCommandReturnPacket? SubcommandWithResponse(
-        SubCommandOperation operation, 
+        SubCommandOperation operation,
         ReadOnlySpan<byte> bufParameters,
         bool print = true)
     {
         Span<byte> responseBuf = stackalloc byte[ReportLength];
         SubCommandReturnPacket? response = null;
         int length = Subcommand(operation, bufParameters, print);
-        
+
         if (length <= 0)
         {
             DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
@@ -2545,7 +2545,7 @@ public class Joycon
         for (int tries = 0; tries < 10; tries++)
         {
             length = Read(responseBuf); //Returns < 1 on error, 0 on timeout
-            
+
             if (length < 0)
             {
                 DebugPrint($"Subcommand read error: {ErrorMessage()}", DebugType.Comms);
@@ -2558,13 +2558,13 @@ public class Joycon
                 {
                     DebugPrint(response.ToString(), DebugType.Comms);
                 }
-                
+
                 return response;
             }
-        } 
+        }
 
         DebugPrint("No response.", DebugType.Comms);
-        
+
         return response;
     }
 
@@ -2884,18 +2884,18 @@ public class Joycon
         for (var i = 0; i < 5; ++i)
         {
             response = SubcommandWithResponse(SubCommandOperation.SPIFlashRead, page, false); //Uses response
-            if (response != null && 
+            if (response != null &&
                 response.Length >= 20 + page.PageSize &&
-                response.Payload[0] == page.LowAddress && 
+                response.Payload[0] == page.LowAddress &&
                 response.Payload[1] == page.HighAddress)
             {
                 ok = true;
-                
+
                 if (print)
                 {
                     PrintArray<byte>(readBuf.AsSpan(0, page.PageSize), DebugType.Comms);
                 }
-                
+
                 response.Payload.Slice(5, page.PageSize).CopyTo(readBuf);
 
                 return readBuf;

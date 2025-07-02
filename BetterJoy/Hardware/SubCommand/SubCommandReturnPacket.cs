@@ -11,18 +11,18 @@ public class SubCommandReturnPacket : IncomingPacket
     protected const int AckIndex = 13;
     protected const int SubCommandEchoIndex = 14;
     protected const int PayloadStartIndex = 15;
-    
+
     protected const int SubCommandReturnPacketResponseCode = 0x21;
-    
+
     public static bool TryConstruct(
         SubCommandOperation operation,
-        ReadOnlySpan<byte> buffer, 
+        ReadOnlySpan<byte> buffer,
         int length,
         [NotNullWhen(true)]
         out SubCommandReturnPacket? packet)
     {
         bool valid = IsValidSubCommandReturnPacket(operation, buffer, length);
-        
+
         packet = valid ? new SubCommandReturnPacket(operation, buffer, length) : null;
 
         return valid;
@@ -38,21 +38,21 @@ public class SubCommandReturnPacket : IncomingPacket
 
     private static bool IsValidSubCommandReturnPacket(SubCommandOperation operation, ReadOnlySpan<byte> buffer, int length)
     {
-        return length >= PayloadStartIndex + 5 && 
+        return length >= PayloadStartIndex + 5 &&
                buffer[ResponseCodeIndex] == SubCommandReturnPacketResponseCode &&
                buffer[SubCommandEchoIndex] == (byte)operation;
     }
-    
+
     public bool IsSubCommandReply => Raw[ResponseCodeIndex] == SubCommandReturnPacketResponseCode;
-    
+
     public bool SubCommandSucceeded => Raw[AckIndex] == 0x01;
 
     public SubCommandOperation Operation =>
         BitWrangler.ByteToEnumOrDefault(Raw[SubCommandEchoIndex], SubCommandOperation.Unknown);
-        
+
     public ReadOnlySpan<byte> Payload => Raw[PayloadStartIndex..];
-    
-    
+
+
     public override string ToString()
     {
         var output = new StringBuilder();

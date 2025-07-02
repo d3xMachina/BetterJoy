@@ -42,24 +42,24 @@ public abstract class IncomingPacket
     public byte MessageCode => Raw[ResponseCodeIndex];
     public byte Timer => Raw[TimerIndex];
     public BatteryLevel BatteryLevel => BitWrangler.ByteToEnumOrDefault(Raw[BatteryAndConnectionIndex], BatteryLevel.Unknown);
-    
+
     public bool IsCharging => (Raw[BatteryAndConnectionIndex] & 1) > 0;
-    
+
     //TODO: Clean this up once we have objects to represent the inputs
     public ReadOnlySpan<byte> InputData => Raw[ButtonStateStartIndex..(RumbleStateIndex - ButtonStateStartIndex)];
-    
+
     public int Length => Raw.Length;
-    
+
     public override string ToString()
     {
         var output = new StringBuilder();
-        
+
         output.Append($" Message Code: {MessageCode:X2}");
         output.Append($" Timer: {Timer:X2}");
         output.Append($" Battery Level: {BatteryLevel.ToString()}");
         output.Append($" Charging: {(IsCharging ? "Yes" : "no")}");
         output.Append($" Input Data: ");
-        
+
         foreach (var inputByte in InputData)
         {
             output.Append($" {inputByte:X2}");
