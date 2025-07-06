@@ -46,6 +46,7 @@ public static class BitWrangler
     public static ushort InvertWord(ushort word)
         => (ushort)(ushort.MaxValue - word);
 
+    //WARNING: Do not use with enums that are not backed by byte values
     public static TEnum ByteToEnumOrDefault<TEnum>(byte value, TEnum defaultValue)
         where TEnum : struct, Enum
     {

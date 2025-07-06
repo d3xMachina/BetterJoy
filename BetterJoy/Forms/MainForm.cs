@@ -1,6 +1,7 @@
 using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
+using BetterJoy.Hardware.SubCommand;
 using BetterJoy.Properties;
 using Microsoft.Win32;
 using System;
@@ -1187,11 +1188,11 @@ public partial class MainForm : Form
         notifyIcon.ShowBalloonTip(0);
     }
 
-    public void SetBatteryColor(Joycon controller, Joycon.BatteryLevel batteryLevel)
+    public void SetBatteryColor(Joycon controller, BatteryLevel batteryLevel)
     {
         if (InvokeRequired)
         {
-            BeginInvoke(new Action<Joycon, Joycon.BatteryLevel>(SetBatteryColor), controller, batteryLevel);
+            BeginInvoke(new Action<Joycon, BatteryLevel>(SetBatteryColor), controller, batteryLevel);
             return;
         }
 
@@ -1204,10 +1205,10 @@ public partial class MainForm : Form
 
             button.BackColor = batteryLevel switch
             {
-                Joycon.BatteryLevel.Full => Color.FromArgb(0xAA, 0, 150, 0),
-                Joycon.BatteryLevel.Medium => Color.FromArgb(0xAA, 150, 230, 0),
-                Joycon.BatteryLevel.Low => Color.FromArgb(0xAA, 250, 210, 0),
-                Joycon.BatteryLevel.Critical => Color.FromArgb(0xAA, 250, 150, 0),
+                BatteryLevel.Full => Color.FromArgb(0xAA, 0, 150, 0),
+                BatteryLevel.Medium => Color.FromArgb(0xAA, 150, 230, 0),
+                BatteryLevel.Low => Color.FromArgb(0xAA, 250, 210, 0),
+                BatteryLevel.Critical => Color.FromArgb(0xAA, 250, 150, 0),
                 _ => Color.FromArgb(0xAA, 230, 0, 0),
             };
         }

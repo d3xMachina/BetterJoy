@@ -13,7 +13,6 @@ using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -83,16 +82,6 @@ public class Joycon
         Dropped,
         Attached,
         MotionDataOk
-    }
-
-    public enum BatteryLevel
-    {
-        Unknown = -1,
-        Empty,
-        Critical,
-        Low,
-        Medium,
-        Full
     }
 
     public enum Orientation
@@ -454,14 +443,7 @@ public class Joycon
     public bool Reset()
     {
         Log("Resetting connection.");
-        try
-        {
-            return SetHCIState(0x01) != null;
-        }
-        catch (IOException)
-        {
-            return false;
-        }
+        return SetHCIState(0x01);
     }
 
     public void Attach()
@@ -610,14 +592,14 @@ public class Joycon
         byte[] btmac_host = Program.BtMac.GetAddressBytes();
 
         // send host MAC and acquire Joycon MAC
-        SubcommandWithResponseIgnoreContent(SubCommandOperation.ManualBluetoothPairing, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]]);
-        SubcommandWithResponseIgnoreContent(SubCommandOperation.ManualBluetoothPairing, [0x02]); // LTKhash
-        SubcommandWithResponseIgnoreContent(SubCommandOperation.ManualBluetoothPairing, [0x03]); // save pairing info
+        SubcommandWithResponse(SubCommandOperation.ManualBluetoothPairing, [0x01, btmac_host[5], btmac_host[4], btmac_host[3], btmac_host[2], btmac_host[1], btmac_host[0]]);
+        SubcommandWithResponse(SubCommandOperation.ManualBluetoothPairing, [0x02]); // LTKhash
+        SubcommandWithResponse(SubCommandOperation.ManualBluetoothPairing, [0x03]); // save pairing info
     }
 
     public bool SetPlayerLED(byte leds = 0x00)
     {
-        return SubcommandWithResponseIgnoreContent(SubCommandOperation.SetPlayerLights, [leds]);
+        return SubcommandWithResponse(SubCommandOperation.SetPlayerLights, [leds]) != null;
     }
 
     // Do not call after initial setup
@@ -642,7 +624,7 @@ public class Joycon
             0xFF,
         ];
 
-        SubcommandWithResponseIgnoreContent(SubCommandOperation.SetHomeLight, buf);
+        SubcommandWithResponse(SubCommandOperation.SetHomeLight, buf);
     }
 
     public bool SetHomeLight(bool on)
@@ -674,10 +656,10 @@ public class Joycon
         return true;
     }
 
-    private SubCommandReturnPacket? SetHCIState(byte state)
+    private bool SetHCIState(byte state, bool throwOnIOError = false)
     {
         StopRumbleInSubcommands();
-        return SubcommandWithResponse(SubCommandOperation.SetHCIState, [state]);
+        return SubcommandWithResponse(SubCommandOperation.SetHCIState, [state], throwOnIOError: throwOnIOError) != null;
     }
 
     private void SetMotion(bool enable)
@@ -687,7 +669,7 @@ public class Joycon
             return;
         }
 
-        SubcommandWithResponseIgnoreContent(SubCommandOperation.EnableIMU, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandWithResponse(SubCommandOperation.EnableIMU, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void SetMotionSensitivity()
@@ -704,12 +686,12 @@ public class Joycon
             0x01, // gyroscope performance rate : 0x00 = 833hz, 0x01 = 208hz (default)
             0x01  // accelerometer anti-aliasing filter bandwidth : 0x00 = 200hz, 0x01 = 100hz (default)
         ];
-        SubcommandWithResponseIgnoreContent(SubCommandOperation.SetIMUSensitivity, buf);
+        SubcommandWithResponse(SubCommandOperation.SetIMUSensitivity, buf);
     }
 
     private void SetRumble(bool enable)
     {
-        SubcommandWithResponseIgnoreContent(SubCommandOperation.EnableVibration, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandWithResponse(SubCommandOperation.EnableVibration, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void IgnoreRumbleInSubcommands()
@@ -736,8 +718,9 @@ public class Joycon
     {
         if (checkResponse)
         {
-            return SubcommandWithResponseIgnoreContent(SubCommandOperation.SetReportMode, [(byte)reportMode]);
+            return SubcommandWithResponse(SubCommandOperation.SetReportMode, [(byte)reportMode]) != null;
         }
+        
         Subcommand(SubCommandOperation.SetReportMode, [(byte)reportMode]);
         return true;
     }
@@ -748,14 +731,7 @@ public class Joycon
 
         for (var i = 0; i < 5; ++i)
         {
-            try
-            {
-                response = SubcommandWithResponse(SubCommandOperation.RequestDeviceInfo, [], false); //Uses response
-            }
-            catch (IOException)
-            {
-                continue;
-            }
+            response = SubcommandWithResponse(SubCommandOperation.RequestDeviceInfo, [], false); //Uses response
 
             if (response == null)
             {
@@ -798,7 +774,7 @@ public class Joycon
 
     private void SetLowPowerState(bool enable)
     {
-        SubcommandWithResponseIgnoreContent(SubCommandOperation.EnableLowPowerMode, [enable ? (byte)0x01 : (byte)0x00]);
+        SubcommandWithResponse(SubCommandOperation.EnableLowPowerMode, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void BTActivate()
@@ -824,7 +800,7 @@ public class Joycon
 
         try
         {
-            if (SetHCIState(0x00) == null)
+            if (SetHCIState(0x00, throwOnIOError: true))
             {
                 return false;
             }
@@ -2513,24 +2489,11 @@ public class Joycon
         return length;
     }
 
-    private bool SubcommandWithResponseIgnoreContent(SubCommandOperation operation, ReadOnlySpan<byte> bufParameters)
-    {
-        try
-        {
-            return SubcommandWithResponse(operation, bufParameters) != null;
-        }
-        catch (IOException e)
-        {
-            DebugPrint(e.ToString(), DebugType.Comms);
-
-            return false;
-        }
-    }
-
     private SubCommandReturnPacket? SubcommandWithResponse(
         SubCommandOperation operation,
         ReadOnlySpan<byte> bufParameters,
-        bool print = true)
+        bool print = true,
+        bool throwOnIOError = false)
     {
         Span<byte> responseBuf = stackalloc byte[ReportLength];
         SubCommandReturnPacket? response = null;
@@ -2539,7 +2502,15 @@ public class Joycon
         if (length <= 0)
         {
             DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
-            throw new IOException("Write subcommand failure.");
+            
+            if (throwOnIOError)
+            {
+                throw new IOException("Write subcommand failure.");
+            }
+            else
+            {
+                return null;
+            }
         }
 
         for (int tries = 0; tries < 10; tries++)
@@ -2549,14 +2520,22 @@ public class Joycon
             if (length < 0)
             {
                 DebugPrint($"Subcommand read error: {ErrorMessage()}", DebugType.Comms);
-                throw new IOException("Read subcommand failure.");
+                
+                if (throwOnIOError)
+                {
+                    throw new IOException("Read subcommand failure.");
+                }
+                else
+                {
+                    return null;
+                }
             }
 
-            if (SubCommandReturnPacket.TryConstruct(operation, responseBuf, length, out response))
+            if (SubCommandReturnPacket.TryConstruct(operation, responseBuf[..length], out response))
             {
                 if (print)
                 {
-                    DebugPrint(response.ToString(), DebugType.Comms);
+                    DebugPrint(response, DebugType.Comms);
                 }
 
                 return response;
@@ -2885,7 +2864,7 @@ public class Joycon
         {
             response = SubcommandWithResponse(SubCommandOperation.SPIFlashRead, page, false); //Uses response
             if (response != null &&
-                response.Length >= 20 + page.PageSize &&
+                response.Length >= SubCommandReturnPacket.MinimumSubcommandReplySize + page.PageSize &&
                 response.Payload[0] == page.LowAddress &&
                 response.Payload[1] == page.HighAddress)
             {

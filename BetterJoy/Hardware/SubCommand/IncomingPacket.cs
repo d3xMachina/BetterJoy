@@ -1,6 +1,5 @@
 using BetterJoy.Hardware.Data;
 using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -24,29 +23,19 @@ public abstract class IncomingPacket
     }
 
     private readonly ResponseBuffer _raw;
-    private readonly int _length;
-    protected ReadOnlySpan<byte> Raw => _raw[.._length];
+    protected ReadOnlySpan<byte> Raw => _raw;
 
-    protected IncomingPacket(ReadOnlySpan<byte> buffer, int length)
+    protected IncomingPacket(ReadOnlySpan<byte> buffer)
     {
-        if (length < RumbleStateIndex)
+        if (buffer.Length < RumbleStateIndex)
         {
             throw new ArgumentException($"Provided length cannot be less than {RumbleStateIndex}.");
         }
-
-        _length = length;
 
         buffer.CopyTo(_raw);
     }
 
     public byte MessageCode => Raw[ResponseCodeIndex];
-    public byte Timer => Raw[TimerIndex];
-    public BatteryLevel BatteryLevel => BitWrangler.ByteToEnumOrDefault(Raw[BatteryAndConnectionIndex], BatteryLevel.Unknown);
-
-    public bool IsCharging => (Raw[BatteryAndConnectionIndex] & 1) > 0;
-
-    //TODO: Clean this up once we have objects to represent the inputs
-    public ReadOnlySpan<byte> InputData => Raw[ButtonStateStartIndex..(RumbleStateIndex - ButtonStateStartIndex)];
 
     public int Length => Raw.Length;
 
@@ -55,14 +44,11 @@ public abstract class IncomingPacket
         var output = new StringBuilder();
 
         output.Append($" Message Code: {MessageCode:X2}");
-        output.Append($" Timer: {Timer:X2}");
-        output.Append($" Battery Level: {BatteryLevel.ToString()}");
-        output.Append($" Charging: {(IsCharging ? "Yes" : "no")}");
-        output.Append($" Input Data: ");
+        output.Append($" Data: ");
 
-        foreach (var inputByte in InputData)
+        foreach (var dataByte in Raw[TimerIndex..])
         {
-            output.Append($" {inputByte:X2}");
+            output.Append($" {dataByte:X2}");
         }
 
         return output.ToString();

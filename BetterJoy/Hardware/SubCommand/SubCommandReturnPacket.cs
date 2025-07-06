@@ -1,54 +1,59 @@
 using BetterJoy.Hardware.Data;
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Text;
 
 namespace BetterJoy.Hardware.SubCommand;
 
 public class SubCommandReturnPacket : IncomingPacket
 {
-    protected const int AckIndex = 13;
-    protected const int SubCommandEchoIndex = 14;
+    protected const int SubCommandOperationIndex = 14;
     protected const int PayloadStartIndex = 15;
+    public const int MinimumSubcommandReplySize = 20;
 
     protected const int SubCommandReturnPacketResponseCode = 0x21;
 
     public static bool TryConstruct(
         SubCommandOperation operation,
         ReadOnlySpan<byte> buffer,
-        int length,
         [NotNullWhen(true)]
         out SubCommandReturnPacket? packet)
     {
-        bool valid = IsValidSubCommandReturnPacket(operation, buffer, length);
+        try
+        {
+            packet = new SubCommandReturnPacket(operation, buffer);
 
-        packet = valid ? new SubCommandReturnPacket(operation, buffer, length) : null;
-
-        return valid;
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            packet = null;
+            
+            return false;
+        }
     }
 
-    protected SubCommandReturnPacket(SubCommandOperation operation, ReadOnlySpan<byte> buffer, int length) : base(buffer, length)
+    protected SubCommandReturnPacket(SubCommandOperation operation, ReadOnlySpan<byte> buffer) : base(buffer)
     {
-        if (!IsValidSubCommandReturnPacket(operation, buffer, length))
+        if (!IsValidSubCommandReturnPacket(operation, buffer))
         {
             throw new ArgumentException("Provided array is not valid subcommand response for given operation.");
         }
     }
 
-    private static bool IsValidSubCommandReturnPacket(SubCommandOperation operation, ReadOnlySpan<byte> buffer, int length)
+    private static bool IsValidSubCommandReturnPacket(SubCommandOperation operation, ReadOnlySpan<byte> buffer)
     {
-        return length >= PayloadStartIndex + 5 &&
+        return buffer.Length >= MinimumSubcommandReplySize &&
                buffer[ResponseCodeIndex] == SubCommandReturnPacketResponseCode &&
-               buffer[SubCommandEchoIndex] == (byte)operation;
+               buffer[SubCommandOperationIndex] == (byte)operation;
     }
 
     public bool IsSubCommandReply => Raw[ResponseCodeIndex] == SubCommandReturnPacketResponseCode;
+    
 
-    public bool SubCommandSucceeded => Raw[AckIndex] == 0x01;
-
-    public SubCommandOperation Operation =>
-        BitWrangler.ByteToEnumOrDefault(Raw[SubCommandEchoIndex], SubCommandOperation.Unknown);
+    public SubCommandOperation SubCommandOperation =>
+        BitWrangler.ByteToEnumOrDefault(
+            BitWrangler.UpperNibble(Raw[SubCommandOperationIndex]), SubCommandOperation.Unknown);
 
     public ReadOnlySpan<byte> Payload => Raw[PayloadStartIndex..];
 
@@ -57,10 +62,7 @@ public class SubCommandReturnPacket : IncomingPacket
     {
         var output = new StringBuilder();
 
-        output.Append($"Subcommand Echo: {(byte)Operation:X2} ({(SubCommandSucceeded ? "Success" : "Failure")})");
-        output.Append($"Status: {(SubCommandSucceeded ? "Success" : "Failure")}");
-
-        output.Append(base.ToString());
+        output.Append($"Subcommand Echo: {(byte)SubCommandOperation:X2} ");
 
         if (!Payload.IsEmpty)
         {
