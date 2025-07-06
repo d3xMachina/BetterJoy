@@ -2499,7 +2499,7 @@ public class Joycon
         SubCommandReturnPacket? response = null;
         int length = Subcommand(operation, bufParameters, print);
 
-        if (length <= 0)
+        if (length < 0)
         {
             DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
             
