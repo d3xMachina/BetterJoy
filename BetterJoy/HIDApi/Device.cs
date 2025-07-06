@@ -13,6 +13,7 @@ public sealed class Device : IDisposable
     public enum ErrorCode
     {
         Success = 0,
+        UnknownFailure = -1,
         DeviceNotConnected = 0x0000048F
     }
 
