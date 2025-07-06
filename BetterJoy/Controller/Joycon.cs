@@ -802,9 +802,9 @@ public class Joycon
         {
             Log("Powering off.");
 
-            // < 0 = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
             var length = SetHCIState(0x00);
-            if (length != 0)
+            if (length > 0 ||
+                (length < 0 && _device.GetErrorCode() == (int)HIDApi.Device.ErrorCode.DeviceNotConnected))
             {
                 Drop(false, false);
                 return true;

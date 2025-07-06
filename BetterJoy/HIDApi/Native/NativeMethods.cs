@@ -61,6 +61,9 @@ internal static partial class NativeMethods
     [LibraryImport(Dll, EntryPoint = "hid_error")]
     public static partial IntPtr Error(IntPtr device);
 
+    [LibraryImport(Dll, EntryPoint = "hid_error_code")]
+    public static partial int ErrorCode(IntPtr device);
+
     [LibraryImport(Dll, EntryPoint = "hid_winapi_get_container_id")]
     public static partial int GetContainerId(IntPtr device, out Guid containerId);
 
