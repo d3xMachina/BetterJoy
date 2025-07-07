@@ -2491,9 +2491,9 @@ public class Joycon
         SubCommandReturnPacket? response = null;
         int length = Subcommand(operation, bufParameters, print);
 
-        if (length < 0)
+        if (length <= 0)
         {
-            DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
+            DebugPrint($"Subcommand write error: {(length == 0 ? "No data written." : ErrorMessage())}", DebugType.Comms);
             
             return null;
         }
