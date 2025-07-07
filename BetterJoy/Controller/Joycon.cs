@@ -656,10 +656,10 @@ public class Joycon
         return true;
     }
 
-    private bool SetHCIState(byte state, bool throwOnIOError = false)
+    private bool SetHCIState(byte state)
     {
         StopRumbleInSubcommands();
-        return SubcommandWithResponse(SubCommandOperation.SetHCIState, [state], throwOnIOError: throwOnIOError) != null;
+        return SubcommandWithResponse(SubCommandOperation.SetHCIState, [state]) != null;
     }
 
     private void SetMotion(bool enable)
@@ -798,16 +798,9 @@ public class Joycon
 
         Log("Powering off.");
 
-        try
+        if (!SetHCIState(0x00) && _device.GetErrorCode() != (int)HIDApi.Device.ErrorCode.DeviceNotConnected)
         {
-            if (SetHCIState(0x00, throwOnIOError: true))
-            {
-                return false;
-            }
-        }
-        catch (IOException)
-        {
-            // IOException = error = we assume it's powered off, ideally should check for 0x0000048F (device not connected) error in hidapi
+            return false;
         }
 
         Drop(false, false);
@@ -1637,8 +1630,8 @@ public class Joycon
         var prevBattery = Battery;
         var prevCharging = Charging;
 
-        byte highNibble = (byte)(reportBuf[2] >> 4);
-        Battery = (BatteryLevel)Math.Clamp(highNibble >> 1, (byte)BatteryLevel.Empty, (byte)BatteryLevel.Full);
+        byte highNibble = BitWrangler.UpperNibble(reportBuf[2]);
+        Battery = BitWrangler.ByteToEnumOrDefault(highNibble, BatteryLevel.Unknown, 0x0E);
         Charging = (highNibble & 0x1) == 1;
 
         if (prevBattery != Battery)
@@ -2492,8 +2485,7 @@ public class Joycon
     private SubCommandReturnPacket? SubcommandWithResponse(
         SubCommandOperation operation,
         ReadOnlySpan<byte> bufParameters,
-        bool print = true,
-        bool throwOnIOError = false)
+        bool print = true)
     {
         Span<byte> responseBuf = stackalloc byte[ReportLength];
         SubCommandReturnPacket? response = null;
@@ -2503,14 +2495,7 @@ public class Joycon
         {
             DebugPrint($"Subcommand write error: {ErrorMessage()}", DebugType.Comms);
             
-            if (throwOnIOError)
-            {
-                throw new IOException("Write subcommand failure.");
-            }
-            else
-            {
-                return null;
-            }
+            return null;
         }
 
         for (int tries = 0; tries < 10; tries++)
@@ -2521,14 +2506,7 @@ public class Joycon
             {
                 DebugPrint($"Subcommand read error: {ErrorMessage()}", DebugType.Comms);
                 
-                if (throwOnIOError)
-                {
-                    throw new IOException("Read subcommand failure.");
-                }
-                else
-                {
-                    return null;
-                }
+                return null;
             }
 
             if (SubCommandReturnPacket.TryConstruct(operation, responseBuf[..length], out response))

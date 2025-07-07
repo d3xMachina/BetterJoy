@@ -23,7 +23,8 @@ public abstract class IncomingPacket
     }
 
     private readonly ResponseBuffer _raw;
-    protected ReadOnlySpan<byte> Raw => _raw;
+    private readonly int _length;
+    protected ReadOnlySpan<byte> Raw => _raw[.._length];
 
     protected IncomingPacket(ReadOnlySpan<byte> buffer)
     {
@@ -31,6 +32,8 @@ public abstract class IncomingPacket
         {
             throw new ArgumentException($"Provided length cannot be less than {RumbleStateIndex}.");
         }
+        
+        _length = buffer.Length;
 
         buffer.CopyTo(_raw);
     }

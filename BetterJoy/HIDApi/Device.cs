@@ -10,6 +10,13 @@ public sealed class Device : IDisposable
 
     public bool IsValid => _deviceHandle != IntPtr.Zero;
 
+    public enum ErrorCode
+    {
+        Success = 0,
+        UnknownFailure = -1,
+        DeviceNotConnected = 0x0000048F
+    }
+
     private Device(IntPtr deviceHandle)
     {
         _deviceHandle = deviceHandle;
@@ -106,6 +113,11 @@ public sealed class Device : IDisposable
     {
         var ptr = Native.NativeMethods.Error(_deviceHandle);
         return Marshal.PtrToStringUni(ptr);
+    }
+
+    public int GetErrorCode()
+    {
+        return Native.NativeMethods.ErrorCode(_deviceHandle);
     }
 
     public void Dispose()
