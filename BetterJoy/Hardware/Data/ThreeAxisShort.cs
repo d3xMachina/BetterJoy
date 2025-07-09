@@ -14,7 +14,7 @@ public record struct ThreeAxisShort(short X, short Y, short Z)
         );
     }
 
-    public override string ToString()
+    public override readonly string ToString()
     {
         return $"X: {X}, Y: {Y}, Z: {Z}";
     }

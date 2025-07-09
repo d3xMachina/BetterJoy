@@ -728,7 +728,7 @@ public class Joycon
 #nullable enable
     private void CheckIfRightIsRetro()
     {
-        SubCommandReturnPacket? response = null;
+        SubCommandReturnPacket? response;
 
         for (var i = 0; i < 5; ++i)
         {
@@ -2635,7 +2635,6 @@ public class Joycon
             var offset = IsLeft ? 0 : 0x12;
 
             _deadZone = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
-
             _range = new StickRangeCalibration(factoryDeadzoneData.AsSpan(offset + 1, 2));
 
             if (IsPro) //If it is pro, then it is also always left
@@ -2643,8 +2642,6 @@ public class Joycon
                 offset = 0x12;
 
                 _deadZone2 = new StickDeadZoneCalibration(_stickCal, factoryDeadzoneData.AsSpan(offset, 2));
-
-                var range2 = BitWrangler.Upper3NibblesLittleEndian(factoryDeadzoneData[1 + offset], factoryDeadzoneData[2 + offset]);
                 _range2 = new StickRangeCalibration(factoryDeadzoneData.AsSpan(offset + 1, 2));
             }
         }
@@ -2840,7 +2837,7 @@ public class Joycon
             return readBuf;
         }
 
-        SubCommandReturnPacket? response = null;
+        SubCommandReturnPacket? response;
 
         ok = false;
         for (var i = 0; i < 5; ++i)

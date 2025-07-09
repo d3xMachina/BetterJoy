@@ -4,9 +4,9 @@ using System;
 
 namespace BetterJoy.Hardware.Calibration;
 
-public struct StickRangeCalibration
+public readonly struct StickRangeCalibration
 {
-    private float _value;
+    private readonly float _value;
 
     public StickRangeCalibration()
     {
