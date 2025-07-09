@@ -1,4 +1,4 @@
-namespace BetterJoy.Hardware.SubCommandUtils;
+namespace BetterJoy.Hardware.SubCommand;
 
 public enum SubCommandOperation : byte
 {
@@ -31,6 +31,7 @@ public enum SubCommandOperation : byte
 
     EnableVibration                 = 0x48,
 
-    GetRegulatedVoltage             = 0x50
+    GetRegulatedVoltage             = 0x50,
+    Unknown                     
 #pragma warning restore IDE0055
 }

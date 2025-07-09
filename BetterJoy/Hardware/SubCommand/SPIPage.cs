@@ -1,6 +1,6 @@
 using System;
 
-namespace BetterJoy.Hardware.SubCommandUtils;
+namespace BetterJoy.Hardware.SubCommand;
 
 public class SPIPage
 {

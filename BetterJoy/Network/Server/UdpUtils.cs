@@ -1,4 +1,5 @@
 using BetterJoy.Controller;
+using BetterJoy.Hardware.SubCommand;
 using System;
 using System.IO.Hashing;
 
@@ -14,10 +15,10 @@ public static class UdpUtils
 
         return controller.Battery switch
         {
-            Joycon.BatteryLevel.Critical => ControllerBattery.Critical,
-            Joycon.BatteryLevel.Low => ControllerBattery.Low,
-            Joycon.BatteryLevel.Medium => ControllerBattery.Medium,
-            Joycon.BatteryLevel.Full => ControllerBattery.Full,
+            BatteryLevel.Critical => ControllerBattery.Critical,
+            BatteryLevel.Low => ControllerBattery.Low,
+            BatteryLevel.Medium => ControllerBattery.Medium,
+            BatteryLevel.Full => ControllerBattery.Full,
             _ => ControllerBattery.Empty,
         };
     }

@@ -7,7 +7,7 @@ namespace BetterJoy.Hardware.Calibration;
 public struct StickRangeCalibration
 {
     private float _value;
-    
+
     public StickRangeCalibration()
     {
         _value = 0;

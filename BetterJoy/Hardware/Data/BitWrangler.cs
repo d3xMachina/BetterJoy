@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 
 namespace BetterJoy.Hardware.Data;
@@ -44,4 +45,28 @@ public static class BitWrangler
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort InvertWord(ushort word)
         => (ushort)(ushort.MaxValue - word);
+
+    //WARNING: Do not use with enums that are not backed by byte values
+    public static TEnum ByteToEnumOrDefault<TEnum>(byte value, TEnum defaultValue, byte mask)
+        where TEnum : struct, Enum
+    {
+        return ByteToEnumOrDefault((byte)(value & mask), defaultValue);
+    }
+    
+    //WARNING: Do not use with enums that are not backed by byte values
+    public static TEnum ByteToEnumOrDefault<TEnum>(byte value, TEnum defaultValue)
+        where TEnum : struct, Enum
+    {
+        
+#if DEBUG
+        if (typeof(byte) != Enum.GetUnderlyingType(typeof(TEnum)))
+        {
+            throw new ArgumentException("Invalid underlying enum type : byte expected");
+        }
+#endif
+        
+        return Enum.IsDefined(typeof(TEnum), value)
+            ? Unsafe.As<byte, TEnum>(ref value)
+            : defaultValue;
+    }
 }

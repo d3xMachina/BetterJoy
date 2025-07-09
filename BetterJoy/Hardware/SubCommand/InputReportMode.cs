@@ -1,4 +1,4 @@
-namespace BetterJoy.Hardware.SubCommandUtils;
+namespace BetterJoy.Hardware.SubCommand;
 
 public enum InputReportMode : byte
 {
