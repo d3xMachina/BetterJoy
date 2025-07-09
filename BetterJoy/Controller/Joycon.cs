@@ -724,7 +724,8 @@ public class Joycon
         Subcommand(SubCommandOperation.SetReportMode, [(byte)reportMode]);
         return true;
     }
-
+    
+#nullable enable
     private void CheckIfRightIsRetro()
     {
         SubCommandReturnPacket? response = null;
@@ -771,7 +772,8 @@ public class Joycon
 
         throw new DeviceComFailedException("reset device info");
     }
-
+#nullable disable
+    
     private void SetLowPowerState(bool enable)
     {
         SubcommandWithResponse(SubCommandOperation.EnableLowPowerMode, [enable ? (byte)0x01 : (byte)0x00]);
@@ -2481,7 +2483,8 @@ public class Joycon
 
         return length;
     }
-
+    
+#nullable enable
     private SubCommandReturnPacket? SubcommandWithResponse(
         SubCommandOperation operation,
         ReadOnlySpan<byte> bufParameters,
@@ -2524,7 +2527,8 @@ public class Joycon
 
         return response;
     }
-
+#nullable disable
+    
     private bool CalibrationDataSupported()
     {
         return !IsThirdParty && (IsJoycon || IsPro || IsN64);
@@ -2826,7 +2830,8 @@ public class Joycon
 
         return length;
     }
-
+    
+#nullable enable
     private byte[] ReadSPICheck(SPIPage page, ref bool ok, bool print = false)
     {
         var readBuf = new byte[page.PageSize];
@@ -2863,7 +2868,8 @@ public class Joycon
 
         return readBuf;
     }
-
+#nullable disable
+    
     private void PrintArray<T>(
         ReadOnlySpan<T> array,
         DebugType type = DebugType.None,
