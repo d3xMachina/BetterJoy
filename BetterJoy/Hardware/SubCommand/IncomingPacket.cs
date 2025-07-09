@@ -32,7 +32,7 @@ public abstract class IncomingPacket
         {
             throw new ArgumentException($"Provided length cannot be less than {RumbleStateIndex}.");
         }
-        
+
         _length = buffer.Length;
 
         buffer.CopyTo(_raw);

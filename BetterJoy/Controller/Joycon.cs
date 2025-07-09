@@ -14,7 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -720,11 +719,11 @@ public class Joycon
         {
             return SubcommandWithResponse(SubCommandOperation.SetReportMode, [(byte)reportMode]) != null;
         }
-        
+
         Subcommand(SubCommandOperation.SetReportMode, [(byte)reportMode]);
         return true;
     }
-    
+
 #nullable enable
     private void CheckIfRightIsRetro()
     {
@@ -773,7 +772,7 @@ public class Joycon
         throw new DeviceComFailedException("reset device info");
     }
 #nullable disable
-    
+
     private void SetLowPowerState(bool enable)
     {
         SubcommandWithResponse(SubCommandOperation.EnableLowPowerMode, [enable ? (byte)0x01 : (byte)0x00]);
@@ -2483,7 +2482,7 @@ public class Joycon
 
         return length;
     }
-    
+
 #nullable enable
     private SubCommandReturnPacket? SubcommandWithResponse(
         SubCommandOperation operation,
@@ -2497,7 +2496,7 @@ public class Joycon
         if (length <= 0)
         {
             DebugPrint($"Subcommand write error: {(length == 0 ? "No data written." : ErrorMessage())}", DebugType.Comms);
-            
+
             return null;
         }
 
@@ -2508,7 +2507,7 @@ public class Joycon
             if (length < 0)
             {
                 DebugPrint($"Subcommand read error: {ErrorMessage()}", DebugType.Comms);
-                
+
                 return null;
             }
 
@@ -2528,7 +2527,7 @@ public class Joycon
         return response;
     }
 #nullable disable
-    
+
     private bool CalibrationDataSupported()
     {
         return !IsThirdParty && (IsJoycon || IsPro || IsN64);
@@ -2827,7 +2826,7 @@ public class Joycon
 
         return length;
     }
-    
+
 #nullable enable
     private byte[] ReadSPICheck(SPIPage page, ref bool ok, bool print = false)
     {
@@ -2866,7 +2865,7 @@ public class Joycon
         return readBuf;
     }
 #nullable disable
-    
+
     private void PrintArray<T>(
         ReadOnlySpan<T> array,
         DebugType type = DebugType.None,

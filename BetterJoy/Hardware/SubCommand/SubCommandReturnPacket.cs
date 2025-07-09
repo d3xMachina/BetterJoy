@@ -29,7 +29,7 @@ public class SubCommandReturnPacket : IncomingPacket
         catch (ArgumentException)
         {
             packet = null;
-            
+
             return false;
         }
     }
@@ -50,7 +50,7 @@ public class SubCommandReturnPacket : IncomingPacket
     }
 
     public bool IsSubCommandReply => Raw[ResponseCodeIndex] == SubCommandReturnPacketResponseCode;
-    
+
 
     public SubCommandOperation SubCommandOperation =>
         BitWrangler.ByteToEnumOrDefault(
