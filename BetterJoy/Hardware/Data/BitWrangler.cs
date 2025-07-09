@@ -59,7 +59,7 @@ public static class BitWrangler
     {
         
 #if DEBUG
-        if (typeof(byte) != Enum.GetUnderlyingType(typeof(TEnum))
+        if (typeof(byte) != Enum.GetUnderlyingType(typeof(TEnum)))
         {
             throw new ArgumentException("Invalid underlying enum type : byte expected");
         }
