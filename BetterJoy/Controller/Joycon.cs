@@ -13,6 +13,7 @@ using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Threading;
@@ -186,8 +187,8 @@ public class Joycon
     public MacAddress MacAddress = new();
     public readonly string Path;
 
-    private Thread _receiveReportsThread;
-    private Thread _sendCommandsThread;
+    private Thread? _receiveReportsThread;
+    private Thread? _sendCommandsThread;
 
     private readonly RumbleQueue _rumbles;
 
@@ -217,7 +218,7 @@ public class Joycon
     private Stick _stick;
     private Stick _stick2;
 
-    private CancellationTokenSource _ctsCommunications;
+    private CancellationTokenSource? _ctsCommunications;
     public ulong Timestamp { get; private set; }
     public readonly long TimestampCreation;
 
@@ -225,7 +226,7 @@ public class Joycon
 
     public ControllerType Type { get; private set; }
 
-    public EventHandler<StateChangedEventArgs> StateChanged;
+    public EventHandler<StateChangedEventArgs>? StateChanged;
 
     public readonly ConcurrentList<MotionShort> CalibrationMotionDatas = [];
     public readonly ConcurrentList<SticksData> CalibrationStickDatas = [];
@@ -297,14 +298,15 @@ public class Joycon
     public bool IsN64 => Type == ControllerType.N64;
     public bool IsJoycon => Type is ControllerType.JoyconRight or ControllerType.JoyconLeft;
     public bool IsLeft => Type != ControllerType.JoyconRight;
-    public bool IsJoined => Other != null && Other != this;
+    [MemberNotNullWhen(true, nameof(Other))]
+    public bool IsJoined => Other is not null && !ReferenceEquals(Other, this);
     public bool IsPrimaryGyro => !IsJoined || Config.GyroLeftHanded == IsLeft;
 
     public bool IsDeviceReady => State > Status.Dropped;
     public bool IsDeviceError => !IsDeviceReady && State != Status.NotAttached;
 
 
-    public Joycon Other;
+    public Joycon? Other;
 
     public bool SetLEDByPlayerNum(int id)
     {
@@ -431,7 +433,7 @@ public class Joycon
             return;
         }
 
-        Log(stringifyable.ToString(), Logger.LogLevel.Debug, type);
+        Log(stringifyable?.ToString() ?? $"Attempted to log type ({typeof(T)}) but was null.", Logger.LogLevel.Debug, type);
     }
 
     public Motion GetMotion()
@@ -723,8 +725,7 @@ public class Joycon
         Subcommand(SubCommandOperation.SetReportMode, [(byte)reportMode]);
         return true;
     }
-
-#nullable enable
+    
     private void CheckIfRightIsRetro()
     {
         SubCommandReturnPacket? response;
@@ -771,7 +772,6 @@ public class Joycon
 
         throw new DeviceComFailedException("reset device info");
     }
-#nullable disable
 
     private void SetLowPowerState(bool enable)
     {
@@ -1036,42 +1036,29 @@ public class Joycon
             _AHRS.SamplePeriod = deltaPacketsMs / 1000;
         }
 
-        var mainController = this;
+        var (mainController, _) = GetMainAndOtherController();
 
         try
         {
             // Only joycons support joining. Need to lock to synchronize inputs between two joycons
-            if (Type == ControllerType.JoyconLeft)
-            {
-                _updateInputLock.Enter();
-            }
-            else if (!IsLeft && IsJoined)
-            {
-                mainController = Other;
-                mainController._updateInputLock.Enter();
-            }
+            mainController._updateInputLock.Enter();
 
             GetBatteryInfos(buf);
             ProcessButtonsAndSticks(buf);
             CopyInputFromJoinedController();
             UpdateInputActivity();
-
-            UdpControllerReport controllerReport = null;
+            
             var sendReport = Program.Server != null && Program.Server.HasClients;
 
+            UdpControllerReport controllerReport = new UdpControllerReport(this);
+            
             // Process packets as soon as they come
             for (var n = 0; n < NbMotionPackets; ++n)
             {
-                bool updateMotion = ExtractMotionValues(buf, n);
-                if (!updateMotion)
+                if (!ExtractMotionValues(buf, n))
                 {
                     Timestamp += deltaPacketsMicroseconds * NbMotionPackets;
                     PacketCounter++;
-
-                    if (sendReport)
-                    {
-                        controllerReport = new UdpControllerReport(this);
-                    }
                     break;
                 }
 
@@ -1082,7 +1069,7 @@ public class Joycon
                 {
                     if (n == 0)
                     {
-                        controllerReport = new UdpControllerReport(this, deltaPacketsMicroseconds);
+                        controllerReport.DeltaPackets = deltaPacketsMicroseconds;
                     }
 
                     controllerReport.AddMotion(this, n);
@@ -1100,7 +1087,7 @@ public class Joycon
                 // We add the input at the end to take the controller remapping into account
                 controllerReport.AddInput(this);
 
-                Program.Server.SendControllerReport(controllerReport);
+                Program.Server?.SendControllerReport(controllerReport);
             }
         }
         finally
@@ -1292,62 +1279,62 @@ public class Joycon
 
         SimulateContinous((int)Button.Capture, Settings.Value("capture"));
         SimulateContinous((int)Button.Home, Settings.Value("home"));
+        
+        var (mainController, otherController) = GetMainAndOtherController();
 
         if (IsLeft)
         {
-            if (_buttonsDown[(int)Button.SL])
+            if (mainController._buttonsDown[(int)Button.SL])
             {
                 Simulate(Settings.Value("sl_l"), false);
             }
 
-            if (_buttonsUp[(int)Button.SL])
+            if (mainController._buttonsUp[(int)Button.SL])
             {
                 Simulate(Settings.Value("sl_l"), false, true);
             }
 
-            if (_buttonsDown[(int)Button.SR])
+            if (mainController._buttonsDown[(int)Button.SR])
             {
                 Simulate(Settings.Value("sr_l"), false);
             }
 
-            if (_buttonsUp[(int)Button.SR])
+            if (mainController._buttonsUp[(int)Button.SR])
             {
                 Simulate(Settings.Value("sr_l"), false, true);
             }
 
-            SimulateContinous(_buttons[(int)Button.SL], Settings.Value("sl_l"));
-            SimulateContinous(_buttons[(int)Button.SR], Settings.Value("sr_l"));
+            SimulateContinous(mainController._buttons[(int)Button.SL], Settings.Value("sl_l"));
+            SimulateContinous(mainController._buttons[(int)Button.SR], Settings.Value("sr_l"));
         }
 
         if (!IsLeft || IsJoined)
         {
-            var controller = !IsLeft ? this : Other;
-
-            if (controller._buttonsDown[(int)Button.SL])
+            if (otherController._buttonsDown[(int)Button.SL])
             {
                 Simulate(Settings.Value("sl_r"), false);
             }
 
-            if (controller._buttonsUp[(int)Button.SL])
+            if (otherController._buttonsUp[(int)Button.SL])
             {
                 Simulate(Settings.Value("sl_r"), false, true);
             }
 
-            if (controller._buttonsDown[(int)Button.SR])
+            if (otherController._buttonsDown[(int)Button.SR])
             {
                 Simulate(Settings.Value("sr_r"), false);
             }
 
-            if (controller._buttonsUp[(int)Button.SR])
+            if (otherController._buttonsUp[(int)Button.SR])
             {
                 Simulate(Settings.Value("sr_r"), false, true);
             }
 
-            SimulateContinous(controller._buttons[(int)Button.SL], Settings.Value("sl_r"));
-            SimulateContinous(controller._buttons[(int)Button.SR], Settings.Value("sr_r"));
+            SimulateContinous(otherController._buttons[(int)Button.SL], Settings.Value("sl_r"));
+            SimulateContinous(otherController._buttons[(int)Button.SR], Settings.Value("sr_r"));
         }
 
-        bool hasShaked = IsPrimaryGyro ? _hasShaked : Other._hasShaked;
+        bool hasShaked = IsPrimaryGyro ? mainController._hasShaked : otherController._hasShaked;
         SimulateContinous(hasShaked, Settings.Value("shake"));
     }
 
@@ -1381,11 +1368,16 @@ public class Joycon
         return _buttonsUp[button] || (Other != null && Other._buttonsUp[button]);
     }
 
-    private Joycon GetMainController()
+    private (Joycon main, Joycon other) GetMainAndOtherController()
     {
-        return IsLeft || !IsJoined ? this : Other;
-    }
+        if (!IsJoined)
+        {
+            return (this, this);
+        }
 
+        return (IsLeft) ? (this, Other) : (Other, this);
+    }
+    
     // Must be done by the main controller (in the case they are joined)
     private void DoThingsWithButtonsMainController()
     {
@@ -1489,8 +1481,8 @@ public class Joycon
             {
                 WindowsInput.Simulate.Events()
                     .MoveTo(
-                        Screen.PrimaryScreen.Bounds.Width / 2,
-                        Screen.PrimaryScreen.Bounds.Height / 2
+                        (Screen.PrimaryScreen?.Bounds.Width ?? 0) / 2,
+                        (Screen.PrimaryScreen?.Bounds.Height ?? 0) / 2
                     )
                     .Invoke();
             }
@@ -1546,8 +1538,8 @@ public class Joycon
 
             if (IsJoined)
             {
-                var mainController = IsLeft ? this : Other;
-                mainController._sliderVal[1] = mainController.Other._sliderVal[1];
+                var (mainController, otherController) = GetMainAndOtherController();
+                mainController._sliderVal[1] = otherController._sliderVal[1];
             }
         }
 
@@ -1559,7 +1551,7 @@ public class Joycon
             {
                 if (Settings.Value("active_gyro") == "0" || ActiveGyro)
                 {
-                    var mainController = GetMainController();
+                    var (mainController, _) = GetMainAndOtherController();
                     ref var controlStick = ref (Config.ExtraGyroFeature == "joy_left" ? ref mainController._stick : ref mainController._stick2);
 
                     float dx, dy;
@@ -1611,7 +1603,7 @@ public class Joycon
             Other.DoThingsWithButtonsEachController();
         }
 
-        var mainController = GetMainController();
+        var (mainController, _) = GetMainAndOtherController();
         mainController.DoThingsWithButtonsMainController();
     }
 
@@ -2112,22 +2104,21 @@ public class Joycon
             return;
         }
 
-        var mainController = IsLeft ? this : Other;
-        var OtherController = mainController.Other;
+        var (mainController, otherController) = GetMainAndOtherController();
 
-        mainController._buttons[(int)Button.B] = OtherController._buttons[(int)Button.DpadDown];
-        mainController._buttons[(int)Button.A] = OtherController._buttons[(int)Button.DpadRight];
-        mainController._buttons[(int)Button.X] = OtherController._buttons[(int)Button.DpadUp];
-        mainController._buttons[(int)Button.Y] = OtherController._buttons[(int)Button.DpadLeft];
+        mainController._buttons[(int)Button.B] = otherController._buttons[(int)Button.DpadDown];
+        mainController._buttons[(int)Button.A] = otherController._buttons[(int)Button.DpadRight];
+        mainController._buttons[(int)Button.X] = otherController._buttons[(int)Button.DpadUp];
+        mainController._buttons[(int)Button.Y] = otherController._buttons[(int)Button.DpadLeft];
 
-        mainController._buttons[(int)Button.Stick2] = OtherController._buttons[(int)Button.Stick];
-        mainController._buttons[(int)Button.Shoulder21] = OtherController._buttons[(int)Button.Shoulder1];
-        mainController._buttons[(int)Button.Shoulder22] = OtherController._buttons[(int)Button.Shoulder2];
+        mainController._buttons[(int)Button.Stick2] = otherController._buttons[(int)Button.Stick];
+        mainController._buttons[(int)Button.Shoulder21] = otherController._buttons[(int)Button.Shoulder1];
+        mainController._buttons[(int)Button.Shoulder22] = otherController._buttons[(int)Button.Shoulder2];
 
-        mainController._buttons[(int)Button.Home] = OtherController._buttons[(int)Button.Home];
-        mainController._buttons[(int)Button.Plus] = OtherController._buttons[(int)Button.Plus];
+        mainController._buttons[(int)Button.Home] = otherController._buttons[(int)Button.Home];
+        mainController._buttons[(int)Button.Plus] = otherController._buttons[(int)Button.Plus];
 
-        mainController._stick2 = OtherController._stick;
+        mainController._stick2 = otherController._stick;
     }
 
     // Must be done by all controllers when their input is updated (in the case they are joined)
@@ -2181,10 +2172,10 @@ public class Joycon
             Other.UpdateInputActivityEachController();
 
             // Consider the other joined controller active when the main controller is (so it doesn't power off after splitting)
-            var mainController = IsLeft ? this : Other;
-            if (mainController._timestampActivity > mainController.Other._timestampActivity)
+            var (mainController, otherController) = GetMainAndOtherController();
+            if (mainController._timestampActivity > otherController._timestampActivity)
             {
-                mainController.Other._timestampActivity = mainController._timestampActivity;
+                otherController._timestampActivity = mainController._timestampActivity;
             }
         }
     }
@@ -2482,8 +2473,7 @@ public class Joycon
 
         return length;
     }
-
-#nullable enable
+    
     private SubCommandReturnPacket? SubcommandWithResponse(
         SubCommandOperation operation,
         ReadOnlySpan<byte> bufParameters,
@@ -2526,7 +2516,6 @@ public class Joycon
 
         return response;
     }
-#nullable disable
 
     private bool CalibrationDataSupported()
     {
@@ -2826,8 +2815,7 @@ public class Joycon
 
         return length;
     }
-
-#nullable enable
+    
     private byte[] ReadSPICheck(SPIPage page, ref bool ok, bool print = false)
     {
         var readBuf = new byte[page.PageSize];
@@ -2864,7 +2852,6 @@ public class Joycon
 
         return readBuf;
     }
-#nullable disable
 
     private void PrintArray<T>(
         ReadOnlySpan<T> array,

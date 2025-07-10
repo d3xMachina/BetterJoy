@@ -3,11 +3,11 @@ using static BetterJoy.Controller.Joycon;
 
 namespace BetterJoy.Config;
 
-public class ControllerConfig : Config
+public sealed class ControllerConfig : Config
 {
-    public int LowFreq;
-    public int HighFreq;
-    public bool EnableRumble;
+    public int LowFreq = 160;
+    public int HighFreq = 320;
+    public bool EnableRumble = true;
     public bool ShowAsXInput;
     public bool ShowAsDs4;
     public float StickLeftDeadzone;
@@ -23,7 +23,7 @@ public class ControllerConfig : Config
     public float ShakeSensitivity;
     public bool ChangeOrientationDoubleClick;
     public bool DragToggle;
-    public string ExtraGyroFeature;
+    public string ExtraGyroFeature = "none";
     public int GyroAnalogSensitivity;
     public bool GyroAnalogSliders;
     public bool GyroHoldToggle;
@@ -86,8 +86,8 @@ public class ControllerConfig : Config
 
     public override void Update()
     {
-        UpdateSetting("LowFreqRumble", ref LowFreq, 160);
-        UpdateSetting("HighFreqRumble", ref HighFreq, 320);
+        UpdateSetting("LowFreqRumble", ref LowFreq, LowFreq);
+        UpdateSetting("HighFreqRumble", ref HighFreq, HighFreq);
         UpdateSetting("EnableRumble", ref EnableRumble, true);
         UpdateSetting("ShowAsXInput", ref ShowAsXInput, true);
         UpdateSetting("ShowAsDS4", ref ShowAsDs4, false);
