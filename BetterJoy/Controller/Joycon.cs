@@ -1477,12 +1477,14 @@ public class Joycon
         if (IsPrimaryGyro && Config.ExtraGyroFeature == "mouse")
         {
             // reset mouse position to centre of primary monitor
-            if (HandleJoyAction("reset_mouse", out button) && IsButtonDown(button))
+            if (HandleJoyAction("reset_mouse", out button) && 
+                IsButtonDown(button) &&
+                Screen.PrimaryScreen is not null)
             {
                 WindowsInput.Simulate.Events()
                     .MoveTo(
-                        (Screen.PrimaryScreen?.Bounds.Width ?? 0) / 2,
-                        (Screen.PrimaryScreen?.Bounds.Height ?? 0) / 2
+                        Screen.PrimaryScreen.Bounds.Width / 2,
+                        Screen.PrimaryScreen.Bounds.Height / 2
                     )
                     .Invoke();
             }
