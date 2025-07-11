@@ -725,7 +725,7 @@ public class Joycon
         Subcommand(SubCommandOperation.SetReportMode, [(byte)reportMode]);
         return true;
     }
-    
+
     private void CheckIfRightIsRetro()
     {
         SubCommandReturnPacket? response;
@@ -1047,11 +1047,11 @@ public class Joycon
             ProcessButtonsAndSticks(buf);
             CopyInputFromJoinedController();
             UpdateInputActivity();
-            
+
             var sendReport = Program.Server != null && Program.Server.HasClients;
 
             UdpControllerReport controllerReport = new UdpControllerReport(this);
-            
+
             // Process packets as soon as they come
             for (var n = 0; n < NbMotionPackets; ++n)
             {
@@ -1279,7 +1279,7 @@ public class Joycon
 
         SimulateContinous((int)Button.Capture, Settings.Value("capture"));
         SimulateContinous((int)Button.Home, Settings.Value("home"));
-        
+
         var (mainController, otherController) = GetMainAndOtherController();
 
         if (IsLeft)
@@ -1377,7 +1377,7 @@ public class Joycon
 
         return (IsLeft) ? (this, Other) : (Other, this);
     }
-    
+
     // Must be done by the main controller (in the case they are joined)
     private void DoThingsWithButtonsMainController()
     {
@@ -1477,7 +1477,7 @@ public class Joycon
         if (IsPrimaryGyro && Config.ExtraGyroFeature == "mouse")
         {
             // reset mouse position to centre of primary monitor
-            if (HandleJoyAction("reset_mouse", out button) && 
+            if (HandleJoyAction("reset_mouse", out button) &&
                 IsButtonDown(button) &&
                 Screen.PrimaryScreen is not null)
             {
@@ -2475,7 +2475,7 @@ public class Joycon
 
         return length;
     }
-    
+
     private SubCommandReturnPacket? SubcommandWithResponse(
         SubCommandOperation operation,
         ReadOnlySpan<byte> bufParameters,
@@ -2817,7 +2817,7 @@ public class Joycon
 
         return length;
     }
-    
+
     private byte[] ReadSPICheck(SPIPage page, ref bool ok, bool print = false)
     {
         var readBuf = new byte[page.PageSize];

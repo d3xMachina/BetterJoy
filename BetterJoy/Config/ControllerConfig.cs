@@ -108,7 +108,7 @@ public class ControllerConfig : Config
         TryUpdateSetting("GyroAnalogSensitivity", ref GyroAnalogSensitivity);
         TryUpdateSetting("GyroAnalogSliders", ref GyroAnalogSliders);
         TryUpdateSetting("GyroHoldToggle", ref GyroHoldToggle);
-        TryUpdateSetting("GyroLeftHanded", ref GyroLeftHanded); 
+        TryUpdateSetting("GyroLeftHanded", ref GyroLeftHanded);
         TryUpdateSetting("GyroMouseSensitivity", ref GyroMouseSensitivity);
         TryUpdateSetting("GyroStickReduction", ref GyroStickReduction);
         TryUpdateSetting("GyroStickSensitivity", ref GyroStickSensitivity);
