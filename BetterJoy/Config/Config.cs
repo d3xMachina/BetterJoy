@@ -100,11 +100,4 @@ public abstract class Config
             _logger?.Log($"Invalid value \"{value}\" for setting {key}! Using default value \"{defaultValueTxt}\".", Logger.LogLevel.Warning);
         }
     }
-    
-    protected T GetSettingOrDefault<T>(string key, T setting)
-    {
-        UpdateSetting(key, ref setting, setting);
-
-        return setting;
-    }
 }
