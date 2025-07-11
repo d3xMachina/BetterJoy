@@ -3,44 +3,44 @@ using static BetterJoy.Controller.Joycon;
 
 namespace BetterJoy.Config;
 
-public sealed class ControllerConfig : Config
+public class ControllerConfig : Config
 {
     public int LowFreq = 160;
     public int HighFreq = 320;
     public bool EnableRumble = true;
-    public bool ShowAsXInput;
-    public bool ShowAsDs4;
-    public float StickLeftDeadzone;
-    public float StickRightDeadzone;
-    public float StickLeftRange;
-    public float StickRightRange;
-    public bool SticksSquared;
-    public float[] StickLeftAntiDeadzone = new float[2];
-    public float[] StickRightAntiDeadzone = new float[2];
-    public float AHRSBeta;
-    public float ShakeDelay;
-    public bool ShakeInputEnabled;
-    public float ShakeSensitivity;
-    public bool ChangeOrientationDoubleClick;
-    public bool DragToggle;
+    public bool ShowAsXInput = true;
+    public bool ShowAsDs4 = false;
+    public float StickLeftDeadzone = 0.15f;
+    public float StickRightDeadzone = 0.15f;
+    public float StickLeftRange = 0.90f;
+    public float StickRightRange = 0.90f;
+    public bool SticksSquared = false;
+    public float[] StickLeftAntiDeadzone = [0.0f, 0.0f];
+    public float[] StickRightAntiDeadzone = [0.0f, 0.0f];
+    public float AHRSBeta = 0.05f;
+    public float ShakeDelay = 200;
+    public bool ShakeInputEnabled = false;
+    public float ShakeSensitivity = 10;
+    public bool ChangeOrientationDoubleClick = true;
+    public bool DragToggle = false;
     public string ExtraGyroFeature = "none";
-    public int GyroAnalogSensitivity;
-    public bool GyroAnalogSliders;
-    public bool GyroHoldToggle;
-    public bool GyroLeftHanded;
-    public int[] GyroMouseSensitivity = new int[2];
-    public float GyroStickReduction;
-    public float[] GyroStickSensitivity = new float[2];
-    public bool HomeLongPowerOff;
-    public bool HomeLEDOn;
-    public long PowerOffInactivityMins;
-    public bool SwapAB;
-    public bool SwapXY;
-    public bool UseFilteredMotion;
-    public DebugType DebugType;
-    public Orientation DoNotRejoin;
-    public bool AutoPowerOff;
-    public bool AllowCalibration;
+    public int GyroAnalogSensitivity = 400;
+    public bool GyroAnalogSliders = false;
+    public bool GyroHoldToggle = true;
+    public bool GyroLeftHanded = false;
+    public int[] GyroMouseSensitivity = [1200, 800];
+    public float GyroStickReduction = 1.5f;
+    public float[] GyroStickSensitivity = [40.0f, 10.0f];
+    public bool HomeLongPowerOff = true;
+    public bool HomeLEDOn = true;
+    public long PowerOffInactivityMins = -1;
+    public bool SwapAB = false;
+    public bool SwapXY = false;
+    public bool UseFilteredMotion = true;
+    public DebugType DebugType = DebugType.None;
+    public Orientation DoNotRejoin = Orientation.None;
+    public bool AutoPowerOff = false;
+    public bool AllowCalibration = true;
 
     public ControllerConfig(Logger logger) : base(logger) { }
 
@@ -86,42 +86,47 @@ public sealed class ControllerConfig : Config
 
     public override void Update()
     {
-        UpdateSetting("LowFreqRumble", ref LowFreq, LowFreq);
-        UpdateSetting("HighFreqRumble", ref HighFreq, HighFreq);
-        UpdateSetting("EnableRumble", ref EnableRumble, true);
-        UpdateSetting("ShowAsXInput", ref ShowAsXInput, true);
-        UpdateSetting("ShowAsDS4", ref ShowAsDs4, false);
-        UpdateSetting("StickLeftDeadzone", ref StickLeftDeadzone, 0.15f);
-        UpdateSetting("StickRightDeadzone", ref StickRightDeadzone, 0.15f);
-        UpdateSetting("StickLeftRange", ref StickLeftRange, 0.90f);
-        UpdateSetting("StickRightRange", ref StickRightRange, 0.90f);
-        UpdateSetting("SticksSquared", ref SticksSquared, false);
-        UpdateSetting("StickLeftAntiDeadzone", ref StickLeftAntiDeadzone, [0.0f, 0.0f]);
-        UpdateSetting("StickRightAntiDeadzone", ref StickRightAntiDeadzone, [0.0f, 0.0f]);
-        UpdateSetting("AHRS_beta", ref AHRSBeta, 0.05f);
-        UpdateSetting("ShakeInputDelay", ref ShakeDelay, 200);
-        UpdateSetting("EnableShakeInput", ref ShakeInputEnabled, false);
-        UpdateSetting("ShakeInputSensitivity", ref ShakeSensitivity, 10);
-        UpdateSetting("ChangeOrientationDoubleClick", ref ChangeOrientationDoubleClick, true);
-        UpdateSetting("DragToggle", ref DragToggle, false);
-        UpdateSetting("GyroToJoyOrMouse", ref ExtraGyroFeature, "none");
-        UpdateSetting("GyroAnalogSensitivity", ref GyroAnalogSensitivity, 400);
-        UpdateSetting("GyroAnalogSliders", ref GyroAnalogSliders, false);
-        UpdateSetting("GyroHoldToggle", ref GyroHoldToggle, true);
-        UpdateSetting("GyroLeftHanded", ref GyroLeftHanded, false);
-        UpdateSetting("GyroMouseSensitivity", ref GyroMouseSensitivity, [1200, 800]);
-        UpdateSetting("GyroStickReduction", ref GyroStickReduction, 1.5f);
-        UpdateSetting("GyroStickSensitivity", ref GyroStickSensitivity, [40.0f, 10.0f]);
-        UpdateSetting("HomeLongPowerOff", ref HomeLongPowerOff, true);
-        UpdateSetting("HomeLEDOn", ref HomeLEDOn, true);
-        UpdateSetting("PowerOffInactivity", ref PowerOffInactivityMins, -1);
-        UpdateSetting("SwapAB", ref SwapAB, false);
-        UpdateSetting("SwapXY", ref SwapXY, false);
-        UpdateSetting("UseFilteredIMU", ref UseFilteredMotion, true);
-        UpdateSetting("DebugType", ref DebugType, DebugType.None);
-        UpdateSetting("DoNotRejoinJoycons", ref DoNotRejoin, Orientation.None);
-        UpdateSetting("AutoPowerOff", ref AutoPowerOff, false);
-        UpdateSetting("AllowCalibration", ref AllowCalibration, true);
+        TryUpdateSetting("LowFreqRumble", ref LowFreq);
+        TryUpdateSetting("HighFreqRumble", ref HighFreq);
+        TryUpdateSetting("EnableRumble", ref EnableRumble);
+        TryUpdateSetting("ShowAsXInput", ref ShowAsXInput);
+        TryUpdateSetting("ShowAsDS4", ref ShowAsDs4);
+        TryUpdateSetting("StickLeftDeadzone", ref StickLeftDeadzone);
+        TryUpdateSetting("StickRightDeadzone", ref StickRightDeadzone);
+        TryUpdateSetting("StickLeftRange", ref StickLeftRange);
+        TryUpdateSetting("StickRightRange", ref StickRightRange);
+        TryUpdateSetting("SticksSquared", ref SticksSquared);
+        TryUpdateSetting("StickLeftAntiDeadzone", ref StickLeftAntiDeadzone);
+        TryUpdateSetting("StickRightAntiDeadzone", ref StickRightAntiDeadzone);
+        TryUpdateSetting("AHRS_beta", ref AHRSBeta);
+        TryUpdateSetting("ShakeInputDelay", ref ShakeDelay);
+        TryUpdateSetting("EnableShakeInput", ref ShakeInputEnabled);
+        TryUpdateSetting("ShakeInputSensitivity", ref ShakeSensitivity);
+        TryUpdateSetting("ChangeOrientationDoubleClick", ref ChangeOrientationDoubleClick);
+        TryUpdateSetting("DragToggle", ref DragToggle);
+        TryUpdateSetting("GyroToJoyOrMouse", ref ExtraGyroFeature);
+        TryUpdateSetting("GyroAnalogSensitivity", ref GyroAnalogSensitivity);
+        TryUpdateSetting("GyroAnalogSliders", ref GyroAnalogSliders);
+        TryUpdateSetting("GyroHoldToggle", ref GyroHoldToggle);
+        TryUpdateSetting("GyroLeftHanded", ref GyroLeftHanded); 
+        TryUpdateSetting("GyroMouseSensitivity", ref GyroMouseSensitivity);
+        TryUpdateSetting("GyroStickReduction", ref GyroStickReduction);
+        TryUpdateSetting("GyroStickSensitivity", ref GyroStickSensitivity);
+        TryUpdateSetting("HomeLongPowerOff", ref HomeLongPowerOff);
+        TryUpdateSetting("HomeLEDOn", ref HomeLEDOn);
+        TryUpdateSetting("PowerOffInactivity", ref PowerOffInactivityMins);
+        TryUpdateSetting("SwapAB", ref SwapAB);
+        TryUpdateSetting("SwapXY", ref SwapXY);
+        TryUpdateSetting("UseFilteredIMU", ref UseFilteredMotion);
+        TryUpdateSetting("DebugType", ref DebugType);
+        TryUpdateSetting("DoNotRejoinJoycons", ref DoNotRejoin);
+        TryUpdateSetting("AutoPowerOff", ref AutoPowerOff);
+        TryUpdateSetting("AllowCalibration", ref AllowCalibration);
+    }
+
+    private void TryUpdateSetting<T>(string key, ref T setting)
+    {
+        UpdateSetting(key, ref setting, setting);
     }
 
     public override ControllerConfig Clone()
