@@ -298,9 +298,13 @@ public class Joycon
     public bool IsN64 => Type == ControllerType.N64;
     public bool IsJoycon => Type is ControllerType.JoyconRight or ControllerType.JoyconLeft;
     public bool IsLeft => Type != ControllerType.JoyconRight;
+    
     [MemberNotNullWhen(true, nameof(Other))]
     public bool IsJoined => Other is not null && !ReferenceEquals(Other, this);
+    
+    [MemberNotNullWhen(false, nameof(Other))]
     public bool IsPrimaryGyro => !IsJoined || Config.GyroLeftHanded == IsLeft;
+    
 
     public bool IsDeviceReady => State > Status.Dropped;
     public bool IsDeviceError => !IsDeviceReady && State != Status.NotAttached;
@@ -1036,21 +1040,23 @@ public class Joycon
             _AHRS.SamplePeriod = deltaPacketsMs / 1000;
         }
 
-        var (mainController, _) = GetMainAndOtherController();
+        var (primaryController, _) = GetPrimaryAndSecondaryController();
 
         try
         {
             // Only joycons support joining. Need to lock to synchronize inputs between two joycons
-            mainController._updateInputLock.Enter();
+            if (Type is ControllerType.JoyconLeft or ControllerType.JoyconRight)
+            {
+                primaryController._updateInputLock.Enter();
+            }
 
             GetBatteryInfos(buf);
             ProcessButtonsAndSticks(buf);
             CopyInputFromJoinedController();
             UpdateInputActivity();
 
-            var sendReport = Program.Server != null && Program.Server.HasClients;
-
-            UdpControllerReport controllerReport = new UdpControllerReport(this);
+            UdpControllerReport? controllerReport = 
+                UdpControllerReport.ConstructIfServerIsServing(this, deltaPacketsMicroseconds);
 
             // Process packets as soon as they come
             for (var n = 0; n < NbMotionPackets; ++n)
@@ -1065,36 +1071,25 @@ public class Joycon
                 Timestamp += deltaPacketsMicroseconds;
                 PacketCounter++;
 
-                if (sendReport)
-                {
-                    if (n == 0)
-                    {
-                        controllerReport.DeltaPackets = deltaPacketsMicroseconds;
-                    }
-
-                    controllerReport.AddMotion(this, n);
-                }
+                controllerReport?.AddMotion(this, n);
 
                 DoThingsWithMotion();
             }
 
             DoThingsWithButtons();
 
-            mainController.UpdateInput();
+            primaryController.UpdateInput();
 
-            if (sendReport)
-            {
-                // We add the input at the end to take the controller remapping into account
-                controllerReport.AddInput(this);
+            // We add the input at the end to take the controller remapping into account
+            controllerReport?.AddInput(this);
 
-                Program.Server?.SendControllerReport(controllerReport);
-            }
+            controllerReport?.SendControllerReport();
         }
         finally
         {
-            if (mainController._updateInputLock.IsHeldByCurrentThread)
+            if (primaryController._updateInputLock.IsHeldByCurrentThread)
             {
-                mainController._updateInputLock.Exit();
+                primaryController._updateInputLock.Exit();
             }
         }
     }
@@ -1280,61 +1275,61 @@ public class Joycon
         SimulateContinous((int)Button.Capture, Settings.Value("capture"));
         SimulateContinous((int)Button.Home, Settings.Value("home"));
 
-        var (mainController, otherController) = GetMainAndOtherController();
-
         if (IsLeft)
         {
-            if (mainController._buttonsDown[(int)Button.SL])
+            if (_buttonsDown[(int)Button.SL])
             {
                 Simulate(Settings.Value("sl_l"), false);
             }
 
-            if (mainController._buttonsUp[(int)Button.SL])
+            if (_buttonsUp[(int)Button.SL])
             {
                 Simulate(Settings.Value("sl_l"), false, true);
             }
 
-            if (mainController._buttonsDown[(int)Button.SR])
+            if (_buttonsDown[(int)Button.SR])
             {
                 Simulate(Settings.Value("sr_l"), false);
             }
 
-            if (mainController._buttonsUp[(int)Button.SR])
+            if (_buttonsUp[(int)Button.SR])
             {
                 Simulate(Settings.Value("sr_l"), false, true);
             }
 
-            SimulateContinous(mainController._buttons[(int)Button.SL], Settings.Value("sl_l"));
-            SimulateContinous(mainController._buttons[(int)Button.SR], Settings.Value("sr_l"));
+            SimulateContinous(_buttons[(int)Button.SL], Settings.Value("sl_l"));
+            SimulateContinous(_buttons[(int)Button.SR], Settings.Value("sr_l"));
         }
 
         if (!IsLeft || IsJoined)
         {
-            if (otherController._buttonsDown[(int)Button.SL])
+            var controller = !IsLeft ? this : Other!;
+            
+            if (controller._buttonsDown[(int)Button.SL])
             {
                 Simulate(Settings.Value("sl_r"), false);
             }
 
-            if (otherController._buttonsUp[(int)Button.SL])
+            if (controller._buttonsUp[(int)Button.SL])
             {
                 Simulate(Settings.Value("sl_r"), false, true);
             }
 
-            if (otherController._buttonsDown[(int)Button.SR])
+            if (controller._buttonsDown[(int)Button.SR])
             {
                 Simulate(Settings.Value("sr_r"), false);
             }
 
-            if (otherController._buttonsUp[(int)Button.SR])
+            if (controller._buttonsUp[(int)Button.SR])
             {
                 Simulate(Settings.Value("sr_r"), false, true);
             }
 
-            SimulateContinous(otherController._buttons[(int)Button.SL], Settings.Value("sl_r"));
-            SimulateContinous(otherController._buttons[(int)Button.SR], Settings.Value("sr_r"));
+            SimulateContinous(controller._buttons[(int)Button.SL], Settings.Value("sl_r"));
+            SimulateContinous(controller._buttons[(int)Button.SR], Settings.Value("sr_r"));
         }
 
-        bool hasShaked = IsPrimaryGyro ? mainController._hasShaked : otherController._hasShaked;
+        bool hasShaked = IsPrimaryGyro ? _hasShaked : Other._hasShaked;
         SimulateContinous(hasShaked, Settings.Value("shake"));
     }
 
@@ -1368,14 +1363,9 @@ public class Joycon
         return _buttonsUp[button] || (Other != null && Other._buttonsUp[button]);
     }
 
-    private (Joycon main, Joycon other) GetMainAndOtherController()
+    private (Joycon primary, Joycon? secondary) GetPrimaryAndSecondaryController()
     {
-        if (!IsJoined)
-        {
-            return (this, this);
-        }
-
-        return (IsLeft) ? (this, Other) : (Other, this);
+        return (IsLeft || !IsJoined) ? (this, Other) : (Other, this);
     }
 
     // Must be done by the main controller (in the case they are joined)
@@ -1479,12 +1469,12 @@ public class Joycon
             // reset mouse position to centre of primary monitor
             if (HandleJoyAction("reset_mouse", out button) &&
                 IsButtonDown(button) &&
-                Screen.PrimaryScreen is not null)
+                Screen.PrimaryScreen is Screen primaryScreen)
             {
                 WindowsInput.Simulate.Events()
                     .MoveTo(
-                        Screen.PrimaryScreen.Bounds.Width / 2,
-                        Screen.PrimaryScreen.Bounds.Height / 2
+                        primaryScreen.Bounds.Width / 2,
+                        primaryScreen.Bounds.Height / 2
                     )
                     .Invoke();
             }
@@ -1537,11 +1527,10 @@ public class Joycon
             {
                 _sliderVal[IsLeft ? 1 : 0] = 0;
             }
-
-            if (IsJoined)
+            
+            if (GetPrimaryAndSecondaryController() is ({ } primaryController, { } secondaryController))
             {
-                var (mainController, otherController) = GetMainAndOtherController();
-                mainController._sliderVal[1] = otherController._sliderVal[1];
+                primaryController._sliderVal[1] = secondaryController._sliderVal[1];
             }
         }
 
@@ -1553,8 +1542,8 @@ public class Joycon
             {
                 if (Settings.Value("active_gyro") == "0" || ActiveGyro)
                 {
-                    var (mainController, _) = GetMainAndOtherController();
-                    ref var controlStick = ref (Config.ExtraGyroFeature == "joy_left" ? ref mainController._stick : ref mainController._stick2);
+                    var (primaryController, _) = GetPrimaryAndSecondaryController();
+                    ref var controlStick = ref (Config.ExtraGyroFeature == "joy_left" ? ref primaryController._stick : ref primaryController._stick2);
 
                     float dx, dy;
                     if (Config.UseFilteredMotion)
@@ -1605,8 +1594,8 @@ public class Joycon
             Other.DoThingsWithButtonsEachController();
         }
 
-        var (mainController, _) = GetMainAndOtherController();
-        mainController.DoThingsWithButtonsMainController();
+        var (primaryController, _) = GetPrimaryAndSecondaryController();
+        primaryController.DoThingsWithButtonsMainController();
     }
 
     private void DoThingsWithMotion()
@@ -2101,26 +2090,26 @@ public class Joycon
 
     private void CopyInputFromJoinedController()
     {
-        if (!IsJoined)
+        var (primaryController, secondaryController) = GetPrimaryAndSecondaryController();
+        
+        if (secondaryController is null || primaryController == secondaryController)
         {
             return;
         }
+        
+        primaryController._buttons[(int)Button.B] = secondaryController._buttons[(int)Button.DpadDown];
+        primaryController._buttons[(int)Button.A] = secondaryController._buttons[(int)Button.DpadRight];
+        primaryController._buttons[(int)Button.X] = secondaryController._buttons[(int)Button.DpadUp];
+        primaryController._buttons[(int)Button.Y] = secondaryController._buttons[(int)Button.DpadLeft];
 
-        var (mainController, otherController) = GetMainAndOtherController();
+        primaryController._buttons[(int)Button.Stick2] = secondaryController._buttons[(int)Button.Stick];
+        primaryController._buttons[(int)Button.Shoulder21] = secondaryController._buttons[(int)Button.Shoulder1];
+        primaryController._buttons[(int)Button.Shoulder22] = secondaryController._buttons[(int)Button.Shoulder2];
 
-        mainController._buttons[(int)Button.B] = otherController._buttons[(int)Button.DpadDown];
-        mainController._buttons[(int)Button.A] = otherController._buttons[(int)Button.DpadRight];
-        mainController._buttons[(int)Button.X] = otherController._buttons[(int)Button.DpadUp];
-        mainController._buttons[(int)Button.Y] = otherController._buttons[(int)Button.DpadLeft];
+        primaryController._buttons[(int)Button.Home] = secondaryController._buttons[(int)Button.Home];
+        primaryController._buttons[(int)Button.Plus] = secondaryController._buttons[(int)Button.Plus];
 
-        mainController._buttons[(int)Button.Stick2] = otherController._buttons[(int)Button.Stick];
-        mainController._buttons[(int)Button.Shoulder21] = otherController._buttons[(int)Button.Shoulder1];
-        mainController._buttons[(int)Button.Shoulder22] = otherController._buttons[(int)Button.Shoulder2];
-
-        mainController._buttons[(int)Button.Home] = otherController._buttons[(int)Button.Home];
-        mainController._buttons[(int)Button.Plus] = otherController._buttons[(int)Button.Plus];
-
-        mainController._stick2 = otherController._stick;
+        primaryController._stick2 = secondaryController._stick;
     }
 
     // Must be done by all controllers when their input is updated (in the case they are joined)
@@ -2166,20 +2155,25 @@ public class Joycon
 
     private void UpdateInputActivity()
     {
-        // Need to update both joined controllers in case they are split afterward
-        UpdateInputActivityEachController();
+        var (primaryController, secondaryController) = GetPrimaryAndSecondaryController();
+        
+        primaryController.UpdateInputActivityEachController();
 
-        if (IsJoined)
+        if (primaryController == secondaryController || secondaryController == null)
         {
-            Other.UpdateInputActivityEachController();
-
-            // Consider the other joined controller active when the main controller is (so it doesn't power off after splitting)
-            var (mainController, otherController) = GetMainAndOtherController();
-            if (mainController._timestampActivity > otherController._timestampActivity)
-            {
-                otherController._timestampActivity = mainController._timestampActivity;
-            }
+            return;
         }
+
+        // Need to update both joined controllers in case they are split afterward
+        secondaryController.UpdateInputActivityEachController();
+
+        // Consider the other joined controller active when the main controller is (so it doesn't power off after splitting)
+        var mostRecentActivity =
+            Math.Max(primaryController._timestampActivity, secondaryController._timestampActivity);
+
+        primaryController._timestampActivity = mostRecentActivity;
+
+        secondaryController._timestampActivity = mostRecentActivity;
     }
 
     private static long TimestampToMs(long timestamp)

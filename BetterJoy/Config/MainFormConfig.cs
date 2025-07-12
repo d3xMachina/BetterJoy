@@ -2,7 +2,7 @@ namespace BetterJoy.Config;
 
 public class MainFormConfig : Config
 {
-    public bool AllowCalibration;
+    public bool AllowCalibration = false;
 
     public MainFormConfig(Logger logger) : base(logger) { }
 
@@ -13,7 +13,7 @@ public class MainFormConfig : Config
 
     public override void Update()
     {
-        UpdateSetting("AllowCalibration", ref AllowCalibration, true);
+        TryUpdateSetting("AllowCalibration", ref AllowCalibration);
     }
 
     public override MainFormConfig Clone()

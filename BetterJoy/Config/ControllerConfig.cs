@@ -124,10 +124,7 @@ public class ControllerConfig : Config
         TryUpdateSetting("AllowCalibration", ref AllowCalibration);
     }
 
-    private void TryUpdateSetting<T>(string key, ref T setting)
-    {
-        UpdateSetting(key, ref setting, setting);
-    }
+    
 
     public override ControllerConfig Clone()
     {
