@@ -1,3 +1,4 @@
+#nullable disable
 using BetterJoy.HIDApi.Exceptions;
 using BetterJoy.HIDApi.Native;
 using System;

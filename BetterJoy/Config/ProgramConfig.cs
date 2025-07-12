@@ -4,13 +4,13 @@ namespace BetterJoy.Config;
 
 public class ProgramConfig : Config
 {
-    public bool UseHIDHide;
-    public bool HIDHideAlwaysOn;
-    public bool PurgeWhitelist;
-    public bool PurgeAffectedDevices;
-    public bool MotionServer;
-    public IPAddress IP;
-    public int Port;
+    public bool UseHIDHide = true;
+    public bool HIDHideAlwaysOn = false;
+    public bool PurgeWhitelist = false;
+    public bool PurgeAffectedDevices = false;
+    public bool MotionServer = true;
+    public IPAddress IP = IPAddress.Loopback;
+    public int Port = 26760;
 
     public ProgramConfig(Logger logger) : base(logger) { }
 
@@ -27,13 +27,13 @@ public class ProgramConfig : Config
 
     public override void Update()
     {
-        UpdateSetting("UseHidHide", ref UseHIDHide, true);
-        UpdateSetting("HIDHideAlwaysOn", ref HIDHideAlwaysOn, false);
-        UpdateSetting("PurgeWhitelist", ref PurgeWhitelist, false);
-        UpdateSetting("PurgeAffectedDevices", ref PurgeAffectedDevices, false);
-        UpdateSetting("MotionServer", ref MotionServer, true);
-        UpdateSetting("IP", ref IP, IPAddress.Loopback);
-        UpdateSetting("Port", ref Port, 26760);
+        TryUpdateSetting("UseHidHide", ref UseHIDHide);
+        TryUpdateSetting("HIDHideAlwaysOn", ref HIDHideAlwaysOn);
+        TryUpdateSetting("PurgeWhitelist", ref PurgeWhitelist);
+        TryUpdateSetting("PurgeAffectedDevices", ref PurgeAffectedDevices);
+        TryUpdateSetting("MotionServer", ref MotionServer);
+        TryUpdateSetting("IP", ref IP);
+        TryUpdateSetting("Port", ref Port);
     }
 
     public override ProgramConfig Clone()

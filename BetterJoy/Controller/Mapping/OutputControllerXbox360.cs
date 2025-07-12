@@ -1,3 +1,4 @@
+#nullable disable
 using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 

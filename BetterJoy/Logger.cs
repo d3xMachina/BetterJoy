@@ -1,3 +1,4 @@
+#nullable disable
 using BetterJoy.Exceptions;
 using System;
 using System.IO;

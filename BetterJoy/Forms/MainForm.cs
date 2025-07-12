@@ -1,3 +1,4 @@
+#nullable disable
 using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
