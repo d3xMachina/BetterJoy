@@ -1,14 +1,15 @@
 using BetterJoy.Controller;
 using BetterJoy.Controller.Mapping;
+using System;
 
 namespace BetterJoy.Network.Server;
 
 public class UdpControllerReport
 {
+    public const ulong DefaultDeltaPackets = 0;
     public ulong Timestamp;
     public int PacketCounter;
     public ulong DeltaPackets;
-
     public int PadId;
     public MacAddress MacAddress;
     public ControllerConnection ConnectionType;
@@ -18,7 +19,7 @@ public class UdpControllerReport
 
     public readonly Motion[] Motion = new Motion[3];
 
-    public UdpControllerReport(Joycon controller, ulong deltaPackets = 0)
+    public UdpControllerReport(Joycon controller, ulong deltaPackets = DefaultDeltaPackets)
     {
         Timestamp = controller.Timestamp;
         PacketCounter = controller.PacketCounter;
@@ -41,5 +42,11 @@ public class UdpControllerReport
     public void AddMotion(Joycon controller, int packetNumber)
     {
         Motion[packetNumber] = controller.GetMotion();
+    }
+
+    public void ClearMotionAndDeltaPackets()
+    {
+        Array.Clear(Motion);
+        DeltaPackets = DefaultDeltaPackets;
     }
 }

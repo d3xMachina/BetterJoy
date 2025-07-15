@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Configuration;
 using System.Linq;
@@ -64,8 +65,9 @@ public abstract class Config
         }
     }
 
-    protected void UpdateSetting<T>(string key, ref T setting, T defaultValue)
+    protected void TryUpdateSetting<T>(string key, ref T setting)
     {
+        var defaultValue = setting;
         var value = ConfigurationManager.AppSettings[key];
         var type = typeof(T);
 
@@ -96,7 +98,7 @@ public abstract class Config
                 defaultValueTxt = $"{defaultValue}";
             }
 
-            _logger?.Log($"Invalid value \"{value}\" for setting {key}! Using default value \"{defaultValueTxt}\".", Logger.LogLevel.Warning);
+            _logger?.Log($"Invalid value \"{value}\" for setting {key}! Using safe value \"{defaultValueTxt}\".", Logger.LogLevel.Warning);
         }
     }
 }

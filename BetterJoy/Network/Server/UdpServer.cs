@@ -1,3 +1,4 @@
+#nullable disable
 using BetterJoy.Controller;
 using BetterJoy.Controller.Mapping;
 using System;
@@ -734,7 +735,7 @@ public class UdpServer
 
     public void SendControllerReport(UdpControllerReport report)
     {
-        if (!_hasClients)
+        if (report == null || !_hasClients)
         {
             return;
         }

@@ -1,4 +1,3 @@
-#nullable enable
 using BetterJoy.Hardware.Data;
 using System;
 using System.Diagnostics.CodeAnalysis;
