@@ -2171,7 +2171,6 @@ public class Joycon
 
         // Consider the other joined controller active when the main controller is (so it doesn't power off after splitting)
         var mostRecentActivity = Math.Max(mainController._timestampActivity, otherController._timestampActivity);
-
         mainController._timestampActivity = mostRecentActivity;
         otherController._timestampActivity = mostRecentActivity;
     }
