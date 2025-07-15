@@ -124,7 +124,7 @@ public class ControllerConfig : Config
         TryUpdateSetting("AllowCalibration", ref AllowCalibration);
     }
 
-    
+
 
     public override ControllerConfig Clone()
     {

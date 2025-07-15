@@ -2,7 +2,7 @@ namespace BetterJoy.Config;
 
 public class MainFormConfig : Config
 {
-    public bool AllowCalibration = false;
+    public bool AllowCalibration = true;
 
     public MainFormConfig(Logger logger) : base(logger) { }
 
