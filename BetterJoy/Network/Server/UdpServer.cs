@@ -735,7 +735,7 @@ public class UdpServer
 
     public void SendControllerReport(UdpControllerReport report)
     {
-        if (report == null || !_hasClients)
+        if (!_hasClients)
         {
             return;
         }

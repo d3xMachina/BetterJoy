@@ -1040,7 +1040,7 @@ public class Joycon
             _AHRS.SamplePeriod = deltaPacketsMs / 1000;
         }
 
-        GetMainAndOtherController(out Joycon mainController, out Joycon? _);
+        GetMainAndOtherController(out Joycon mainController, out var _);
 
         try
         {
@@ -1083,10 +1083,13 @@ public class Joycon
 
             mainController.UpdateInput();
 
-            // We add the input at the end to take the controller remapping into account
-            controllerReport?.AddInput(this);
+            if (controllerReport != null)
+            {
+                // We add the input at the end to take the controller remapping into account
+                controllerReport.AddInput(this);
 
-            Program.Server!.SendControllerReport(controllerReport);
+                Program.Server!.SendControllerReport(controllerReport);
+            }
         }
         finally
         {
@@ -1366,9 +1369,9 @@ public class Joycon
         return _buttonsUp[button] || (Other != null && Other._buttonsUp[button]);
     }
 
-    private bool GetMainAndOtherController(out Joycon primary, [NotNullWhen(true)] out Joycon? secondary)
+    private bool GetMainAndOtherController(out Joycon main, [NotNullWhen(true)] out Joycon? other)
     {
-        (primary, secondary) = (IsLeft || !IsJoined) ? (this, Other) : (Other, this);
+        (main, other) = (IsLeft || !IsJoined) ? (this, Other) : (Other, this);
 
         return IsJoined;
     }
@@ -1547,7 +1550,7 @@ public class Joycon
             {
                 if (Settings.Value("active_gyro") == "0" || ActiveGyro)
                 {
-                    GetMainAndOtherController(out Joycon mainController, out Joycon? _);
+                    GetMainAndOtherController(out Joycon mainController, out var _);
                     ref var controlStick = ref (Config.ExtraGyroFeature == "joy_left" ? ref mainController._stick : ref mainController._stick2);
 
                     float dx, dy;
@@ -1593,13 +1596,12 @@ public class Joycon
     private void DoThingsWithButtons()
     {
         // Updating a controller's button impacts the joined controller
-        DoThingsWithButtonsEachController();
-        if (IsJoined)
+        if (GetMainAndOtherController(out Joycon mainController, out Joycon? otherController))
         {
-            Other.DoThingsWithButtonsEachController();
+            otherController.DoThingsWithButtonsEachController();
         }
 
-        GetMainAndOtherController(out Joycon mainController, out Joycon? _);
+        mainController.DoThingsWithButtonsEachController();
         mainController.DoThingsWithButtonsMainController();
     }
 
@@ -2164,9 +2166,8 @@ public class Joycon
             return;
         }
 
-        mainController.UpdateInputActivityEachController();
-
         // Need to update both joined controllers in case they are split afterward
+        mainController.UpdateInputActivityEachController();
         otherController.UpdateInputActivityEachController();
 
         // Consider the other joined controller active when the main controller is (so it doesn't power off after splitting)

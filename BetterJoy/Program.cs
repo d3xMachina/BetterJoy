@@ -22,7 +22,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using WindowsInput;
 using WindowsInput.Events;
 using WindowsInput.Events.Sources;
 using static BetterJoy.Forms._3rdPartyControllers;
@@ -1158,11 +1157,15 @@ internal class Program
 
         if (button != null)
         {
-            if (HandleMouseAction("reset_mouse", button))
+            if (HandleMouseAction("reset_mouse", button) &&
+                Screen.PrimaryScreen is Screen primaryScreen)
             {
-                Simulate.Events()
-                        .MoveTo(Screen.PrimaryScreen.Bounds.Width / 2, Screen.PrimaryScreen.Bounds.Height / 2)
-                        .Invoke();
+                WindowsInput.Simulate.Events()
+                    .MoveTo(
+                        primaryScreen.Bounds.Width / 2,
+                        primaryScreen.Bounds.Height / 2
+                    )
+                    .Invoke();
             }
 
             bool activeGyro = HandleMouseAction("active_gyro", button);
@@ -1209,11 +1212,15 @@ internal class Program
 
         if (key != null)
         {
-            if (HandleKeyAction("reset_mouse", key))
+            if (HandleKeyAction("reset_mouse", key) &&
+                Screen.PrimaryScreen is Screen primaryScreen)
             {
-                Simulate.Events()
-                        .MoveTo(Screen.PrimaryScreen.Bounds.Width / 2, Screen.PrimaryScreen.Bounds.Height / 2)
-                        .Invoke();
+                WindowsInput.Simulate.Events()
+                    .MoveTo(
+                        primaryScreen.Bounds.Width / 2,
+                        primaryScreen.Bounds.Height / 2
+                    )
+                    .Invoke();
             }
 
             bool activeGyro = HandleKeyAction("active_gyro", key);
