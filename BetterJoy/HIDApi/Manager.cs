@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 
 namespace BetterJoy.HIDApi;
 
-public delegate void DeviceNotificationReceivedEventHandler(object sender, DeviceNotificationEventArgs e);
+public delegate void DeviceNotificationReceivedEventHandler(object? sender, DeviceNotificationEventArgs e);
 
 public static class Manager
 {
-    public static event DeviceNotificationReceivedEventHandler DeviceNotificationReceived;
+    public static event DeviceNotificationReceivedEventHandler? DeviceNotificationReceived;
 
     private static int _deviceNotificationsHandle = 0; // A valid callback handle is a positive integer
 
@@ -33,7 +33,7 @@ public static class Manager
     public static string GetError()
     {
         var ptr = Native.NativeMethods.Error(IntPtr.Zero);
-        return Marshal.PtrToStringUni(ptr);
+        return Marshal.PtrToStringUni(ptr) ?? "No Error.";
     }
 
     public static IEnumerable<DeviceInfo> EnumerateDevices(ushort vendorId, ushort productId)

@@ -201,17 +201,16 @@ public partial class _3rdPartyControllers : Form
 
     private void list_allControllers_SelectedValueChanged(object sender, EventArgs e)
     {
-        if (list_allControllers.SelectedItem != null)
+        if (list_allControllers.SelectedItem is SController v)
         {
-            tip_device.Show((list_allControllers.SelectedItem as SController).Name, list_allControllers);
+            tip_device.Show(v.Name, list_allControllers);
         }
     }
 
     private void list_customControllers_SelectedValueChanged(object sender, EventArgs e)
     {
-        if (list_customControllers.SelectedItem != null)
+        if (list_customControllers.SelectedItem is SController v)
         {
-            var v = list_customControllers.SelectedItem as SController;
             tip_device.Show(v.Name, list_customControllers);
 
             chooseType.SelectedIndex = v.Type - 1;
@@ -243,9 +242,8 @@ public partial class _3rdPartyControllers : Form
 
     private void chooseType_SelectedValueChanged(object sender, EventArgs e)
     {
-        if (list_customControllers.SelectedItem != null)
+        if (list_customControllers.SelectedItem is SController v)
         {
-            var v = list_customControllers.SelectedItem as SController;
             v.Type = (byte)(chooseType.SelectedIndex + 1);
         }
     }
@@ -267,7 +265,7 @@ public partial class _3rdPartyControllers : Form
             Name = name;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             //Check for null and compare run-time types.
             if (obj == null || !GetType().Equals(obj.GetType()))

@@ -74,7 +74,7 @@ public class OutputControllerXbox360
 {
     public delegate void Xbox360FeedbackReceivedEventHandler(Xbox360FeedbackReceivedEventArgs e);
 
-    private readonly IXbox360Controller _xboxController;
+    private readonly IXbox360Controller? _xboxController;
 
     private OutputControllerXbox360InputState _currentState;
 
@@ -102,7 +102,7 @@ public class OutputControllerXbox360
         Init();
     }
 
-    public event Xbox360FeedbackReceivedEventHandler FeedbackReceived;
+    public event Xbox360FeedbackReceivedEventHandler? FeedbackReceived;
 
     private void Init()
     {

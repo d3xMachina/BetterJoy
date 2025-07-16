@@ -38,7 +38,7 @@ public sealed class SafeEnumerator<T> : IEnumerator<T>
 
     public T Current => _inner.Current;
 
-    object IEnumerator.Current => Current;
+    object? IEnumerator.Current => Current;
 }
 
 // https://codereview.stackexchange.com/a/125341

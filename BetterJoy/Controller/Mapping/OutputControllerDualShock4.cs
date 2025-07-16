@@ -82,7 +82,7 @@ public class OutputControllerDualShock4
 {
     public delegate void DualShock4FeedbackReceivedEventHandler(DualShock4FeedbackReceivedEventArgs e);
 
-    private readonly IDualShock4Controller _controller;
+    private readonly IDualShock4Controller? _controller;
 
     private OutputControllerDualShock4InputState _currentState;
 
@@ -110,7 +110,7 @@ public class OutputControllerDualShock4
         Init();
     }
 
-    public event DualShock4FeedbackReceivedEventHandler FeedbackReceived;
+    public event DualShock4FeedbackReceivedEventHandler? FeedbackReceived;
 
     private void Init()
     {

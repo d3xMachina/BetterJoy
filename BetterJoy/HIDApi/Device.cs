@@ -112,7 +112,7 @@ public sealed class Device : IDisposable
     public string GetError()
     {
         var ptr = Native.NativeMethods.Error(_deviceHandle);
-        return Marshal.PtrToStringUni(ptr);
+        return Marshal.PtrToStringUni(ptr) ?? "No error.";
     }
 
     public int GetErrorCode()
