@@ -1,4 +1,3 @@
-#nullable disable
 using BetterJoy.Controller;
 using BetterJoy.Controller.Mapping;
 using System;

@@ -1,4 +1,3 @@
-#nullable disable
 using BetterJoy.Controller;
 using System;
 using System.Collections.Generic;
