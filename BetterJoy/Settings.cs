@@ -177,7 +177,7 @@ public static class Settings
         }
     }
 
-    public static int IntValue(string key) => int.Parse(_variables.GetValueOrDefault(key, "0"));
+    public static int IntValue(string key) => _variables.TryGetValue(key, out string? value) ? int.Parse(value) : 0;
 
     public static string Value(string key) => _variables.GetValueOrDefault(key, "");
 

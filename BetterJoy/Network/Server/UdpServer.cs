@@ -230,7 +230,7 @@ public class UdpServer
             _logger?.Log("Server is not running!", Logger.LogLevel.Warning);
             return;
         }
-        
+
         var buffer = GC.AllocateArray<byte>(PacketSize, true);
         var bufferMem = buffer.AsMemory();
         var receivedAddress = new SocketAddress(_udpSock.AddressFamily);
@@ -267,7 +267,7 @@ public class UdpServer
             _logger?.Log("Server is not running!", Logger.LogLevel.Warning);
             return;
         }
-        
+
         var buffer = GC.AllocateArray<byte>(ReportSize, true);
         var bufferMem = buffer.AsMemory();
 
@@ -628,7 +628,7 @@ public class UdpServer
             _logger?.Log("Server is not running!", Logger.LogLevel.Warning);
             return;
         }
-        
+
         try
         {
             await _udpSock.SendToAsync(outputData, SocketFlags.None, client, cancellationToken);
@@ -752,7 +752,7 @@ public class UdpServer
             _logger?.Log("Server is not running!", Logger.LogLevel.Warning);
             return;
         }
-        
+
         const uint IocIn = 0x80000000;
         const uint IocVendor = 0x18000000;
         uint sioUdpConnreset = IocIn | IocVendor | 12;
