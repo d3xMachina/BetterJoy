@@ -1,4 +1,3 @@
-#nullable disable
 using BetterJoy.Controller;
 using System;
 using System.Collections.Generic;
@@ -40,8 +39,7 @@ public static class Settings
         long count = -1;
         using (var r = new StreamReader(f))
         {
-            string line;
-            while ((line = r.ReadLine()) != null)
+            while (r.ReadLine() != null)
             {
                 count++;
             }
@@ -179,25 +177,9 @@ public static class Settings
         }
     }
 
-    public static int IntValue(string key)
-    {
-        if (!_variables.TryGetValue(key, out string value))
-        {
-            return 0;
-        }
+    public static int IntValue(string key) => _variables.TryGetValue(key, out string? value) ? int.Parse(value) : 0;
 
-        return int.Parse(value);
-    }
-
-    public static string Value(string key)
-    {
-        if (!_variables.TryGetValue(key, out string value))
-        {
-            return "";
-        }
-
-        return value;
-    }
+    public static string Value(string key) => _variables.GetValueOrDefault(key, "");
 
     public static bool SetValue(string key, string value)
     {

@@ -1,6 +1,6 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
 namespace BetterJoy.Collections;
@@ -32,7 +32,7 @@ public class ConcurrentSpinQueue<T>
         );
     }
 
-    public bool TryDequeue(out T result)
+    public bool TryDequeue([MaybeNullWhen(false)] out T result)
     {
         var lockTaken = false;
         try

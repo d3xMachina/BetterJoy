@@ -1,8 +1,8 @@
-#nullable disable
 using BetterJoy.Controller;
 using BetterJoy.Controller.Mapping;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
@@ -39,19 +39,26 @@ public class UdpServer
     private readonly Dictionary<SocketAddress, ClientRequestTimes> _clients = [];
     private readonly IList<Joycon> _controllers;
 
-    private bool _running = false;
+    [MemberNotNullWhen(returnValue: true,
+        nameof(_ctsTransfers),
+        nameof(_receiveTask),
+        nameof(_sendTask),
+        nameof(_channelSendData),
+        nameof(_udpSock))]
+    public bool Running { get; private set; } = false;
+
     private volatile bool _hasClients = false;
-    private CancellationTokenSource _ctsTransfers;
-    private Task _receiveTask;
-    private Task _sendTask;
-    private Channel<IPendingData> _channelSendData;
+    private CancellationTokenSource? _ctsTransfers;
+    private Task? _receiveTask;
+    private Task? _sendTask;
+    private Channel<IPendingData>? _channelSendData;
 
     private uint _serverId;
-    private Socket _udpSock;
+    private Socket? _udpSock;
 
-    private readonly Logger _logger;
+    private readonly Logger? _logger;
 
-    public UdpServer(Logger logger, IList<Joycon> p)
+    public UdpServer(Logger? logger, IList<Joycon> p)
     {
         _controllers = p;
         _logger = logger;
@@ -146,9 +153,9 @@ public class UdpServer
         return true;
     }
 
-    private static PendingReply ProcessIncoming(Span<byte> localMsg, SocketAddress clientSocketAddress)
+    private static PendingReply? ProcessIncoming(Span<byte> localMsg, SocketAddress clientSocketAddress)
     {
-        PendingReply pendingReply = null;
+        PendingReply? pendingReply = null;
 
         if (!CheckIncomingValidity(localMsg, out var currIdx))
         {
@@ -217,6 +224,11 @@ public class UdpServer
 
     private async Task RunReceive(CancellationToken token)
     {
+        if (!Running)
+        {
+            return;
+        }
+
         var buffer = GC.AllocateArray<byte>(PacketSize, true);
         var bufferMem = buffer.AsMemory();
         var receivedAddress = new SocketAddress(_udpSock.AddressFamily);
@@ -248,6 +260,11 @@ public class UdpServer
 
     private async Task RunSend(CancellationToken token)
     {
+        if (!Running)
+        {
+            return;
+        }
+
         var buffer = GC.AllocateArray<byte>(ReportSize, true);
         var bufferMem = buffer.AsMemory();
 
@@ -603,6 +620,11 @@ public class UdpServer
 
     private async ValueTask SendData(ReadOnlyMemory<byte> outputData, SocketAddress client, CancellationToken cancellationToken)
     {
+        if (!Running)
+        {
+            return;
+        }
+
         try
         {
             await _udpSock.SendToAsync(outputData, SocketFlags.None, client, cancellationToken);
@@ -616,7 +638,7 @@ public class UdpServer
 
     public void Start(IPAddress ip, int port = 26760)
     {
-        if (_running)
+        if (Running)
         {
             return;
         }
@@ -694,18 +716,18 @@ public class UdpServer
         );
         _logger?.Log("Task UDP send started.", Logger.LogLevel.Debug);
 
-        _running = true;
+        Running = true;
         _logger?.Log($"Motion server started on {ip}:{port}.");
     }
 
     public async Task Stop()
     {
-        if (!_running)
+        if (!Running)
         {
             return;
         }
 
-        _running = false;
+        Running = false;
         _hasClients = false;
         _channelSendData.Writer.Complete();
         _ctsTransfers.Cancel();
@@ -721,6 +743,11 @@ public class UdpServer
 
     private void ResetUDPSocket()
     {
+        if (!Running)
+        {
+            return;
+        }
+
         const uint IocIn = 0x80000000;
         const uint IocVendor = 0x18000000;
         uint sioUdpConnreset = IocIn | IocVendor | 12;
@@ -735,7 +762,7 @@ public class UdpServer
 
     public void SendControllerReport(UdpControllerReport report)
     {
-        if (!_hasClients)
+        if (!_hasClients || !Running)
         {
             return;
         }

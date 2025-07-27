@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Runtime.InteropServices;
 
@@ -113,7 +112,7 @@ public sealed class Device : IDisposable
     public string GetError()
     {
         var ptr = Native.NativeMethods.Error(_deviceHandle);
-        return Marshal.PtrToStringUni(ptr);
+        return Marshal.PtrToStringUni(ptr)!;
     }
 
     public int GetErrorCode()

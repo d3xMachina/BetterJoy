@@ -1,4 +1,3 @@
-#nullable disable
 using BetterJoy.Exceptions;
 using System;
 using System.IO;
@@ -15,7 +14,7 @@ public sealed class Logger : IDisposable
     private readonly StreamWriter _logWriter;
     private bool _disposed = false;
 
-    public event Action<string, LogLevel, Exception> OnMessageLogged;
+    public event Action<string, LogLevel, Exception?>? OnMessageLogged;
 
     private readonly Task _logWriterTask;
     private readonly CancellationTokenSource _ctsLogs;
@@ -30,11 +29,7 @@ public sealed class Logger : IDisposable
         Debug
     }
 
-    private class LogEntry
-    {
-        public string Message;
-        public LogLevel Level;
-    }
+    private record LogEntry(string Message, LogLevel Level);
 
     public Logger(string path)
     {
@@ -94,11 +89,7 @@ public sealed class Logger : IDisposable
 
     private void LogImpl(string message, LogLevel level)
     {
-        var log = new LogEntry
-        {
-            Message = message,
-            Level = level
-        };
+        var log = new LogEntry(Message: message, Level: level);
 
         while (!_logChannel.Writer.TryWrite(log)) { }
     }
