@@ -33,7 +33,7 @@ public static class Manager
     public static string GetError()
     {
         var ptr = Native.NativeMethods.Error(IntPtr.Zero);
-        return Marshal.PtrToStringUni(ptr) ?? "No Error.";
+        return Marshal.PtrToStringUni(ptr)!;
     }
 
     public static IEnumerable<DeviceInfo> EnumerateDevices(ushort vendorId, ushort productId)

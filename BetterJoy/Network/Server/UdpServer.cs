@@ -44,9 +44,8 @@ public class UdpServer
         nameof(_receiveTask),
         nameof(_sendTask),
         nameof(_channelSendData),
-        nameof(_udpSock),
-        nameof(_channelSendData))]
-    private bool _running { get; set; } = false;
+        nameof(_udpSock))]
+    public bool Running { get; private set; } = false;
 
     private volatile bool _hasClients = false;
     private CancellationTokenSource? _ctsTransfers;
@@ -225,9 +224,8 @@ public class UdpServer
 
     private async Task RunReceive(CancellationToken token)
     {
-        if (!_running)
+        if (!Running)
         {
-            _logger?.Log("Server is not running!", Logger.LogLevel.Warning);
             return;
         }
 
@@ -262,9 +260,8 @@ public class UdpServer
 
     private async Task RunSend(CancellationToken token)
     {
-        if (!_running)
+        if (!Running)
         {
-            _logger?.Log("Server is not running!", Logger.LogLevel.Warning);
             return;
         }
 
@@ -623,9 +620,8 @@ public class UdpServer
 
     private async ValueTask SendData(ReadOnlyMemory<byte> outputData, SocketAddress client, CancellationToken cancellationToken)
     {
-        if (!_running)
+        if (!Running)
         {
-            _logger?.Log("Server is not running!", Logger.LogLevel.Warning);
             return;
         }
 
@@ -642,7 +638,7 @@ public class UdpServer
 
     public void Start(IPAddress ip, int port = 26760)
     {
-        if (_running)
+        if (Running)
         {
             return;
         }
@@ -720,18 +716,18 @@ public class UdpServer
         );
         _logger?.Log("Task UDP send started.", Logger.LogLevel.Debug);
 
-        _running = true;
+        Running = true;
         _logger?.Log($"Motion server started on {ip}:{port}.");
     }
 
     public async Task Stop()
     {
-        if (!_running)
+        if (!Running)
         {
             return;
         }
 
-        _running = false;
+        Running = false;
         _hasClients = false;
         _channelSendData.Writer.Complete();
         _ctsTransfers.Cancel();
@@ -747,9 +743,8 @@ public class UdpServer
 
     private void ResetUDPSocket()
     {
-        if (!_running)
+        if (!Running)
         {
-            _logger?.Log("Server is not running!", Logger.LogLevel.Warning);
             return;
         }
 
@@ -767,7 +762,7 @@ public class UdpServer
 
     public void SendControllerReport(UdpControllerReport report)
     {
-        if (!_hasClients || !_running)
+        if (!_hasClients || !Running)
         {
             return;
         }
