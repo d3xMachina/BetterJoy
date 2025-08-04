@@ -46,7 +46,7 @@ public abstract class Config
         var tokens = value
             .Split(',', StringSplitOptions.TrimEntries)
             .Take(settings.Length).ToArray();
-        
+
         tokens = tokens
             .Concat(Enumerable.Repeat(tokens.Last(), settings.Length - tokens.Length))
             .ToArray();
