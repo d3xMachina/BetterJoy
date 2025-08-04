@@ -24,7 +24,7 @@ public abstract class Config
         switch (setting)
         {
             case Array:
-                ParseListAs(value, (dynamic)setting);
+                ParseArrayAs(value, (dynamic)setting);
                 break;
             case Enum:
                 setting = (T)Enum.Parse(typeof(T), value, true);
@@ -42,7 +42,7 @@ public abstract class Config
         }
     }
 
-    private void ParseListAs<T>(string value, T[] settings) where T : new() //Note, even though the array is passed by value, edits to it persist to the original
+    private void ParseArrayAs<T>(string value, T[] settings) where T : new() //Note, even though the array is passed by value, edits to it persist to the original
     {
         var tokens = value.Split(',', StringSplitOptions.TrimEntries);
 
