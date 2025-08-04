@@ -21,41 +21,34 @@ public abstract class Config
 
     private void ParseAs<T>(string value, ref T setting)
     {
-        if (setting is Array)
+        switch (setting)
         {
-            ParseListAs(value, (dynamic)setting);
-        }
-        else if (setting is Enum)
-        {
-            setting = (T)Enum.Parse(typeof(T), value, true);
-        }
-        else if (setting is string || setting is IConvertible)
-        {
-            setting = (T)Convert.ChangeType(value, typeof(T));
-        }
-        else
-        {
-            var type = typeof(T);
-            var method = type.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public, [typeof(string)]);
-            setting = (T)method!.Invoke(null, [value])!;
+            case Array:
+                ParseListAs(value, (dynamic)setting);
+                break;
+            case Enum:
+                setting = (T)Enum.Parse(typeof(T), value, true);
+                break;
+            case string:
+            case IConvertible:
+                setting = (T)Convert.ChangeType(value, typeof(T));
+                break;
+            default:
+            {
+                var method = typeof(T).GetMethod("Parse", BindingFlags.Static | BindingFlags.Public, [typeof(string)]);
+                setting = (T)method!.Invoke(null, [value])!;
+                break;
+            }
         }
     }
 
     private void ParseListAs<T>(string value, T[] settings) where T : new() //Note, even though the array is passed by value, edits to it persist to the original
     {
-        var tokens = value
-            .Split(',', StringSplitOptions.TrimEntries)
-            .Take(settings.Length).ToArray();
-
-        tokens = tokens
-            .Concat(Enumerable.Repeat(tokens.Last(), settings.Length - tokens.Length))
-            .ToArray();
+        var tokens = value.Split(',', StringSplitOptions.TrimEntries);
 
         for (int i = 0; i < settings.Length; i++)
         {
-            T temp = settings[i];
-            ParseAs(tokens[i], ref temp);
-            settings[i] = temp;
+            ParseAs(i < tokens.Length ? tokens[i] : tokens[^1], ref settings[i]);
         }
     }
 
