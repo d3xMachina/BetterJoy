@@ -1,5 +1,5 @@
-#nullable disable
 using System;
+using System.Collections;
 using System.Configuration;
 using System.Linq;
 using System.Reflection;
@@ -8,10 +8,10 @@ namespace BetterJoy.Config;
 
 public abstract class Config
 {
-    protected readonly Logger _logger;
+    protected readonly Logger? _logger;
     public bool ShowErrors = true;
 
-    protected Config(Logger logger)
+    protected Config(Logger? logger)
     {
         _logger = logger;
     }
@@ -20,48 +20,43 @@ public abstract class Config
     public abstract void Update();
     public abstract Config Clone();
 
-    protected void ParseAs<T>(string value, Type type, ref T setting)
+    private void ParseAs<T>(string value, ref T setting)
     {
-        if (type.IsArray)
+        if (setting is Array)
         {
-            ParseArrayAs(value, type, ref setting);
+            ParseListAs(value, (dynamic)setting);
         }
-        else if (type.IsEnum)
+        else if (setting is Enum)
         {
-            setting = (T)Enum.Parse(type, value, true);
+            setting = (T)Enum.Parse(typeof(T), value, true);
         }
-        else if (type == typeof(string) || type is IConvertible || type.IsValueType)
+        else if (setting is string || setting is IConvertible)
         {
-            setting = (T)Convert.ChangeType(value, type);
+            setting = (T)Convert.ChangeType(value, typeof(T));
         }
         else
         {
+            var type = typeof(T);
             var method = type.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public, [typeof(string)]);
             setting = (T)method!.Invoke(null, [value])!;
         }
     }
 
-    private void ParseArrayAs<T>(string value, Type type, ref T setting)
+    private void ParseListAs<T>(string value, T[] settings) where T : new() //Note, even though the array is passed by value, edits to it persist to the original
     {
-        if (setting is not Array elements)
+        var tokens = value
+            .Split(',', StringSplitOptions.TrimEntries)
+            .Take(settings.Length).ToArray();
+        
+        tokens = tokens
+            .Concat(Enumerable.Repeat(tokens.Last(), settings.Length - tokens.Length))
+            .ToArray();
+
+        for (int i = 0; i < settings.Length; i++)
         {
-            throw new InvalidOperationException("setting must be an array.");
-        }
-
-        var tokens = value.Split(',');
-
-        for (int i = 0, j = 0; i < elements.Length; ++i)
-        {
-            var token = tokens[j].Trim();
-            object parsedValue = null;
-
-            ParseAs(token, type.GetElementType(), ref parsedValue);
-            elements.SetValue(parsedValue, i);
-
-            if (j < tokens.Length - 1)
-            {
-                ++j;
-            }
+            T temp = settings[i];
+            ParseAs(tokens[i], ref temp);
+            settings[i] = temp;
         }
     }
 
@@ -69,13 +64,12 @@ public abstract class Config
     {
         var defaultValue = setting;
         var value = ConfigurationManager.AppSettings[key];
-        var type = typeof(T);
 
         if (value != null)
         {
             try
             {
-                ParseAs(value, type, ref setting);
+                ParseAs(value, ref setting);
 
                 return;
             }
