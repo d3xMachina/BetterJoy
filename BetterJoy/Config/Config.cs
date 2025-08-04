@@ -42,7 +42,7 @@ public abstract class Config
         }
     }
 
-    private void ParseArrayAs<T>(string value, T[] settings) where T : new() //Note, even though the array is passed by value, edits to it persist to the original
+    private void ParseArrayAs<T>(string value, T[] settings) //Note, even though the array is passed by value, edits to it persist to the original
     {
         var tokens = value.Split(',', StringSplitOptions.TrimEntries);
 
