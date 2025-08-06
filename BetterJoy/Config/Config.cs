@@ -29,7 +29,6 @@ public abstract class Config
             case Enum:
                 setting = (T)Enum.Parse(typeof(T), value, true);
                 break;
-            case string:
             case IConvertible:
                 setting = (T)Convert.ChangeType(value, typeof(T));
                 break;
@@ -42,13 +41,14 @@ public abstract class Config
         }
     }
 
-    private void ParseArrayAs<T>(string value, T[] settings) //Note, even though the array is passed by value, edits to it persist to the original
+    private void ParseArrayAs<T>(string value, T[] settings)
     {
         var tokens = value.Split(',', StringSplitOptions.TrimEntries);
 
         for (int i = 0; i < settings.Length; i++)
         {
-            ParseAs(i < tokens.Length ? tokens[i] : tokens[^1], ref settings[i]);
+            var currentToken = i < tokens.Length ? tokens[i] : tokens[^1];
+            ParseAs(currentToken, ref settings[i]);
         }
     }
 
