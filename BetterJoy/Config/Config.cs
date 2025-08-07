@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Configuration;
 using System.Linq;
@@ -8,10 +7,10 @@ namespace BetterJoy.Config;
 
 public abstract class Config
 {
-    protected readonly Logger _logger;
+    protected readonly Logger? _logger;
     public bool ShowErrors = true;
 
-    protected Config(Logger logger)
+    protected Config(Logger? logger)
     {
         _logger = logger;
     }
@@ -20,48 +19,36 @@ public abstract class Config
     public abstract void Update();
     public abstract Config Clone();
 
-    protected void ParseAs<T>(string value, Type type, ref T setting)
+    private void ParseAs<T>(string value, ref T setting)
     {
-        if (type.IsArray)
+        switch (setting)
         {
-            ParseArrayAs(value, type, ref setting);
-        }
-        else if (type.IsEnum)
-        {
-            setting = (T)Enum.Parse(type, value, true);
-        }
-        else if (type == typeof(string) || type is IConvertible || type.IsValueType)
-        {
-            setting = (T)Convert.ChangeType(value, type);
-        }
-        else
-        {
-            var method = type.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public, [typeof(string)]);
-            setting = (T)method!.Invoke(null, [value])!;
+            case Array:
+                ParseArrayAs(value, (dynamic)setting);
+                break;
+            case Enum:
+                setting = (T)Enum.Parse(typeof(T), value, true);
+                break;
+            case IConvertible:
+                setting = (T)Convert.ChangeType(value, typeof(T));
+                break;
+            default:
+            {
+                var method = typeof(T).GetMethod("Parse", BindingFlags.Static | BindingFlags.Public, [typeof(string)]);
+                setting = (T)method!.Invoke(null, [value])!;
+                break;
+            }
         }
     }
 
-    private void ParseArrayAs<T>(string value, Type type, ref T setting)
+    private void ParseArrayAs<T>(string value, T[] settings)
     {
-        if (setting is not Array elements)
+        var tokens = value.Split(',', StringSplitOptions.TrimEntries);
+
+        for (int i = 0; i < settings.Length; i++)
         {
-            throw new InvalidOperationException("setting must be an array.");
-        }
-
-        var tokens = value.Split(',');
-
-        for (int i = 0, j = 0; i < elements.Length; ++i)
-        {
-            var token = tokens[j].Trim();
-            object parsedValue = null;
-
-            ParseAs(token, type.GetElementType(), ref parsedValue);
-            elements.SetValue(parsedValue, i);
-
-            if (j < tokens.Length - 1)
-            {
-                ++j;
-            }
+            var currentToken = i < tokens.Length ? tokens[i] : tokens[^1];
+            ParseAs(currentToken, ref settings[i]);
         }
     }
 
@@ -69,13 +56,12 @@ public abstract class Config
     {
         var defaultValue = setting;
         var value = ConfigurationManager.AppSettings[key];
-        var type = typeof(T);
 
         if (value != null)
         {
             try
             {
-                ParseAs(value, type, ref setting);
+                ParseAs(value, ref setting);
 
                 return;
             }
