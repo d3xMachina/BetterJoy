@@ -1,4 +1,3 @@
-#nullable disable
 using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
@@ -34,7 +33,7 @@ public partial class MainForm : Form
     public readonly List<KeyValuePair<string, ushort[]>> CaliSticksData = [];
 
     private int _count;
-    private Timer _countDown;
+    private Timer? _countDown;
 
     private ControllerAction _currentAction = ControllerAction.None;
     private bool _selectController = false;
@@ -42,9 +41,9 @@ public partial class MainForm : Form
     private bool _closing = false;
     private bool _close = false;
 
-    private readonly Logger _logger;
+    private readonly Logger? _logger;
 
-    public MainForm(Logger logger)
+    public MainForm(Logger? logger)
     {
         InitializeComponent();
         InitializeConsoleTextBox();
@@ -92,7 +91,7 @@ public partial class MainForm : Form
         oldIcon?.Dispose();
     }
 
-    private Control GenerateConfigItem(string key, string value)
+    private Control GenerateConfigItem(string? key, string? value)
     {
         Control childControl;
 
@@ -282,7 +281,7 @@ public partial class MainForm : Form
         Refresh();
     }
 
-    private void MainForm_Shown(object sender, EventArgs e)
+    private void MainForm_Shown(object? sender, EventArgs e)
     {
         Program.Start();
     }
@@ -330,7 +329,7 @@ public partial class MainForm : Form
         }
     }
 
-    private void OnDisplaySettingsChanged(object sender, EventArgs e)
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
     {
         // avoid blurry icon after resolution/dpi changes
         SetTaskbarIcon();
@@ -356,7 +355,7 @@ public partial class MainForm : Form
         });
     }
 
-    private void OnMessageLogged(string message, Logger.LogLevel level, Exception e)
+    private void OnMessageLogged(string message, Logger.LogLevel level, Exception? e)
     {
         if (level == Logger.LogLevel.Debug)
         {
@@ -405,7 +404,7 @@ public partial class MainForm : Form
         controller.SetRumble(160f, 320f, 0f, 0f);
     }
 
-    private async void ConBtnClick(object sender, EventArgs e)
+    private async void ConBtnClick(object? sender, EventArgs e)
     {
         var button = sender as Button;
 
@@ -470,10 +469,9 @@ public partial class MainForm : Form
     private static void SetRunOnBoot(bool enable)
     {
         using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);
-        if (key != null)
+        if (key != null && Application.ProductName is string programName)
         {
             var programPath = Application.ExecutablePath;
-            var programName = Application.ProductName;
 
             if (enable)
             {
@@ -518,9 +516,8 @@ public partial class MainForm : Form
         for (var row = 0; row < ConfigurationManager.AppSettings.AllKeys.Length; row++)
         {
             var valCtl = settingsTable.GetControlFromPosition(1, row);
-            var keyCtl = settingsTable.GetControlFromPosition(0, row).Text;
 
-            if (settings[keyCtl] != null)
+            if (settingsTable.GetControlFromPosition(0, row)?.Text is string keyCtl && settings[keyCtl] != null)
             {
                 if (valCtl is CheckBox checkBox)
                 {
@@ -528,7 +525,7 @@ public partial class MainForm : Form
                 }
                 else if (valCtl is ComboBox comboBox)
                 {
-                    settings[keyCtl].Value = comboBox.SelectedItem.ToString().ToLower();
+                    settings[keyCtl].Value = comboBox.SelectedItem!.ToString()!.ToLower();
                 }
                 else if (valCtl is TextBox textBox)
                 {
@@ -586,17 +583,16 @@ public partial class MainForm : Form
         foldLbl.Text = rightPanel.Visible ? "<" : ">";
     }
 
-    private async void ConfigItemChanged(object sender, EventArgs e)
+    private async void ConfigItemChanged(object? sender, EventArgs e)
     {
         var control = sender as Control;
         var coord = settingsTable.GetPositionFromControl(control);
-        var keyCtl = settingsTable.GetControlFromPosition(coord.Column - 1, coord.Row).Text;
 
         try
         {
             var configFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
             var settings = configFile.AppSettings.Settings;
-            if (settings[keyCtl] != null)
+            if (settingsTable.GetControlFromPosition(coord.Column - 1, coord.Row)?.Text is string keyCtl && settings[keyCtl] != null)
             {
                 if (sender is CheckBox checkBox)
                 {
@@ -604,7 +600,7 @@ public partial class MainForm : Form
                 }
                 else if (sender is ComboBox comboBox)
                 {
-                    settings[keyCtl].Value = comboBox.SelectedItem.ToString().ToLower();
+                    settings[keyCtl].Value = comboBox.SelectedItem!.ToString()!.ToLower();
                 }
                 else
                 {
@@ -718,22 +714,12 @@ public partial class MainForm : Form
         }
     }
 
-    private List<Joycon> GetActiveControllers()
-    {
-        var controllers = new List<Joycon>();
-
-        foreach (var button in _con)
-        {
-            if (!button.Enabled)
-            {
-                continue;
-            }
-
-            controllers.Add((Joycon)button.Tag);
-        }
-
-        return controllers;
-    }
+    private List<Joycon> GetActiveControllers() =>
+        _con
+            .Where(button => button.Enabled)
+            .Select(button => (Joycon?)button.Tag)
+            .OfType<Joycon>()
+            .ToList();
 
     private void StartCalibrate(Joycon controller)
     {
@@ -771,9 +757,12 @@ public partial class MainForm : Form
         throw new NotImplementedException();
     }
 
-    private void CountDownMotion(object sender, EventArgs e)
+    private void CountDownMotion(object? sender, EventArgs? e)
     {
-        var controller = (Joycon)_countDown.Tag;
+        if (_countDown?.Tag is not Joycon controller)
+        {
+            return;
+        }
 
         if (controller.State != Joycon.Status.MotionDataOk)
         {
@@ -802,9 +791,12 @@ public partial class MainForm : Form
         }
     }
 
-    private void CalcMotionData(object sender, EventArgs e)
+    private void CalcMotionData(object? sender, EventArgs e)
     {
-        var controller = (Joycon)_countDown.Tag;
+        if (_countDown?.Tag is not Joycon controller)
+        {
+            return;
+        }
 
         if (controller.State != Joycon.Status.MotionDataOk)
         {
@@ -823,7 +815,7 @@ public partial class MainForm : Form
             }
             else
             {
-                var motionData = ActiveCalibrationMotionData(controller.SerialOrMac, true);
+                var motionData = GetOrInitCalibrationMotionData(controller.SerialOrMac);
 
                 var rnd = new Random();
 
@@ -873,9 +865,12 @@ public partial class MainForm : Form
         }
     }
 
-    private void CountDownSticksCenter(object sender, EventArgs e)
+    private void CountDownSticksCenter(object? sender, EventArgs? e)
     {
-        var controller = (Joycon)_countDown.Tag;
+        if (_countDown?.Tag is not Joycon controller)
+        {
+            return;
+        }
 
         if (controller.State != Joycon.Status.MotionDataOk)
         {
@@ -905,9 +900,12 @@ public partial class MainForm : Form
         }
     }
 
-    private void CalcSticksCenterData(object sender, EventArgs e)
+    private void CalcSticksCenterData(object? sender, EventArgs e)
     {
-        var controller = (Joycon)_countDown.Tag;
+        if (_countDown?.Tag is not Joycon controller)
+        {
+            return;
+        }
 
         if (controller.State != Joycon.Status.MotionDataOk)
         {
@@ -970,9 +968,12 @@ public partial class MainForm : Form
         }
     }
 
-    private void CountDownSticksMinMax(object sender, EventArgs e)
+    private void CountDownSticksMinMax(object? sender, EventArgs? e)
     {
-        var controller = (Joycon)_countDown.Tag;
+        if (_countDown?.Tag is not Joycon controller)
+        {
+            return;
+        }
 
         if (controller.State != Joycon.Status.MotionDataOk)
         {
@@ -1002,9 +1003,12 @@ public partial class MainForm : Form
         }
     }
 
-    private void CalcSticksMinMaxData(object sender, EventArgs e)
+    private void CalcSticksMinMaxData(object? sender, EventArgs e)
     {
-        var controller = (Joycon)_countDown.Tag;
+        if (_countDown?.Tag is not Joycon controller)
+        {
+            return;
+        }
 
         if (controller.State != Joycon.Status.MotionDataOk)
         {
@@ -1125,7 +1129,10 @@ public partial class MainForm : Form
         return Quickselect(highs, k - lows.Count - pivots.Count, pivotFn);
     }
 
-    public short[] ActiveCalibrationMotionData(string serNum, bool init = false)
+    public short[] GetOrInitCalibrationMotionData(string serNum) =>
+        ActiveCalibrationMotionData(serNum) ?? InitCalibrationMotionData(serNum);
+    
+    public short[]? ActiveCalibrationMotionData(string serNum)
     {
         for (var i = 0; i < CalibrationMotionData.Count; i++)
         {
@@ -1135,22 +1142,23 @@ public partial class MainForm : Form
             }
         }
 
-        if (init)
-        {
-            var arr = new short[6];
-            CalibrationMotionData.Add(
-                new KeyValuePair<string, short[]>(
-                    serNum,
-                    arr
-                )
-            );
-            return arr;
-        }
-
         return null;
     }
+    
+    public short[] InitCalibrationMotionData(string serNum)
+    {
+        var arr = new short[6];
+        CalibrationMotionData.Add(
+            new KeyValuePair<string, short[]>(
+                serNum,
+                arr
+            )
+        );
+        
+        return arr;
+    }
 
-    public ushort[] ActiveCaliSticksData(string serNum, bool init = false)
+    public ushort[]? ActiveCaliSticksData(string serNum, bool init = false)
     {
         for (var i = 0; i < CaliSticksData.Count; i++)
         {

@@ -4,7 +4,7 @@ public class MainFormConfig : Config
 {
     public bool AllowCalibration = true;
 
-    public MainFormConfig(Logger logger) : base(logger) { }
+    public MainFormConfig(Logger? logger) : base(logger) { }
 
     public MainFormConfig(MainFormConfig config) : base(config._logger)
     {
