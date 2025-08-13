@@ -517,7 +517,8 @@ public partial class MainForm : Form
         {
             var valCtl = settingsTable.GetControlFromPosition(1, row);
 
-            if (settingsTable.GetControlFromPosition(0, row)?.Text is string keyCtl && settings[keyCtl] != null)
+            if (settingsTable.GetControlFromPosition(0, row)?.Text is string keyCtl &&
+                settings[keyCtl] != null)
             {
                 if (valCtl is CheckBox checkBox)
                 {
@@ -592,7 +593,8 @@ public partial class MainForm : Form
         {
             var configFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
             var settings = configFile.AppSettings.Settings;
-            if (settingsTable.GetControlFromPosition(coord.Column - 1, coord.Row)?.Text is string keyCtl && settings[keyCtl] != null)
+            if (settingsTable.GetControlFromPosition(coord.Column - 1, coord.Row)?.Text is string keyCtl &&
+                settings[keyCtl] != null)
             {
                 if (sender is CheckBox checkBox)
                 {
@@ -714,12 +716,20 @@ public partial class MainForm : Form
         }
     }
 
-    private List<Joycon> GetActiveControllers() =>
-        _con
-            .Where(button => button.Enabled)
-            .Select(button => (Joycon?)button.Tag)
-            .OfType<Joycon>()
-            .ToList();
+    private List<Joycon> GetActiveControllers()
+    {
+        var controllers = new List<Joycon>();
+
+        foreach (var button in _con)
+        {
+            if (button is { Enabled: true, Tag: Joycon controller })
+            {
+                controllers.Add(controller);
+            }
+        }
+
+        return controllers;
+    }
 
     private void StartCalibrate(Joycon controller)
     {
@@ -925,7 +935,7 @@ public partial class MainForm : Form
                 return;
             }
 
-            var stickData = ActiveCaliSticksData(controller.SerialOrMac, true);
+            var stickData = GetOrInitCaliSticksData(controller.SerialOrMac);
             var leftStickData = stickData.AsSpan(0, 6);
             var rightStickData = stickData.AsSpan(6, 6);
 
@@ -1028,7 +1038,7 @@ public partial class MainForm : Form
                 return;
             }
 
-            var stickData = ActiveCaliSticksData(controller.SerialOrMac, true);
+            var stickData = GetOrInitCaliSticksData(controller.SerialOrMac);
             var leftStickData = stickData.AsSpan(0, 6);
             var rightStickData = stickData.AsSpan(6, 6);
 
@@ -1131,20 +1141,20 @@ public partial class MainForm : Form
 
     public short[] GetOrInitCalibrationMotionData(string serNum) =>
         ActiveCalibrationMotionData(serNum) ?? InitCalibrationMotionData(serNum);
-    
+
     public short[]? ActiveCalibrationMotionData(string serNum)
     {
-        for (var i = 0; i < CalibrationMotionData.Count; i++)
+        foreach (var CalibrationMotionDatum in CalibrationMotionData)
         {
-            if (CalibrationMotionData[i].Key == serNum)
+            if (CalibrationMotionDatum.Key == serNum)
             {
-                return CalibrationMotionData[i].Value;
+                return CalibrationMotionDatum.Value;
             }
         }
 
         return null;
     }
-    
+
     public short[] InitCalibrationMotionData(string serNum)
     {
         var arr = new short[6];
@@ -1154,34 +1164,37 @@ public partial class MainForm : Form
                 arr
             )
         );
-        
+
         return arr;
     }
 
-    public ushort[]? ActiveCaliSticksData(string serNum, bool init = false)
+    public ushort[] GetOrInitCaliSticksData(string serNum) =>
+        ActiveCaliSticksData(serNum) ?? InitCaliSticksData(serNum);
+
+    public ushort[]? ActiveCaliSticksData(string serNum)
     {
-        for (var i = 0; i < CaliSticksData.Count; i++)
+        foreach (var caliSticksDatum in CaliSticksData)
         {
-            if (CaliSticksData[i].Key == serNum)
+            if (caliSticksDatum.Key == serNum)
             {
-                return CaliSticksData[i].Value;
+                return caliSticksDatum.Value;
             }
         }
 
-        if (init)
-        {
-            const int stickCaliSize = 6;
-            var arr = new ushort[stickCaliSize * 2];
-            CaliSticksData.Add(
-                new KeyValuePair<string, ushort[]>(
-                    serNum,
-                    arr
-                )
-            );
-            return arr;
-        }
-
         return null;
+    }
+
+    public ushort[] InitCaliSticksData(string serNum)
+    {
+        const int stickCaliSize = 6;
+        var arr = new ushort[stickCaliSize * 2];
+        CaliSticksData.Add(
+            new KeyValuePair<string, ushort[]>(
+                serNum,
+                arr
+            )
+        );
+        return arr;
     }
 
     public void Tooltip(string msg)
