@@ -1144,11 +1144,11 @@ public partial class MainForm : Form
 
     public short[]? ActiveCalibrationMotionData(string serNum)
     {
-        foreach (var CalibrationMotionDatum in CalibrationMotionData)
+        foreach (var calibrationMotionDatum in CalibrationMotionData)
         {
-            if (CalibrationMotionDatum.Key == serNum)
+            if (calibrationMotionDatum.Key == serNum)
             {
-                return CalibrationMotionDatum.Value;
+                return calibrationMotionDatum.Value;
             }
         }
 

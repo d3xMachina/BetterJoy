@@ -2193,12 +2193,12 @@ public class Joycon
         var offset = n * 12;
 
         MotionShort motionRaw = new(
-            Gyroscope: new(
+            gyroscope: new(
                 X: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[19 + offset], reportBuf[20 + offset]),
                 Y: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[21 + offset], reportBuf[22 + offset]),
                 Z: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[23 + offset], reportBuf[24 + offset])
             ),
-            Accelerometer: new(
+            accelerometer: new(
                 X: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[13 + offset], reportBuf[14 + offset]),
                 Y: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[15 + offset], reportBuf[16 + offset]),
                 Z: BitWrangler.EncodeBytesAsWordLittleEndianSigned(reportBuf[17 + offset], reportBuf[18 + offset])
@@ -2230,12 +2230,12 @@ public class Joycon
 
         MotionShort neutral = _motionCalibrated
             ? new(
-                Accelerometer: new(
+                accelerometer: new(
                     X: _activeMotionData[3],
                     Y: _activeMotionData[4],
                     Z: _activeMotionData[5]
                 ),
-                Gyroscope: new(
+                gyroscope: new(
                     X: _activeMotionData[0],
                     Y: _activeMotionData[1],
                     Z: _activeMotionData[2]
@@ -2243,8 +2243,8 @@ public class Joycon
             )
             : new(
                 // Don't use neutral position with factory calibration for the accelerometer, it's more accurate
-                Accelerometer: ThreeAxisShort.Zero,
-                Gyroscope: _motionCalibration.GyroscopeNeutral
+                accelerometer: ThreeAxisShort.Zero,
+                gyroscope: _motionCalibration.GyroscopeNeutral
             );
 
         _motion.Accelerometer.X = (motionRaw.Accelerometer.X - neutral.Accelerometer.X) * (1.0f / (_motionCalibration.AccelerometerSensitivity.X - _motionCalibration.AccelerometerNeutral.X)) * 4.0f;

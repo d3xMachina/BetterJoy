@@ -1,7 +1,7 @@
 namespace BetterJoy.Hardware.Data;
 
-public struct MotionShort(ThreeAxisShort Gyroscope, ThreeAxisShort Accelerometer)
+public struct MotionShort(ThreeAxisShort gyroscope, ThreeAxisShort accelerometer)
 {
-    public ThreeAxisShort Gyroscope = Gyroscope;
-    public ThreeAxisShort Accelerometer = Accelerometer;
+    public ThreeAxisShort Gyroscope = gyroscope;
+    public ThreeAxisShort Accelerometer = accelerometer;
 }

@@ -2,8 +2,8 @@ using System.Numerics;
 
 namespace BetterJoy.Controller;
 
-public struct Motion(Vector3 Gyroscope, Vector3 Accelerometer)
+public struct Motion(Vector3 gyroscope, Vector3 accelerometer)
 {
-    public Vector3 Gyroscope = Gyroscope;
-    public Vector3 Accelerometer = Accelerometer;
+    public Vector3 Gyroscope = gyroscope;
+    public Vector3 Accelerometer = accelerometer;
 }
