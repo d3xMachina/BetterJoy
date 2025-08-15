@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Buffers;
 using System.Threading;
@@ -18,7 +17,7 @@ public sealed partial class ArrayPoolHelper<T>
     private sealed class ArrayOwner<U> : IArrayOwner<U>
     {
         private readonly int _length;
-        private U[] _array;
+        private U[]? _array;
 
         public ArrayOwner(int length)
         {
@@ -27,7 +26,7 @@ public sealed partial class ArrayPoolHelper<T>
         }
 
         public int Length => _length;
-        public U[] Array => _array; // carefull, length allocated to the array might be bigger than demanded, prefer to use Span instead
+        public U[] Array => _array ?? throw new ObjectDisposedException(nameof(ArrayOwner<U>)); // carefull, length allocated to the array might be bigger than demanded, prefer to use Span instead
         public Span<U> Span => _array.AsSpan(0, _length);
         public ReadOnlyMemory<U> ReadOnlyMemory => new(_array, 0, Length);
 
