@@ -18,7 +18,7 @@ public struct DeviceInfo
     [MarshalAs(UnmanagedType.LPStr)] public string Path;
     public ushort VendorId;
     public ushort ProductId;
-    [MarshalAs(UnmanagedType.LPWStr)] public string SerialNumber;
+    [MarshalAs(UnmanagedType.LPWStr)] public string? SerialNumber;
     public ushort ReleaseNumber;
     [MarshalAs(UnmanagedType.LPWStr)] public string ManufacturerString;
     [MarshalAs(UnmanagedType.LPWStr)] public string ProductString;

@@ -68,7 +68,7 @@ public partial class MainForm : Form
 
         SetIcon();
         SetTaskbarIcon();
-        version_lbl.Text = Program.GetProgramVersion();
+        version_lbl.Text = Program.ProgramVersion;
 
         _con = [con1, con2, con3, con4, con5, con6, con7, con8];
 
@@ -1372,6 +1372,8 @@ public partial class MainForm : Form
             btn_locate.Enabled = false;
         }
     }
+
+    public void JoinJoyconToSelf(Joycon controller) => JoinJoycon(controller, controller);
 
     public void JoinJoycon(Joycon controller, Joycon other)
     {

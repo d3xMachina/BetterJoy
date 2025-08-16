@@ -42,7 +42,7 @@ public class ControllerConfig : Config
     public bool AutoPowerOff = false;
     public bool AllowCalibration = true;
 
-    public ControllerConfig(Logger logger) : base(logger) { }
+    public ControllerConfig(Logger? logger) : base(logger) { }
 
     public ControllerConfig(ControllerConfig config) : base(config._logger)
     {

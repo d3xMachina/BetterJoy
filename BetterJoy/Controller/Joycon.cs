@@ -163,7 +163,7 @@ public class Joycon
     private StickRangeCalibration _range2;
 
     private readonly MainForm _form;
-    private readonly Logger _logger;
+    private readonly Logger? _logger;
 
     private byte _globalCount;
 
@@ -242,7 +242,7 @@ public class Joycon
     private volatile bool _requestSetLEDByPadID;
 
     public Joycon(
-        Logger logger,
+        Logger? logger,
         MainForm form,
         HIDApi.Device device,
         string path,
