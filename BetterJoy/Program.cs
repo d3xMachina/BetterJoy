@@ -65,6 +65,8 @@ internal class Program
 
     private const string _logFilePath = "LogDebug.txt";
     private static Logger _logger;
+    
+    public static readonly string ProgramVersion = $"v{Application.ProductVersion.Split('+')[0]}";
 
     public static void Start()
     {
@@ -457,12 +459,6 @@ internal class Program
         ThirdpartyCons.Set(controllers);
     }
 
-    public static string GetProgramVersion()
-    {
-        var programVersion = Assembly.GetExecutingAssembly().GetName().Version;
-        return $"v{programVersion.Major}.{programVersion.Minor}.{programVersion.Build}";
-    }
-
     private static void InitializeLogger()
     {
         try
@@ -495,7 +491,7 @@ internal class Program
 
         var programName = Application.ProductName;
         var osArch = Environment.Is64BitProcess ? "x64" : "x86";
-        _logger?.Log($"{programName} {GetProgramVersion()}", Logger.LogLevel.Debug);
+        _logger?.Log($"{programName} {ProgramVersion}", Logger.LogLevel.Debug);
         _logger?.Log($"OS version: {Environment.OSVersion} {osArch}", Logger.LogLevel.Debug);
     }
 
