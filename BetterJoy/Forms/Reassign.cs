@@ -73,7 +73,7 @@ public partial class Reassign : Form
                 _curAssignment = control;
                 break;
             case MouseButtons.Middle:
-                Assign(control, Settings.GetDefaultValue((string)control.Tag));
+                Assign(control, Settings.GetDefaultValue(control.Tag));
                 break;
             case MouseButtons.Right:
                 break;
@@ -126,7 +126,7 @@ public partial class Reassign : Form
             return;
         }
 
-        string val = Settings.Value((string)c.Tag);
+        string val = Settings.Value(c.Tag);
 
         if (val == "0")
         {
@@ -187,7 +187,7 @@ public partial class Reassign : Form
 
     private void Assign(Control control, string input)
     {
-        Settings.SetValue((string)control.Tag, input);
+        Settings.SetValue(control.Tag, input);
         GetPrettyName(control);
 
         if (control.Parent == gb_actions)
