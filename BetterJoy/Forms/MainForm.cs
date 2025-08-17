@@ -1373,8 +1373,6 @@ public partial class MainForm : Form
         }
     }
 
-    public void JoinJoyconToSelf(Joycon controller) => JoinJoycon(controller, controller);
-
     public void JoinJoycon(Joycon controller, Joycon other)
     {
         if (InvokeRequired)

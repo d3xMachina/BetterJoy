@@ -5,6 +5,7 @@ using BetterJoy.HIDApi.Exceptions;
 using BetterJoy.HIDApi.Native;
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
@@ -27,13 +28,16 @@ public class JoyconManager
     private readonly Logger? _logger;
     private readonly MainForm _form;
 
-    private bool _isRunning = false;
-    private CancellationTokenSource _ctsDevicesNotifications = new();
+    [MemberNotNullWhen(returnValue: true,
+        nameof(_ctsDevicesNotifications),
+        nameof(_devicesNotificationTask))]
+    public bool Running { get; private set; } = false;
+    private CancellationTokenSource? _ctsDevicesNotifications;
 
     public ConcurrentList<Joycon> Controllers { get; } = []; // connected controllers
 
     private readonly Channel<DeviceNotification> _channelDeviceNotifications;
-    private Task _devicesNotificationTask = Task.CompletedTask;
+    private Task? _devicesNotificationTask;
 
     private readonly Lock _joinOrSplitJoyconLock = new();
 
@@ -76,7 +80,7 @@ public class JoyconManager
 
     public bool Start()
     {
-        if (_isRunning)
+        if (Running)
         {
             return true;
         }
@@ -127,7 +131,7 @@ public class JoyconManager
         );
         _logger?.Log("Task devices notification started.", Logger.LogLevel.Debug);
 
-        _isRunning = true;
+        Running = true;
         return true;
     }
 
@@ -332,7 +336,7 @@ public class JoyconManager
             bool joinSelf = doNotRejoin != Joycon.Orientation.None;
             if (JoinJoycon(controller, joinSelf))
             {
-                _form.JoinJoyconToSelf(controller);
+                _form.JoinJoycon(controller, controller.Other!);
             }
         }
 
@@ -490,7 +494,8 @@ public class JoyconManager
 
     private void OnControllerStateChanged(object? sender, Joycon.StateChangedEventArgs e)
     {
-        if (sender is not Joycon controller || _ctsDevicesNotifications.IsCancellationRequested)
+        if (sender is not Joycon controller || 
+            _ctsDevicesNotifications is not {IsCancellationRequested: false})
         {
             return;
         }
@@ -506,6 +511,7 @@ public class JoyconManager
                 break;
         }
     }
+    
     private void ReconnectControllerDelayed(Joycon controller, int delayMs = 2000)
     {
         Task.Delay(delayMs).ContinueWith(_ => ReconnectController(controller));
@@ -530,7 +536,7 @@ public class JoyconManager
     private int GetControllerIndex(Joycon.ControllerType type)
     {
         const int NbControllersMax = 8;
-        var controllers = Controllers.OrderBy(c => c.PadId).ToList();
+        var controllers = Controllers.OrderBy(c => c.PadId);
 
         // Get the ID next to a matching joycon that is not joined if possible
         if (type == Joycon.ControllerType.JoyconLeft)
@@ -653,12 +659,12 @@ public class JoyconManager
 
     public async Task Stop()
     {
-        if (!_isRunning)
+        if (!Running)
         {
             return;
         }
 
-        _isRunning = false;
+        Running = false;
 
         _ctsDevicesNotifications.Cancel();
 
@@ -846,7 +852,7 @@ public class JoyconManager
 
                 if (JoinJoycon(controller, joinSelf))
                 {
-                    _form.JoinJoyconToSelf(controller);
+                    _form.JoinJoycon(controller, controller.Other!);
                     change = true;
                 }
             }
