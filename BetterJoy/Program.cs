@@ -64,7 +64,7 @@ internal class Program
 
     private const string _logFilePath = "LogDebug.txt";
     private static Logger _logger;
-    
+
     public static readonly string ProgramVersion = $"v{Application.ProductVersion.Split('+')[0]}";
 
     public static void Start()

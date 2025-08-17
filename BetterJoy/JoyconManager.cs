@@ -494,8 +494,8 @@ public class JoyconManager
 
     private void OnControllerStateChanged(object? sender, Joycon.StateChangedEventArgs e)
     {
-        if (sender is not Joycon controller || 
-            _ctsDevicesNotifications is not {IsCancellationRequested: false})
+        if (sender is not Joycon controller ||
+            _ctsDevicesNotifications is not { IsCancellationRequested: false })
         {
             return;
         }
@@ -511,7 +511,7 @@ public class JoyconManager
                 break;
         }
     }
-    
+
     private void ReconnectControllerDelayed(Joycon controller, int delayMs = 2000)
     {
         Task.Delay(delayMs).ContinueWith(_ => ReconnectController(controller));
