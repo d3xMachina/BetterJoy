@@ -53,18 +53,18 @@ public partial class Reassign : Form
         if (sender is Control {Tag: SplitButton caller} &&
             e.ClickedItem is {Tag: object clickedItem})
         {
-            string prefix = "";
+            string value = $"{(int)clickedItem}";
 
             if (clickedItem is not ButtonAction action)
             {
-                prefix = "joy_";
+                value = "joy_" + value;
             }
             else if (action != ButtonAction.None)
             {
-                prefix = "act_";
+                value = "act_" + value;
             }
 
-            Assign(caller, prefix + $"{(int)clickedItem}");
+            Assign(caller, value);
         }
     }
 
