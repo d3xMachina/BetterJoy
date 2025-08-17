@@ -1,4 +1,3 @@
-#nullable disable
 using BetterJoy.Controller;
 using System;
 using System.Drawing;
@@ -10,14 +9,14 @@ namespace BetterJoy.Forms;
 
 public partial class Reassign : Form
 {
-    public event EventHandler<EventArgs> ActionAssigned;
+    public event EventHandler<EventArgs>? ActionAssigned;
 
-    private Control _curAssignment;
+    private Control? _curAssignment;
 
     private enum ButtonAction
     {
-        None,
-        Disabled
+        None = 0,
+        Disabled = 1
     }
 
     public Reassign()
@@ -49,35 +48,24 @@ public partial class Reassign : Form
         }
     }
 
-    private void Menu_joy_buttons_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+    private void Menu_joy_buttons_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
     {
-        var c = sender as Control;
-        var clickedItem = e.ClickedItem;
-        var caller = (SplitButton)c.Tag;
-
-        string value;
-        if (clickedItem.Tag is ButtonAction action)
+        if (sender is Control {Tag: SplitButton caller} &&
+            e.ClickedItem is {Tag: object clickedItem})
         {
-            if (action == ButtonAction.None)
-            {
-                value = "0";
-            }
-            else
-            {
-                value = "act_" + (int)clickedItem.Tag;
-            }
+            string value = clickedItem is ButtonAction ? "act_" : "joy_" + $"{(int)clickedItem}";
+        
+            Assign(caller, value);
         }
-        else
-        {
-            value = "joy_" + (int)clickedItem.Tag;
-        }
-
-        Assign(caller, value);
     }
 
-    private void Remap(object sender, MouseEventArgs e)
+    private void Remap(object? sender, MouseEventArgs e)
     {
-        var control = sender as SplitButton;
+        if (sender is not SplitButton control)
+        {
+            return;
+        }
+
         switch (e.Button)
         {
             case MouseButtons.Left:
@@ -98,7 +86,7 @@ public partial class Reassign : Form
         InputCapture.Global.RegisterEvent(GlobalMouseEvent);
     }
 
-    private void GlobalMouseEvent(object sender, EventSourceEventArgs<MouseEvent> e)
+    private void GlobalMouseEvent(object? sender, EventSourceEventArgs<MouseEvent> e)
     {
         ButtonCode? button = e.Data.ButtonDown?.Button;
 
@@ -111,7 +99,7 @@ public partial class Reassign : Form
         }
     }
 
-    private void GlobalKeyEvent(object sender, EventSourceEventArgs<KeyboardEvent> e)
+    private void GlobalKeyEvent(object? sender, EventSourceEventArgs<KeyboardEvent> e)
     {
         KeyCode? key = e.Data.KeyDown?.Key;
 
