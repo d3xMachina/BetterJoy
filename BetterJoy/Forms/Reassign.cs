@@ -50,22 +50,24 @@ public partial class Reassign : Form
 
     private void Menu_joy_buttons_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
     {
-        if (sender is Control {Tag: SplitButton caller} &&
-            e.ClickedItem is {Tag: object clickedItem})
+        if (sender is not Control {Tag: SplitButton caller} ||
+            e.ClickedItem is not {Tag: object clickedItem})
         {
-            string value = $"{(int)clickedItem}";
-
-            if (clickedItem is not ButtonAction action)
-            {
-                value = "joy_" + value;
-            }
-            else if (action != ButtonAction.None)
-            {
-                value = "act_" + value;
-            }
-
-            Assign(caller, value);
+            return;
         }
+        
+        string value = $"{(int)clickedItem}";
+
+        if (clickedItem is not ButtonAction action)
+        {
+            value = "joy_" + value;
+        }
+        else if (action != ButtonAction.None)
+        {
+            value = "act_" + value;
+        }
+
+        Assign(caller, value);
     }
 
     private void Remap(object? sender, MouseEventArgs e)
@@ -82,7 +84,11 @@ public partial class Reassign : Form
                 _curAssignment = control;
                 break;
             case MouseButtons.Middle:
-                Assign(control, Settings.GetDefaultValue(control.Tag));
+                Assign(
+                    control, 
+                    control.Tag is string controlTag 
+                        ? Settings.GetDefaultValue(controlTag) 
+                        : "0");
                 break;
             case MouseButtons.Right:
                 break;
@@ -127,19 +133,21 @@ public partial class Reassign : Form
         InputCapture.Global.UnregisterEvent(GlobalMouseEvent);
     }
 
-    private void GetPrettyName(Control c)
+    private void GetPrettyName(Control control)
     {
         if (InvokeRequired)
         {
-            Invoke(new Action<Control>(GetPrettyName), c);
+            Invoke(new Action<Control>(GetPrettyName), control);
             return;
         }
 
-        string val = Settings.Value(c.Tag);
+        string val = control.Tag is string controlTag 
+            ? Settings.Value(controlTag) 
+            : string.Empty;
 
         if (val == "0")
         {
-            c.Text = "";
+            control.Text = string.Empty;
         }
         else
         {
@@ -148,7 +156,7 @@ public partial class Reassign : Form
                     val.StartsWith("joy_") ? typeof(Joycon.Button) :
                     val.StartsWith("key_") ? typeof(KeyCode) : typeof(ButtonCode);
 
-            c.Text = Enum.GetName(type, int.Parse(val.AsSpan(4)));
+            control.Text = Enum.GetName(type, int.Parse(val.AsSpan(4)));
         }
     }
 
@@ -196,7 +204,12 @@ public partial class Reassign : Form
 
     private void Assign(Control control, string input)
     {
-        Settings.SetValue(control.Tag, input);
+        if (control.Tag is not string controlTag)
+        {
+            return;
+        }
+
+        Settings.SetValue(controlTag, input);
         GetPrettyName(control);
 
         if (control.Parent == gb_actions)
