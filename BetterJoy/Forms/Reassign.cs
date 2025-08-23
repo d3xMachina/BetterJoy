@@ -72,7 +72,7 @@ public partial class Reassign : Form
 
     private void Remap(object? sender, MouseEventArgs e)
     {
-        if (sender is not SplitButton control)
+        if (sender is not SplitButton { Tag: string key } control)
         {
             return;
         }
@@ -84,11 +84,7 @@ public partial class Reassign : Form
                 _curAssignment = control;
                 break;
             case MouseButtons.Middle:
-                Assign(
-                    control, 
-                    control.Tag is string controlTag 
-                        ? Settings.GetDefaultValue(controlTag) 
-                        : "0");
+                Assign(control, key);
                 break;
             case MouseButtons.Right:
                 break;
@@ -141,9 +137,12 @@ public partial class Reassign : Form
             return;
         }
 
-        string val = control.Tag is string controlTag 
-            ? Settings.Value(controlTag) 
-            : string.Empty;
+        if (control.Tag is not string key)
+        {
+            return;
+        }
+
+        string val = Settings.Value(key);
 
         if (val == "0")
         {
@@ -204,12 +203,12 @@ public partial class Reassign : Form
 
     private void Assign(Control control, string input)
     {
-        if (control.Tag is not string controlTag)
+        if (control.Tag is not string key)
         {
             return;
         }
 
-        Settings.SetValue(controlTag, input);
+        Settings.SetValue(key, input);
         GetPrettyName(control);
 
         if (control.Parent == gb_actions)
