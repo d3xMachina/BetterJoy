@@ -20,9 +20,9 @@ public static class Settings
         _path = Path.GetDirectoryName(Environment.ProcessPath) + "\\settings";
     }
 
-    public static string GetDefaultValue(string s)
+    public static string GetDefaultValue(string key)
     {
-        return s switch
+        return key switch
         {
             "ProgressiveScan" => "1",
             "capture" => "key_" + (int)KeyCode.PrintScreen,
@@ -178,8 +178,8 @@ public static class Settings
     }
 
     public static int IntValue(string key) => _variables.TryGetValue(key, out string? value) ? int.Parse(value) : 0;
-
-    public static string Value(string key) => _variables.GetValueOrDefault(key, "");
+    
+    public static string Value(string key) => _variables.GetValueOrDefault(key, string.Empty);
 
     public static bool SetValue(string key, string value)
     {

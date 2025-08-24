@@ -1,4 +1,3 @@
-#nullable disable
 using BetterJoy.Controller;
 using System;
 using System.Drawing;
@@ -10,14 +9,14 @@ namespace BetterJoy.Forms;
 
 public partial class Reassign : Form
 {
-    public event EventHandler<EventArgs> ActionAssigned;
+    public event EventHandler<EventArgs>? ActionAssigned;
 
-    private Control _curAssignment;
+    private Control? _curAssignment;
 
     private enum ButtonAction
     {
-        None,
-        Disabled
+        None = 0,
+        Disabled = 1
     }
 
     public Reassign()
@@ -49,35 +48,35 @@ public partial class Reassign : Form
         }
     }
 
-    private void Menu_joy_buttons_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+    private void Menu_joy_buttons_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
     {
-        var c = sender as Control;
-        var clickedItem = e.ClickedItem;
-        var caller = (SplitButton)c.Tag;
-
-        string value;
-        if (clickedItem.Tag is ButtonAction action)
+        if (sender is not Control {Tag: SplitButton caller} ||
+            e.ClickedItem is not {Tag: object clickedItem})
         {
-            if (action == ButtonAction.None)
-            {
-                value = "0";
-            }
-            else
-            {
-                value = "act_" + (int)clickedItem.Tag;
-            }
+            return;
         }
-        else
+        
+        string value = $"{(int)clickedItem}";
+
+        if (clickedItem is not ButtonAction action)
         {
-            value = "joy_" + (int)clickedItem.Tag;
+            value = "joy_" + value;
+        }
+        else if (action != ButtonAction.None)
+        {
+            value = "act_" + value;
         }
 
         Assign(caller, value);
     }
 
-    private void Remap(object sender, MouseEventArgs e)
+    private void Remap(object? sender, MouseEventArgs e)
     {
-        var control = sender as SplitButton;
+        if (sender is not SplitButton { Tag: string key } control)
+        {
+            return;
+        }
+
         switch (e.Button)
         {
             case MouseButtons.Left:
@@ -85,7 +84,7 @@ public partial class Reassign : Form
                 _curAssignment = control;
                 break;
             case MouseButtons.Middle:
-                Assign(control, Settings.GetDefaultValue((string)control.Tag));
+                Assign(control, key);
                 break;
             case MouseButtons.Right:
                 break;
@@ -98,7 +97,7 @@ public partial class Reassign : Form
         InputCapture.Global.RegisterEvent(GlobalMouseEvent);
     }
 
-    private void GlobalMouseEvent(object sender, EventSourceEventArgs<MouseEvent> e)
+    private void GlobalMouseEvent(object? sender, EventSourceEventArgs<MouseEvent> e)
     {
         ButtonCode? button = e.Data.ButtonDown?.Button;
 
@@ -111,7 +110,7 @@ public partial class Reassign : Form
         }
     }
 
-    private void GlobalKeyEvent(object sender, EventSourceEventArgs<KeyboardEvent> e)
+    private void GlobalKeyEvent(object? sender, EventSourceEventArgs<KeyboardEvent> e)
     {
         KeyCode? key = e.Data.KeyDown?.Key;
 
@@ -130,19 +129,24 @@ public partial class Reassign : Form
         InputCapture.Global.UnregisterEvent(GlobalMouseEvent);
     }
 
-    private void GetPrettyName(Control c)
+    private void GetPrettyName(Control control)
     {
         if (InvokeRequired)
         {
-            Invoke(new Action<Control>(GetPrettyName), c);
+            Invoke(new Action<Control>(GetPrettyName), control);
             return;
         }
 
-        string val = Settings.Value((string)c.Tag);
+        if (control.Tag is not string key)
+        {
+            return;
+        }
+
+        string val = Settings.Value(key);
 
         if (val == "0")
         {
-            c.Text = "";
+            control.Text = string.Empty;
         }
         else
         {
@@ -151,7 +155,7 @@ public partial class Reassign : Form
                     val.StartsWith("joy_") ? typeof(Joycon.Button) :
                     val.StartsWith("key_") ? typeof(KeyCode) : typeof(ButtonCode);
 
-            c.Text = Enum.GetName(type, int.Parse(val.AsSpan(4)));
+            control.Text = Enum.GetName(type, int.Parse(val.AsSpan(4)));
         }
     }
 
@@ -199,7 +203,12 @@ public partial class Reassign : Form
 
     private void Assign(Control control, string input)
     {
-        Settings.SetValue((string)control.Tag, input);
+        if (control.Tag is not string key)
+        {
+            return;
+        }
+
+        Settings.SetValue(key, input);
         GetPrettyName(control);
 
         if (control.Parent == gb_actions)
