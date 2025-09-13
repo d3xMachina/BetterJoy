@@ -303,16 +303,9 @@ internal class Program
             bool activeGyro = HandleMouseAction("active_gyro", button);
             bool swapAB = HandleMouseAction("swap_ab", button);
             bool swapXY = HandleMouseAction("swap_xy", button);
-
-            if (activeGyro || swapAB || swapXY)
-            {
-                foreach (var controller in Mgr.Controllers)
-                {
-                    if (activeGyro) controller.ActiveGyro = true;
-                    if (swapAB) controller.Config.SwapAB = !controller.Config.SwapAB;
-                    if (swapXY) controller.Config.SwapXY = !controller.Config.SwapXY;
-                }
-            }
+            
+            Mgr?.ChangeControllerSettings(activeGyro, swapAB, swapXY);
+            
             return;
         }
 
@@ -324,10 +317,7 @@ internal class Program
 
             if (activeGyro)
             {
-                foreach (var controller in Mgr.Controllers)
-                {
-                    controller.ActiveGyro = false;
-                }
+                Mgr?.DisableAllGyroscopes();
             }
         }
     }
@@ -335,7 +325,7 @@ internal class Program
     private static bool HandleKeyAction(string settingKey, KeyCode? key)
     {
         var resVal = Settings.Value(settingKey);
-        return resVal.StartsWith("key_") && (int)key == int.Parse(resVal.AsSpan(4));
+        return resVal.StartsWith("key_") && (int?)key == int.Parse(resVal.AsSpan(4));
     }
 
     private static void GlobalKeyEvent(object sender, EventSourceEventArgs<KeyboardEvent> e)
@@ -358,16 +348,9 @@ internal class Program
             bool activeGyro = HandleKeyAction("active_gyro", key);
             bool swapAB = HandleKeyAction("swap_ab", key);
             bool swapXY = HandleKeyAction("swap_xy", key);
-
-            if (activeGyro || swapAB || swapXY)
-            {
-                foreach (var controller in Mgr.Controllers)
-                {
-                    if (activeGyro) controller.ActiveGyro = true;
-                    if (swapAB) controller.Config.SwapAB = !controller.Config.SwapAB;
-                    if (swapXY) controller.Config.SwapXY = !controller.Config.SwapXY;
-                }
-            }
+            
+            Mgr?.ChangeControllerSettings(activeGyro, swapAB, swapXY);
+            
             return;
         }
 
@@ -379,10 +362,7 @@ internal class Program
 
             if (activeGyro)
             {
-                foreach (var controller in Mgr.Controllers)
-                {
-                    controller.ActiveGyro = false;
-                }
+                Mgr?.DisableAllGyroscopes();
             }
         }
     }
@@ -585,12 +565,7 @@ internal class Program
             }
         }
 
-        bool showErrors = true;
-        foreach (var controller in Mgr.Controllers)
-        {
-            JoyconManager.ApplyConfig(controller, showErrors);
-            showErrors = false; // only show parsing errors once
-        }
+        Mgr?.ApplyAllConfigs();
     }
 
     public static void SetSuspended(bool suspend)
