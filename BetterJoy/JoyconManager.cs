@@ -870,9 +870,37 @@ public class JoyconManager
 
         return change;
     }
-
-    public static void ApplyConfig(Joycon controller, bool showErrors = true)
+    
+    public void ChangeControllerSettings(
+        bool forceActiveGyro = false, 
+        bool toggleSwapAB = false, 
+        bool toggleSwapXY = false)
     {
-        controller.ApplyConfig(showErrors);
+        if (forceActiveGyro || toggleSwapAB || toggleSwapXY)
+        {
+            foreach (var controller in Controllers)
+            {
+                controller.ActiveGyro |= forceActiveGyro;
+                controller.Config.SwapAB ^= toggleSwapAB;
+                controller.Config.SwapXY ^= toggleSwapXY;
+            }
+        }
+    }
+
+    public void DisableAllGyroscopes()
+    {
+        foreach (var controller in Controllers)
+        {
+            controller.ActiveGyro = false;
+        }
+    }
+
+    public void ApplyAllConfigs(bool showErrors = true)
+    {
+        foreach (var controller in Controllers)
+        {
+            controller.ApplyConfig(showErrors);
+            showErrors = false; // only show parsing errors once
+        }
     }
 }

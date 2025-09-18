@@ -277,7 +277,7 @@ internal class Program
         return false;
     }
 
-    private static bool HandleMouseAction(string settingKey, ButtonCode? key)
+    private static bool HandleMouseAction(string settingKey, ButtonCode key)
     {
         var resVal = Settings.Value(settingKey);
         return resVal.StartsWith("mse_") && (int)key == int.Parse(resVal.AsSpan(4));
@@ -285,11 +285,9 @@ internal class Program
 
     private static void GlobalMouseEvent(object sender, EventSourceEventArgs<MouseEvent> e)
     {
-        ButtonCode? button = e.Data.ButtonDown?.Button;
-
-        if (button != null)
+        if (e.Data.ButtonDown?.Button is ButtonCode buttonDown)
         {
-            if (HandleMouseAction("reset_mouse", button) &&
+            if (HandleMouseAction("reset_mouse", buttonDown) &&
                 Screen.PrimaryScreen is Screen primaryScreen)
             {
                 WindowsInput.Simulate.Events()
@@ -300,39 +298,27 @@ internal class Program
                     .Invoke();
             }
 
-            bool activeGyro = HandleMouseAction("active_gyro", button);
-            bool swapAB = HandleMouseAction("swap_ab", button);
-            bool swapXY = HandleMouseAction("swap_xy", button);
-
-            if (activeGyro || swapAB || swapXY)
-            {
-                foreach (var controller in Mgr.Controllers)
-                {
-                    if (activeGyro) controller.ActiveGyro = true;
-                    if (swapAB) controller.Config.SwapAB = !controller.Config.SwapAB;
-                    if (swapXY) controller.Config.SwapXY = !controller.Config.SwapXY;
-                }
-            }
+            bool activeGyro = HandleMouseAction("active_gyro", buttonDown);
+            bool swapAB = HandleMouseAction("swap_ab", buttonDown);
+            bool swapXY = HandleMouseAction("swap_xy", buttonDown);
+            
+            Mgr?.ChangeControllerSettings(activeGyro, swapAB, swapXY);
+            
             return;
         }
 
-        button = e.Data.ButtonUp?.Button;
-
-        if (button != null)
+        if (e.Data.ButtonUp?.Button is ButtonCode buttonUp)
         {
-            bool activeGyro = HandleMouseAction("active_gyro", button);
+            bool activeGyro = HandleMouseAction("active_gyro", buttonUp);
 
             if (activeGyro)
             {
-                foreach (var controller in Mgr.Controllers)
-                {
-                    controller.ActiveGyro = false;
-                }
+                Mgr?.DisableAllGyroscopes();
             }
         }
     }
 
-    private static bool HandleKeyAction(string settingKey, KeyCode? key)
+    private static bool HandleKeyAction(string settingKey, KeyCode key)
     {
         var resVal = Settings.Value(settingKey);
         return resVal.StartsWith("key_") && (int)key == int.Parse(resVal.AsSpan(4));
@@ -340,11 +326,9 @@ internal class Program
 
     private static void GlobalKeyEvent(object sender, EventSourceEventArgs<KeyboardEvent> e)
     {
-        KeyCode? key = e.Data.KeyDown?.Key;
-
-        if (key != null)
+        if (e.Data.KeyDown?.Key is KeyCode keyDown)
         {
-            if (HandleKeyAction("reset_mouse", key) &&
+            if (HandleKeyAction("reset_mouse", keyDown) &&
                 Screen.PrimaryScreen is Screen primaryScreen)
             {
                 WindowsInput.Simulate.Events()
@@ -355,34 +339,22 @@ internal class Program
                     .Invoke();
             }
 
-            bool activeGyro = HandleKeyAction("active_gyro", key);
-            bool swapAB = HandleKeyAction("swap_ab", key);
-            bool swapXY = HandleKeyAction("swap_xy", key);
-
-            if (activeGyro || swapAB || swapXY)
-            {
-                foreach (var controller in Mgr.Controllers)
-                {
-                    if (activeGyro) controller.ActiveGyro = true;
-                    if (swapAB) controller.Config.SwapAB = !controller.Config.SwapAB;
-                    if (swapXY) controller.Config.SwapXY = !controller.Config.SwapXY;
-                }
-            }
+            bool activeGyro = HandleKeyAction("active_gyro", keyDown);
+            bool swapAB = HandleKeyAction("swap_ab", keyDown);
+            bool swapXY = HandleKeyAction("swap_xy", keyDown);
+            
+            Mgr?.ChangeControllerSettings(activeGyro, swapAB, swapXY);
+            
             return;
         }
 
-        key = e.Data.KeyUp?.Key;
-
-        if (key != null)
+        if (e.Data.KeyUp?.Key is KeyCode keyUp)
         {
-            bool activeGyro = HandleKeyAction("active_gyro", key);
+            bool activeGyro = HandleKeyAction("active_gyro", keyUp);
 
             if (activeGyro)
             {
-                foreach (var controller in Mgr.Controllers)
-                {
-                    controller.ActiveGyro = false;
-                }
+                Mgr?.DisableAllGyroscopes();
             }
         }
     }
@@ -585,12 +557,7 @@ internal class Program
             }
         }
 
-        bool showErrors = true;
-        foreach (var controller in Mgr.Controllers)
-        {
-            JoyconManager.ApplyConfig(controller, showErrors);
-            showErrors = false; // only show parsing errors once
-        }
+        Mgr?.ApplyAllConfigs();
     }
 
     public static void SetSuspended(bool suspend)
