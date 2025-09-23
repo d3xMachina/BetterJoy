@@ -2,6 +2,7 @@ using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
 using BetterJoy.Hardware.SubCommand;
+using BetterJoy.Logging;
 using BetterJoy.Properties;
 using Microsoft.Win32;
 using System;
@@ -41,9 +42,9 @@ public partial class MainForm : Form
     private bool _closing = false;
     private bool _close = false;
 
-    private readonly Logger? _logger;
+    private readonly ILogger? _logger;
 
-    public MainForm(Logger? logger)
+    public MainForm(ILogger? logger)
     {
         InitializeComponent();
         InitializeConsoleTextBox();
@@ -308,7 +309,7 @@ public partial class MainForm : Form
         _logger?.Log("Closing...");
         SystemEvents.PowerModeChanged -= OnPowerChange;
         await Program.Stop();
-        _logger?.Log("Closed.", Logger.LogLevel.Debug);
+        _logger?.Log("Closed.", LogLevel.Debug);
 
         _close = true;
         Close(); // we're done with the UI thread, close it for real now
@@ -355,9 +356,9 @@ public partial class MainForm : Form
         });
     }
 
-    private void OnMessageLogged(string message, Logger.LogLevel level, Exception? e)
+    private void OnMessageLogged(string message, LogLevel level, Exception? e)
     {
-        if (level == Logger.LogLevel.Debug)
+        if (level == LogLevel.Debug)
         {
             return;
         }
@@ -821,7 +822,7 @@ public partial class MainForm : Form
 
             if (controller.CalibrationMotionDatas.Count == 0)
             {
-                _logger?.Log("No motion data received, proceed to stick calibration anyway. Is the controller working ?", Logger.LogLevel.Warning);
+                _logger?.Log("No motion data received, proceed to stick calibration anyway. Is the controller working ?", LogLevel.Warning);
             }
             else
             {
@@ -930,7 +931,7 @@ public partial class MainForm : Form
 
             if (controller.CalibrationStickDatas.Count == 0)
             {
-                _logger?.Log("No stick positions received, calibration canceled. Is the controller working ?", Logger.LogLevel.Warning);
+                _logger?.Log("No stick positions received, calibration canceled. Is the controller working ?", LogLevel.Warning);
                 CancelCalibrate(controller);
                 return;
             }
@@ -1033,7 +1034,7 @@ public partial class MainForm : Form
 
             if (controller.CalibrationStickDatas.Count == 0)
             {
-                _logger?.Log("No stick positions received, calibration canceled. Is the controller working ?", Logger.LogLevel.Warning);
+                _logger?.Log("No stick positions received, calibration canceled. Is the controller working ?", LogLevel.Warning);
                 CancelCalibrate(controller);
                 return;
             }

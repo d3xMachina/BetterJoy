@@ -1,13 +1,14 @@
 using BetterJoy.Exceptions;
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace BetterJoy;
+namespace BetterJoy.Logging;
 
-public sealed class Logger : IDisposable
+public sealed class Logger : ILogger 
 {
     private const int _logLevelPadding = 9; // length of the longest LogLevel + 2
 
@@ -20,14 +21,6 @@ public sealed class Logger : IDisposable
     private readonly CancellationTokenSource _ctsLogs;
     private readonly Channel<LogEntry> _logChannel;
     private readonly bool _isRunning = false;
-
-    public enum LogLevel
-    {
-        Info,
-        Warning,
-        Error,
-        Debug
-    }
 
     private record LogEntry(string Message, LogLevel Level);
 
@@ -77,12 +70,16 @@ public sealed class Logger : IDisposable
 
     public void Log(string message, LogLevel level = LogLevel.Info)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
         OnMessageLogged?.Invoke(message, level, null);
         LogImpl(message, level);
     }
 
     public void Log(string message, Exception e, LogLevel level = LogLevel.Error)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        
         OnMessageLogged?.Invoke(message, level, e);
         LogImpl($"{message} {e.Display(true)}", level);
     }
@@ -94,7 +91,7 @@ public sealed class Logger : IDisposable
         while (!_logChannel.Writer.TryWrite(log)) { }
     }
 
-    public async Task Close()
+    private void Close()
     {
         if (!_isRunning)
         {
@@ -102,7 +99,7 @@ public sealed class Logger : IDisposable
         }
 
         _ctsLogs.Cancel();
-        await _logWriterTask;
+        _logWriterTask.GetAwaiter().GetResult();
 
         _logWriter.Close();
     }
@@ -113,6 +110,8 @@ public sealed class Logger : IDisposable
         {
             return;
         }
+        
+        Close();
 
         _logWriter.Dispose();
         _disposed = true;

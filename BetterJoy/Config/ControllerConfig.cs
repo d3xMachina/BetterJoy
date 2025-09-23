@@ -1,3 +1,4 @@
+using BetterJoy.Logging;
 using System;
 using static BetterJoy.Controller.Joycon;
 
@@ -42,7 +43,7 @@ public class ControllerConfig : Config
     public bool AutoPowerOff = false;
     public bool AllowCalibration = true;
 
-    public ControllerConfig(Logger? logger) : base(logger) { }
+    public ControllerConfig(ILogger? logger) : base(logger) { }
 
     public ControllerConfig(ControllerConfig config) : base(config._logger)
     {

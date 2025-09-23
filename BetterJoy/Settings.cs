@@ -17,7 +17,7 @@ public static class Settings
 
     static Settings()
     {
-        _path = Path.GetDirectoryName(Environment.ProcessPath) + "\\settings";
+        _path = Path.GetDirectoryName(Program.ProgramLocation) + "\\settings";
     }
 
     public static string GetDefaultValue(string key)

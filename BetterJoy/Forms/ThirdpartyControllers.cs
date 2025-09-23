@@ -12,7 +12,7 @@ public partial class _3rdPartyControllers : Form
 
     static _3rdPartyControllers()
     {
-        _path = Path.GetDirectoryName(Environment.ProcessPath)
+        _path = Path.GetDirectoryName(Program.ProgramLocation)
                + "\\3rdPartyControllers";
     }
 

@@ -3,6 +3,7 @@ using BetterJoy.Controller;
 using BetterJoy.Forms;
 using BetterJoy.HIDApi.Exceptions;
 using BetterJoy.HIDApi.Native;
+using BetterJoy.Logging;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -25,7 +26,7 @@ public class JoyconManager
     private const ushort ProductFamicomII = 0x2007;
     private const ushort ProductN64 = 0x2019;
 
-    private readonly Logger? _logger;
+    private readonly ILogger? _logger;
     private readonly MainForm _form;
 
     [MemberNotNullWhen(returnValue: true,
@@ -63,7 +64,7 @@ public class JoyconManager
         }
     }
 
-    public JoyconManager(Logger logger, MainForm form)
+    public JoyconManager(ILogger? logger, MainForm form)
     {
         _logger = logger;
         _form = form;
@@ -116,11 +117,11 @@ public class JoyconManager
                 try
                 {
                     await ProcessDevicesNotifications(_ctsDevicesNotifications.Token);
-                    _logger?.Log("Task devices notification finished.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task devices notification finished.", LogLevel.Debug);
                 }
                 catch (OperationCanceledException) when (_ctsDevicesNotifications.IsCancellationRequested)
                 {
-                    _logger?.Log("Task devices notification canceled.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task devices notification canceled.", LogLevel.Debug);
                 }
                 catch (Exception e)
                 {
@@ -129,7 +130,7 @@ public class JoyconManager
                 }
             }
         );
-        _logger?.Log("Task devices notification started.", Logger.LogLevel.Debug);
+        _logger?.Log("Task devices notification started.", LogLevel.Debug);
 
         Running = true;
         return true;
@@ -256,7 +257,7 @@ public class JoyconManager
                     type = Joycon.ControllerType.N64;
                     break;
                 default:
-                    _logger?.Log($"Invalid product ID: {info.ProductId}.", Logger.LogLevel.Error);
+                    _logger?.Log($"Invalid product ID: {info.ProductId}.", LogLevel.Error);
                     return;
             }
         }
@@ -264,7 +265,7 @@ public class JoyconManager
         {
             if (!Enum.IsDefined(typeof(Joycon.ControllerType), thirdParty.Type))
             {
-                _logger?.Log($"Invalid third-party controller type: {thirdParty.Type}.", Logger.LogLevel.Error);
+                _logger?.Log($"Invalid third-party controller type: {thirdParty.Type}.", LogLevel.Error);
                 return;
             }
 
@@ -284,7 +285,7 @@ public class JoyconManager
             // don't show an error message when the controller was dropped without hidapi callback notification (after standby for example)
             if (!reconnect)
             {
-                _logger?.Log($"Unable to open device: {HIDApi.Manager.GetError()}.", Logger.LogLevel.Error);
+                _logger?.Log($"Unable to open device: {HIDApi.Manager.GetError()}.", LogLevel.Error);
             }
 
             return;
