@@ -871,10 +871,10 @@ public class JoyconManager
 
         return change;
     }
-    
+
     public void ChangeControllerSettings(
-        bool forceActiveGyro = false, 
-        bool toggleSwapAB = false, 
+        bool forceActiveGyro = false,
+        bool toggleSwapAB = false,
         bool toggleSwapXY = false)
     {
         if (forceActiveGyro || toggleSwapAB || toggleSwapXY)

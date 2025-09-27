@@ -303,9 +303,9 @@ internal class Program
             bool activeGyro = HandleMouseAction("active_gyro", buttonDown);
             bool swapAB = HandleMouseAction("swap_ab", buttonDown);
             bool swapXY = HandleMouseAction("swap_xy", buttonDown);
-            
+
             Mgr?.ChangeControllerSettings(activeGyro, swapAB, swapXY);
-            
+
             return;
         }
 
@@ -344,9 +344,9 @@ internal class Program
             bool activeGyro = HandleKeyAction("active_gyro", keyDown);
             bool swapAB = HandleKeyAction("swap_ab", keyDown);
             bool swapXY = HandleKeyAction("swap_xy", keyDown);
-            
+
             Mgr?.ChangeControllerSettings(activeGyro, swapAB, swapXY);
-            
+
             return;
         }
 
@@ -458,7 +458,7 @@ internal class Program
     }
 
     [STAThread]
-    private static Task Main()
+    private static void Main()
     {
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -473,7 +473,7 @@ internal class Program
             if (!_mutexInstance.WaitOne(0, false))
             {
                 MessageBox.Show("Instance already running.", "BetterJoy");
-                return Task.CompletedTask;
+                return;
             }
 
             InitializeLogger();
@@ -493,8 +493,6 @@ internal class Program
                 _logger?.Dispose();
             }
         }
-
-        return Task.CompletedTask;
     }
 
     private static void SetupDlls()

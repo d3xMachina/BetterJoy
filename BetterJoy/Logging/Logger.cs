@@ -1,14 +1,13 @@
 using BetterJoy.Exceptions;
 using System;
 using System.IO;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace BetterJoy.Logging;
 
-public sealed class Logger : ILogger 
+public sealed class Logger : ILogger
 {
     private const int _logLevelPadding = 9; // length of the longest LogLevel + 2
 
@@ -79,7 +78,7 @@ public sealed class Logger : ILogger
     public void Log(string message, Exception e, LogLevel level = LogLevel.Error)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        
+
         OnMessageLogged?.Invoke(message, level, e);
         LogImpl($"{message} {e.Display(true)}", level);
     }
@@ -110,7 +109,7 @@ public sealed class Logger : ILogger
         {
             return;
         }
-        
+
         Close();
 
         _logWriter.Dispose();
