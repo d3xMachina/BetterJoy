@@ -4,6 +4,7 @@ using BetterJoy.Config;
 using BetterJoy.Controller;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
+using BetterJoy.Logging;
 using BetterJoy.Network.Server;
 using Nefarius.Drivers.HidHide;
 using Nefarius.ViGEm.Client;
@@ -63,8 +64,9 @@ internal class Program
     private static bool _mouseEventRegistered;
 
     private const string _logFilePath = "LogDebug.txt";
-    private static Logger _logger;
+    private static ILogger _logger;
 
+    public static readonly string ProgramLocation = Application.ExecutablePath;
     public static readonly string ProgramVersion = $"v{Application.ProductVersion.Split('+')[0]}";
 
     public static void Start()
@@ -146,7 +148,7 @@ internal class Program
 
             if (!_hidHideService.IsInstalled)
             {
-                _logger?.Log("HIDHide is not installed.", Logger.LogLevel.Warning);
+                _logger?.Log("HIDHide is not installed.", LogLevel.Warning);
                 return;
             }
 
@@ -163,7 +165,7 @@ internal class Program
                 _hidHideService.ClearApplicationsList();
             }
 
-            _hidHideService.AddApplicationPath(Environment.ProcessPath);
+            _hidHideService.AddApplicationPath(ProgramLocation);
 
             _hidHideService.IsActive = true;
         }
@@ -190,7 +192,7 @@ internal class Program
             var instance = device.GetInstance();
             if (instance.Length == 0)
             {
-                _logger?.Log("Unable to get device instance.", Logger.LogLevel.Error);
+                _logger?.Log("Unable to get device instance.", LogLevel.Error);
             }
             else
             {
@@ -200,7 +202,7 @@ internal class Program
             var parentInstance = device.GetParentInstance();
             if (parentInstance.Length == 0)
             {
-                _logger?.Log("Unable to get device parent instance.", Logger.LogLevel.Error);
+                _logger?.Log("Unable to get device parent instance.", LogLevel.Error);
             }
             else
             {
@@ -301,9 +303,9 @@ internal class Program
             bool activeGyro = HandleMouseAction("active_gyro", buttonDown);
             bool swapAB = HandleMouseAction("swap_ab", buttonDown);
             bool swapXY = HandleMouseAction("swap_xy", buttonDown);
-            
+
             Mgr?.ChangeControllerSettings(activeGyro, swapAB, swapXY);
-            
+
             return;
         }
 
@@ -342,9 +344,9 @@ internal class Program
             bool activeGyro = HandleKeyAction("active_gyro", keyDown);
             bool swapAB = HandleKeyAction("swap_ab", keyDown);
             bool swapXY = HandleKeyAction("swap_xy", keyDown);
-            
+
             Mgr?.ChangeControllerSettings(activeGyro, swapAB, swapXY);
-            
+
             return;
         }
 
@@ -399,7 +401,7 @@ internal class Program
                 return;
             }
 
-            _hidHideService.RemoveApplicationPath(Environment.ProcessPath);
+            _hidHideService.RemoveApplicationPath(ProgramLocation);
 
             if (Config.PurgeAffectedDevices)
             {
@@ -442,17 +444,6 @@ internal class Program
         }
     }
 
-    private static async Task DisposeLogger()
-    {
-        if (_logger == null)
-        {
-            return;
-        }
-
-        await _logger.Close();
-        _logger.Dispose();
-    }
-
     private static void LogDebugInfos()
     {
         if (_logger == null)
@@ -462,12 +453,12 @@ internal class Program
 
         var programName = Application.ProductName;
         var osArch = Environment.Is64BitProcess ? "x64" : "x86";
-        _logger?.Log($"{programName} {ProgramVersion}", Logger.LogLevel.Debug);
-        _logger?.Log($"OS version: {Environment.OSVersion} {osArch}", Logger.LogLevel.Debug);
+        _logger?.Log($"{programName} {ProgramVersion}", LogLevel.Debug);
+        _logger?.Log($"OS version: {Environment.OSVersion} {osArch}", LogLevel.Debug);
     }
 
     [STAThread]
-    private static async Task Main()
+    private static void Main()
     {
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -499,7 +490,7 @@ internal class Program
             }
             finally
             {
-                await DisposeLogger();
+                _logger?.Dispose();
             }
         }
     }

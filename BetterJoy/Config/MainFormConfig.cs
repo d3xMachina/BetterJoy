@@ -1,10 +1,12 @@
+using BetterJoy.Logging;
+
 namespace BetterJoy.Config;
 
 public class MainFormConfig : Config
 {
     public bool AllowCalibration = true;
 
-    public MainFormConfig(Logger? logger) : base(logger) { }
+    public MainFormConfig(ILogger? logger) : base(logger) { }
 
     public MainFormConfig(MainFormConfig config) : base(config._logger)
     {

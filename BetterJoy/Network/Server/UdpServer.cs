@@ -1,5 +1,6 @@
 using BetterJoy.Controller;
 using BetterJoy.Controller.Mapping;
+using BetterJoy.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -56,9 +57,9 @@ public class UdpServer
     private uint _serverId;
     private Socket? _udpSock;
 
-    private readonly Logger? _logger;
+    private readonly ILogger? _logger;
 
-    public UdpServer(Logger? logger, IList<Joycon> p)
+    public UdpServer(ILogger? logger, IList<Joycon> p)
     {
         _controllers = p;
         _logger = logger;
@@ -632,7 +633,7 @@ public class UdpServer
         // Ignore closing
         catch (SocketException e)
         {
-            _logger?.Log("UDP socket closed.", e, Logger.LogLevel.Warning);
+            _logger?.Log("UDP socket closed.", e, LogLevel.Warning);
         }
     }
 
@@ -680,11 +681,11 @@ public class UdpServer
                 try
                 {
                     await RunReceive(_ctsTransfers.Token);
-                    _logger?.Log("Task UDP receive finished.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task UDP receive finished.", LogLevel.Debug);
                 }
                 catch (OperationCanceledException) when (_ctsTransfers.IsCancellationRequested)
                 {
-                    _logger?.Log("Task UDP receive canceled.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task UDP receive canceled.", LogLevel.Debug);
                 }
                 catch (Exception e)
                 {
@@ -693,7 +694,7 @@ public class UdpServer
                 }
             }
         );
-        _logger?.Log("Task UDP receive started.", Logger.LogLevel.Debug);
+        _logger?.Log("Task UDP receive started.", LogLevel.Debug);
 
         _sendTask = Task.Run(
             async () =>
@@ -701,11 +702,11 @@ public class UdpServer
                 try
                 {
                     await RunSend(_ctsTransfers.Token);
-                    _logger?.Log("Task UDP send finished.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task UDP send finished.", LogLevel.Debug);
                 }
                 catch (OperationCanceledException) when (_ctsTransfers.IsCancellationRequested)
                 {
-                    _logger?.Log("Task UDP send canceled.", Logger.LogLevel.Debug);
+                    _logger?.Log("Task UDP send canceled.", LogLevel.Debug);
                 }
                 catch (Exception e)
                 {
@@ -714,7 +715,7 @@ public class UdpServer
                 }
             }
         );
-        _logger?.Log("Task UDP send started.", Logger.LogLevel.Debug);
+        _logger?.Log("Task UDP send started.", LogLevel.Debug);
 
         Running = true;
         _logger?.Log($"Motion server started on {ip}:{port}.");

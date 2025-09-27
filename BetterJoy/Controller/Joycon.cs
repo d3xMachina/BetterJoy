@@ -6,6 +6,7 @@ using BetterJoy.Forms;
 using BetterJoy.Hardware.Calibration;
 using BetterJoy.Hardware.Data;
 using BetterJoy.Hardware.SubCommand;
+using BetterJoy.Logging;
 using BetterJoy.Network;
 using BetterJoy.Network.Server;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
@@ -163,7 +164,7 @@ public class Joycon
     private StickRangeCalibration _range2;
 
     private readonly MainForm _form;
-    private readonly Logger? _logger;
+    private readonly ILogger? _logger;
 
     private byte _globalCount;
 
@@ -242,7 +243,7 @@ public class Joycon
     private volatile bool _requestSetLEDByPadID;
 
     public Joycon(
-        Logger? logger,
+        ILogger? logger,
         MainForm form,
         HIDApi.Device device,
         string path,
@@ -437,7 +438,7 @@ public class Joycon
             return;
         }
 
-        Log(stringifyable?.ToString() ?? $"Attempted to log type ({typeof(T)}) but was null.", Logger.LogLevel.Debug, type);
+        Log(stringifyable?.ToString() ?? $"Attempted to log type ({typeof(T)}) but was null.", LogLevel.Debug, type);
     }
 
     public Motion GetMotion()
@@ -560,7 +561,7 @@ public class Joycon
         // could not parse mac address, ignore
         catch (Exception e)
         {
-            Log("Cannot parse MAC address.", e, Logger.LogLevel.Debug);
+            Log("Cannot parse MAC address.", e, LogLevel.Debug);
         }
     }
 
@@ -767,7 +768,7 @@ public class Joycon
                     Type = ControllerType.FamicomII;
                     break;
                 default:
-                    Log($"Unknown device type: {deviceType:X2}", Logger.LogLevel.Warning);
+                    Log($"Unknown device type: {deviceType:X2}", LogLevel.Warning);
                     break;
             }
 
@@ -964,7 +965,7 @@ public class Joycon
         // ignore
         catch (Exception e)
         {
-            Log("Cannot update input.", e, Logger.LogLevel.Debug);
+            Log("Cannot update input.", e, LogLevel.Debug);
         }
     }
 
@@ -1784,7 +1785,7 @@ public class Joycon
             {
                 if (requestPowerOff || (IsUSB && reconnectAttempts >= 3))
                 {
-                    Log("Dropped.", Logger.LogLevel.Warning);
+                    Log("Dropped.", LogLevel.Warning);
                     Drop(!requestPowerOff, false);
 
                     // exit
@@ -1810,7 +1811,7 @@ public class Joycon
                     // ignore and retry
                     catch (Exception e)
                     {
-                        Log("Soft reconnect failed.", e, Logger.LogLevel.Debug);
+                        Log("Soft reconnect failed.", e, LogLevel.Debug);
                     }
                 }
                 else
@@ -1841,11 +1842,11 @@ public class Joycon
                     break;
                 case ReceiveError.InvalidHandle:
                     // should not happen
-                    Log("Dropped (invalid handle).", Logger.LogLevel.Error);
+                    Log("Dropped (invalid handle).", LogLevel.Error);
                     Drop(true, false);
                     break;
                 case ReceiveError.Disconnected:
-                    Log("Disconnected.", Logger.LogLevel.Warning);
+                    Log("Disconnected.", LogLevel.Warning);
                     Drop(true, false);
                     break;
                 default:
@@ -2296,7 +2297,7 @@ public class Joycon
     {
         if (_receiveReportsThread != null || _sendCommandsThread != null)
         {
-            Log("Poll thread cannot start!", Logger.LogLevel.Error);
+            Log("Poll thread cannot start!", LogLevel.Error);
             return;
         }
 
@@ -2308,11 +2309,11 @@ public class Joycon
                 try
                 {
                     ReceiveReports(_ctsCommunications.Token);
-                    Log("Thread receive reports finished.", Logger.LogLevel.Debug);
+                    Log("Thread receive reports finished.", LogLevel.Debug);
                 }
                 catch (OperationCanceledException) when (_ctsCommunications.IsCancellationRequested)
                 {
-                    Log("Thread receive reports canceled.", Logger.LogLevel.Debug);
+                    Log("Thread receive reports canceled.", LogLevel.Debug);
                 }
                 catch (Exception e)
                 {
@@ -2331,11 +2332,11 @@ public class Joycon
                 try
                 {
                     SendCommands(_ctsCommunications.Token);
-                    Log("Thread send commands finished.", Logger.LogLevel.Debug);
+                    Log("Thread send commands finished.", LogLevel.Debug);
                 }
                 catch (OperationCanceledException) when (_ctsCommunications.IsCancellationRequested)
                 {
-                    Log("Thread send commands canceled.", Logger.LogLevel.Debug);
+                    Log("Thread send commands canceled.", LogLevel.Debug);
                 }
                 catch (Exception e)
                 {
@@ -2349,10 +2350,10 @@ public class Joycon
         };
 
         _sendCommandsThread.Start();
-        Log("Thread send commands started.", Logger.LogLevel.Debug);
+        Log("Thread send commands started.", LogLevel.Debug);
 
         _receiveReportsThread.Start();
-        Log("Thread receive reports started.", Logger.LogLevel.Debug);
+        Log("Thread receive reports started.", LogLevel.Debug);
 
         Log("Ready.");
     }
@@ -2655,7 +2656,7 @@ public class Joycon
 
             if (_motionCalibration.UsedDefaultValues)
             {
-                Log("Some sensor calibrations datas are missing, fallback to default ones.", Logger.LogLevel.Warning);
+                Log("Some sensor calibrations datas are missing, fallback to default ones.", LogLevel.Warning);
             }
 
             DebugPrint(_motionCalibration, DebugType.Motion);
@@ -2663,7 +2664,7 @@ public class Joycon
 
         if (!ok)
         {
-            Log("Error while reading calibration datas.", Logger.LogLevel.Error);
+            Log("Error while reading calibration datas.", LogLevel.Error);
         }
 
         _DumpedCalibration = ok;
@@ -2844,7 +2845,7 @@ public class Joycon
             }
         }
 
-        Log("ReadSPI error.", Logger.LogLevel.Error);
+        Log("ReadSPI error.", LogLevel.Error);
 
         return readBuf;
     }
@@ -2881,7 +2882,7 @@ public class Joycon
             arrayAsStr = output.ToString(0, output.Length - 1); // Remove trailing space
         }
 
-        Log(string.Format(format, arrayAsStr), Logger.LogLevel.Debug, type);
+        Log(string.Format(format, arrayAsStr), LogLevel.Debug, type);
     }
 
     public class StateChangedEventArgs : EventArgs
@@ -3349,9 +3350,9 @@ public class Joycon
         }
     }
 
-    private void Log(string message, Logger.LogLevel level = Logger.LogLevel.Info, DebugType type = DebugType.None)
+    private void Log(string message, LogLevel level = LogLevel.Info, DebugType type = DebugType.None)
     {
-        if (level == Logger.LogLevel.Debug && type != DebugType.None)
+        if (level == LogLevel.Debug && type != DebugType.None)
         {
             _logger?.Log($"[P{PadId + 1}] [{type.ToString().ToUpper()}] {message}", level);
         }
@@ -3361,7 +3362,7 @@ public class Joycon
         }
     }
 
-    private void Log(string message, Exception e, Logger.LogLevel level = Logger.LogLevel.Error)
+    private void Log(string message, Exception e, LogLevel level = LogLevel.Error)
     {
         _logger?.Log($"[P{PadId + 1}] {message}", e, level);
     }

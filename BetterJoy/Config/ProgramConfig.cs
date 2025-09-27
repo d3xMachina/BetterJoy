@@ -1,3 +1,4 @@
+using BetterJoy.Logging;
 using System.Net;
 
 namespace BetterJoy.Config;
@@ -12,7 +13,7 @@ public class ProgramConfig : Config
     public IPAddress IP = IPAddress.Loopback;
     public int Port = 26760;
 
-    public ProgramConfig(Logger logger) : base(logger) { }
+    public ProgramConfig(ILogger logger) : base(logger) { }
 
     public ProgramConfig(ProgramConfig config) : base(config._logger)
     {

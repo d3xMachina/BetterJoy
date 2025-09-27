@@ -1,3 +1,4 @@
+using BetterJoy.Logging;
 using System;
 using System.Configuration;
 using System.Linq;
@@ -7,10 +8,10 @@ namespace BetterJoy.Config;
 
 public abstract class Config
 {
-    protected readonly Logger? _logger;
+    protected readonly ILogger? _logger;
     public bool ShowErrors = true;
 
-    protected Config(Logger? logger)
+    protected Config(ILogger? logger)
     {
         _logger = logger;
     }
@@ -84,7 +85,7 @@ public abstract class Config
                 defaultValueTxt = $"{defaultValue}";
             }
 
-            _logger?.Log($"Invalid value \"{value}\" for setting {key}! Using safe value \"{defaultValueTxt}\".", Logger.LogLevel.Warning);
+            _logger?.Log($"Invalid value \"{value}\" for setting {key}! Using safe value \"{defaultValueTxt}\".", LogLevel.Warning);
         }
     }
 }

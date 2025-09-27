@@ -50,12 +50,12 @@ public partial class Reassign : Form
 
     private void Menu_joy_buttons_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
     {
-        if (sender is not Control {Tag: SplitButton caller} ||
-            e.ClickedItem is not {Tag: object clickedItem})
+        if (sender is not Control { Tag: SplitButton caller } ||
+            e.ClickedItem is not { Tag: object clickedItem })
         {
             return;
         }
-        
+
         string value = $"{(int)clickedItem}";
 
         if (clickedItem is not ButtonAction action)
