@@ -203,7 +203,7 @@ public class JoyconManager
 
     private void OnDeviceConnected(DeviceInfo info)
     {
-        if (info.SerialNumber == null || GetControllerByPath(info.Path) != null)
+        if (GetControllerByPath(info.Path) != null)
         {
             return;
         }
@@ -218,14 +218,16 @@ public class JoyconManager
         _3rdPartyControllers.SController? thirdParty = null;
 
         // Check if it's a custom controller
-        foreach (var v in Program.ThirdpartyCons)
+        foreach (var currentThirdparty in Program.ThirdpartyCons)
         {
-            if (info.VendorId == v.VendorId &&
-                info.ProductId == v.ProductId &&
-                info.SerialNumber == v.SerialNumber)
+            if (info.VendorId == currentThirdparty.VendorId &&
+                info.ProductId == currentThirdparty.ProductId &&
+                info.SerialNumber == currentThirdparty.SerialNumber &&
+                info.ManufacturerString == currentThirdparty.Manufacturer &&
+                info.ProductString == currentThirdparty.Product)
             {
                 validController = true;
-                thirdParty = v;
+                thirdParty = currentThirdparty;
                 break;
             }
         }

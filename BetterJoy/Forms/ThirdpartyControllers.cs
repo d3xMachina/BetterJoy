@@ -46,23 +46,22 @@ public partial class _3rdPartyControllers : Form
         {
             using var file = new StreamReader(_path);
             var line = string.Empty;
-            while ((line = file.ReadLine()) != null && line != string.Empty)
+            while (!string.IsNullOrEmpty(line = file.ReadLine()))
             {
                 var split = line.Split('|');
-                //won't break existing config file
-                var serialNumber = "";
-                if (split.Length > 4)
+                if (split.Length < 6)
                 {
-                    serialNumber = split[4];
+                    continue;
                 }
 
                 controllers.Add(
                     new SController(
                         split[0],
-                        ushort.Parse(split[1]),
+                        split[1],
                         ushort.Parse(split[2]),
-                        byte.Parse(split[3]),
-                        serialNumber
+                        ushort.Parse(split[3]),
+                        split[4],
+                        byte.Parse(split[5])
                     )
                 );
             }
@@ -75,9 +74,9 @@ public partial class _3rdPartyControllers : Form
     {
         var controllers = new List<SController>();
 
-        foreach (SController v in list_customControllers.Items)
+        foreach (SController controller in list_customControllers.Items)
         {
-            controllers.Add(v);
+            controllers.Add(controller);
         }
 
         return controllers;
@@ -89,21 +88,11 @@ public partial class _3rdPartyControllers : Form
         Program.UpdateThirdpartyControllers(controllers);
     }
 
-    private static bool ContainsText(ListBox a, string manu)
+    private static bool ContainsController(ListBox a, SController controller)
     {
-        foreach (SController v in a.Items)
+        foreach (SController currentController in a.Items)
         {
-            if (v == null)
-            {
-                continue;
-            }
-
-            if (v.Name == null)
-            {
-                continue;
-            }
-
-            if (v.Name.Equals(manu))
+            if (currentController.Equals(controller))
             {
                 return true;
             }
@@ -120,31 +109,19 @@ public partial class _3rdPartyControllers : Form
         // Add devices to the list
         foreach (var device in devices)
         {
-            if (device.SerialNumber == null)
-            {
-                continue;
-            }
+            var controller = new SController(
+                device.ManufacturerString,
+                device.ProductString,
+                device.VendorId,
+                device.ProductId,
+                device.SerialNumber,
+                0 // type not set
+            );
 
-            var name = device.ProductString;
-            if (string.IsNullOrWhiteSpace(name))
+            if (!ContainsController(list_customControllers, controller) && !ContainsController(list_allControllers, controller))
             {
-                name = "Unknown";
-            }
-
-            name += $" (P{device.VendorId:X2} V{device.ProductId:X2}";
-            if (!string.IsNullOrWhiteSpace(device.SerialNumber))
-            {
-                name += $" S{device.SerialNumber}";
-            }
-            name += ")";
-
-            if (!ContainsText(list_customControllers, name) && !ContainsText(list_allControllers, name))
-            {
-                list_allControllers.Items.Add(
-                    new SController(name, device.VendorId, device.ProductId, 0, device.SerialNumber)
-                );
-                // 0 type is undefined
-                Console.WriteLine("Found controller " + name);
+                list_allControllers.Items.Add(controller);
+                Console.WriteLine($"Found controller {controller}");
             }
         }
     }
@@ -173,13 +150,13 @@ public partial class _3rdPartyControllers : Form
 
     private void btn_apply_Click(object sender, EventArgs e)
     {
-        var sc = "";
-        foreach (SController v in list_customControllers.Items)
+        var content = "";
+        foreach (SController controller in list_customControllers.Items)
         {
-            sc += v.Serialise() + Environment.NewLine;
+            content += controller.Serialise() + Environment.NewLine;
         }
 
-        File.WriteAllText(_path, sc);
+        File.WriteAllText(_path, content);
         CopyCustomControllers();
     }
 
@@ -201,20 +178,19 @@ public partial class _3rdPartyControllers : Form
 
     private void list_allControllers_SelectedValueChanged(object sender, EventArgs e)
     {
-        if (list_allControllers.SelectedItem is SController v)
+        if (list_allControllers.SelectedItem is SController controller)
         {
-            tip_device.Show(v.Name, list_allControllers);
+            tip_device.Show(controller.ToString(), list_allControllers);
         }
     }
 
     private void list_customControllers_SelectedValueChanged(object sender, EventArgs e)
     {
-        if (list_customControllers.SelectedItem is SController v)
+        if (list_customControllers.SelectedItem is SController controller)
         {
-            tip_device.Show(v.Name, list_customControllers);
+            tip_device.Show(controller.ToString(), list_customControllers);
 
-            chooseType.SelectedIndex = v.Type - 1;
-
+            chooseType.SelectedIndex = controller.Type - 1;
             group_props.Enabled = true;
         }
         else
@@ -242,54 +218,82 @@ public partial class _3rdPartyControllers : Form
 
     private void chooseType_SelectedValueChanged(object sender, EventArgs e)
     {
-        if (list_customControllers.SelectedItem is SController v)
+        if (list_customControllers.SelectedItem is SController controller)
         {
-            v.Type = (byte)(chooseType.SelectedIndex + 1);
+            controller.Type = (byte)(chooseType.SelectedIndex + 1);
         }
     }
 
     public class SController
     {
-        public readonly string Name;
+        public readonly string Manufacturer;
+        public readonly string Product;
+        public readonly ushort VendorId;
         public readonly ushort ProductId;
         public readonly string SerialNumber;
-        public byte Type; // 1 is pro, 2 is left joy, 3 is right joy, 4 is snes, 5 is n64
-        public readonly ushort VendorId;
+        public byte Type;
+        private string? _name;
 
-        public SController(string name, ushort vendorId, ushort productId, byte type, string serialNumber)
+        public SController(string manufacturer, string product, ushort vendorId, ushort productId, string serialNumber, byte type)
         {
-            ProductId = productId;
+            Manufacturer = manufacturer;
+            Product = product;
             VendorId = vendorId;
-            Type = type;
+            ProductId = productId;
             SerialNumber = serialNumber;
-            Name = name;
+            Type = type;
         }
 
         public override bool Equals(object? obj)
         {
-            //Check for null and compare run-time types.
-            if (obj == null || !GetType().Equals(obj.GetType()))
+            if (obj is not SController controllerObj)
             {
                 return false;
             }
 
-            var s = (SController)obj;
-            return s.ProductId == ProductId && s.VendorId == VendorId && s.SerialNumber == SerialNumber;
+            return controllerObj.Manufacturer == Manufacturer &&
+                   controllerObj.Product == Product &&
+                   controllerObj.VendorId == VendorId &&
+                   controllerObj.ProductId == ProductId &&
+                   controllerObj.SerialNumber == SerialNumber;
         }
 
         public override int GetHashCode()
         {
-            return Tuple.Create(ProductId, VendorId, SerialNumber).GetHashCode();
+            return Tuple.Create(Manufacturer, Product, VendorId, ProductId, SerialNumber).GetHashCode();
         }
 
         public override string ToString()
         {
-            return Name ?? $"Unidentified Device ({ProductId})";
+            if (_name == null)
+            {
+                _name = Manufacturer;
+
+                if (Product != "")
+                {
+                    _name += $" {Product}";
+                }
+                else
+                {
+                    _name = "Unknown";
+                }
+
+                _name += $" (V{VendorId:X2} P{ProductId:X2}";
+
+                if (SerialNumber != "")
+                {
+                    _name += $" S{SerialNumber}";
+                }
+
+                _name += ")";
+            }
+
+            return _name;
         }
 
         public string Serialise()
         {
-            return $"{Name}|{VendorId}|{ProductId}|{Type}|{SerialNumber}";
+            return $"{Manufacturer}|{Product}|{VendorId}|{ProductId}|{SerialNumber}|{Type}";
         }
     }
 }
