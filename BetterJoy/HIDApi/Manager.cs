@@ -50,8 +50,11 @@ public static class Manager
 
             do
             {
-                yield return currentDevice.Value;
-                currentDevice = currentDevice.Value.Next;
+                var deviceInfo = currentDevice.Value;
+                SanitizeDeviceInfo(ref deviceInfo);
+
+                yield return deviceInfo;
+                currentDevice = deviceInfo.Next;
             }
             while (currentDevice != null);
         }
@@ -104,5 +107,12 @@ public static class Manager
         }
 
         _deviceNotificationsHandle = 0;
+    }
+
+    private static void SanitizeDeviceInfo(ref DeviceInfo deviceInfo)
+    {
+        deviceInfo.ManufacturerString = deviceInfo.ManufacturerString.Trim();
+        deviceInfo.ProductString = deviceInfo.ProductString.Trim();
+        deviceInfo.SerialNumber = deviceInfo.SerialNumber.Trim();
     }
 }
