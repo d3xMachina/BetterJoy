@@ -73,6 +73,7 @@ public static class Manager
 
         static int notificationCallback(int callbackHandle, DeviceInfo deviceInfo, int events, IntPtr userData)
         {
+            SanitizeDeviceInfo(ref deviceInfo);
             DeviceNotificationReceived?.Invoke(null, new DeviceNotificationEventArgs(deviceInfo, (HotplugEvent)events));
             return 0; // keep the callback registered
         }
