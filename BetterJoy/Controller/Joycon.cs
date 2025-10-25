@@ -501,11 +501,7 @@ public class Joycon
             BlinkHomeLight();
             SetLEDByPlayerNum(PadId);
 
-            SetMotion(true);
-            SetMotionSensitivity();
-
-            SetRumble(true);
-            SetNFCIR(false);
+            SetFeatures();
 
             SetReportMode(InputReportMode.StandardFull);
 
@@ -527,6 +523,15 @@ public class Joycon
             State = Status.AttachError;
             throw;
         }
+    }
+
+    private void SetFeatures()
+    {
+        SetMotion(true);
+        SetMotionSensitivity();
+
+        SetRumble(true);
+        SetNFCIR(false);
     }
 
     private void GetMAC()
@@ -1805,6 +1810,7 @@ public class Joycon
                     try
                     {
                         USBPairing();
+                        SetFeatures();
                         SetReportMode(InputReportMode.StandardFull);
                         RequestSetLEDByPadID();
                     }
