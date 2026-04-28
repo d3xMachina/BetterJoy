@@ -1,5 +1,5 @@
 @echo off
-set "MSBUILD_PATH=%ProgramFiles%\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
+set "MSBUILD_PATH=%ProgramFiles%\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"
 set "DOTNET_CLI_TELEMETRY_OPTOUT=1"
 set "options=--nologo -p:PublishProfile=Properties\PublishProfiles\FolderProfile.pubxml"
 

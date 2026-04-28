@@ -7,7 +7,7 @@
  - fixed a good amount of bugs, crashes, controller connection/disconnection issues
  - added the calibration of the controller with the calibrate button
  - added deadzone, range and anti-deadzone settings
- - updated to .NET 9
+ - updated to .NET 10
  - updated hidapi and packages
  - use HidHide instead of the outdated HIDGuardian
  - instantly connect and disconnect
@@ -74,8 +74,8 @@ Check out the [wiki](https://github.com/Davidobot/BetterJoy/wiki)! There, you'll
 
 ## Visual Studio (IDE)
 
-1. If you didn't already, install **Visual Studio Community 2022** via
-   [the official guide](https://docs.microsoft.com/en-us/visualstudio/install/install-visual-studio?view=vs-2022).
+1. If you didn't already, install **Visual Studio Community 2026** via
+   [the official guide](https://docs.microsoft.com/en-us/visualstudio/install/install-visual-studio?view=vs-2026).
    When asked about the workloads, select **.NET Desktop Development**.
 2. Get the code project via Git (git clone --recurse-submodules https://github.com/d3xMachina/BetterJoy.git)
 3. Open Visual Studio Community and open the solution file (*BetterJoy.sln*).
@@ -93,7 +93,7 @@ Check out the [wiki](https://github.com/Davidobot/BetterJoy/wiki)! There, you'll
 
 ## Visual Studio Build Tools (CLI)
 1. Download **Visual Studio Build Tools** via
-   [the official link](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022).
+   [the official link](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2026).
 2. Install **NuGet** by following
    [the official guide](https://docs.microsoft.com/en-us/nuget/install-nuget-client-tools#nugetexe-cli).
    You should follow the section for ***nuget.exe***.
