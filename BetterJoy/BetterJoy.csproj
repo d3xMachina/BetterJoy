@@ -63,7 +63,7 @@
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<TargetPath>x64\%(Filename)%(Extension)</TargetPath>
         </ContentWithTargetPath>
-		<ContentWithTargetPath Include="..\LICENSE">
+		<ContentWithTargetPath Include="..\NOTICE">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<TargetPath>%(Filename)%(Extension)</TargetPath>
         </ContentWithTargetPath>
