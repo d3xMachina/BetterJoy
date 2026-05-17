@@ -925,11 +925,8 @@ public class Joycon
 
             lock (_ctsCommunicationsLock)
             {
-                if (_ctsCommunications != null)
-                {
-                    _ctsCommunications.Dispose();
-                    _ctsCommunications = null;
-                }
+                _ctsCommunications?.Dispose();
+                _ctsCommunications = null;
             }
         }
     }

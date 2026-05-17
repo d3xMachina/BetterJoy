@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.10.34928.147
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11806.211 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BetterJoy", "BetterJoy\BetterJoy.csproj", "{1BF709E9-C133-41DF-933A-C9FF3F664C7B}"
 	ProjectSection(ProjectDependencies) = postProject

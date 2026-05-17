@@ -14,6 +14,18 @@ using System.Threading.Tasks;
 
 namespace BetterJoy;
 
+public readonly struct ControllerIdentifier
+{
+    public readonly string Path;
+    public readonly long TimestampCreation;
+
+    public ControllerIdentifier(Joycon controller)
+    {
+        Path = controller.Path;
+        TimestampCreation = controller.TimestampCreation;
+    }
+}
+
 public class JoyconManager
 {
     private const ushort VendorId = 0x57e;

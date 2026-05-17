@@ -1,7 +1,6 @@
 #nullable disable
 using BetterJoy.Collections;
 using BetterJoy.Config;
-using BetterJoy.Controller;
 using BetterJoy.Exceptions;
 using BetterJoy.Forms;
 using BetterJoy.Logging;
@@ -23,18 +22,6 @@ using WindowsInput.Events.Sources;
 using static BetterJoy.Forms._3rdPartyControllers;
 
 namespace BetterJoy;
-
-public readonly struct ControllerIdentifier
-{
-    public readonly string Path;
-    public readonly long TimestampCreation;
-
-    public ControllerIdentifier(Joycon controller)
-    {
-        Path = controller.Path;
-        TimestampCreation = controller.TimestampCreation;
-    }
-}
 
 internal class Program
 {
@@ -64,7 +51,7 @@ internal class Program
     private static bool _mouseEventRegistered;
 
     private const string _logFilePath = "LogDebug.txt";
-    private static ILogger _logger;
+    private static Logger _logger;
 
     public static readonly string ProgramLocation = Application.ExecutablePath;
     public static readonly string ProgramVersion = $"v{Application.ProductVersion.Split('+')[0]}";
