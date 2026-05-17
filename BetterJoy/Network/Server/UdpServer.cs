@@ -249,6 +249,10 @@ public class UdpServer
                     await _channelSendData.Writer.WriteAsync(pendingReply, token);
                 }
             }
+            catch (ChannelClosedException) when (token.IsCancellationRequested)
+            {
+                // server stopping, ignore
+            }
             catch (SocketException)
             {
                 if (!token.IsCancellationRequested)
@@ -730,8 +734,8 @@ public class UdpServer
 
         Running = false;
         _hasClients = false;
-        _channelSendData.Writer.Complete();
         _ctsTransfers.Cancel();
+        _channelSendData.Writer.Complete();
         _udpSock.Close();
 
         await Task.WhenAll(_receiveTask, _sendTask);
