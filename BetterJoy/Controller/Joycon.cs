@@ -3134,6 +3134,7 @@ public class Joycon
         var gyroAnalogSliders = UseGyroAnalogSliders();
         var swapAB = Config.SwapAB;
         var swapXY = Config.SwapXY;
+        var minusToShare = Config.MinusToShare;
 
         if (other != null && !isLeft)
         {
@@ -3158,10 +3159,10 @@ public class Joycon
                     buttons[(int)(isLeft ? Button.DpadRight : Button.A)]
                 );
 
-                output.Share = buttons[(int)Button.Capture];
+                output.Share = minusToShare ? buttons[(int)Button.Minus] : buttons[(int)Button.Capture];
                 output.Options = buttons[(int)Button.Plus];
                 output.Ps = buttons[(int)Button.Home];
-                output.Touchpad = buttons[(int)Button.Minus];
+                output.Touchpad = minusToShare ? buttons[(int)Button.Capture] : buttons[(int)Button.Minus];
 
                 output.ShoulderLeft = buttons[(int)(isLeft ? Button.Shoulder1 : Button.Shoulder21)];
                 output.ShoulderRight = buttons[(int)(isLeft ? Button.Shoulder21 : Button.Shoulder1)];
@@ -3219,10 +3220,10 @@ public class Joycon
                 buttons[(int)Button.DpadRight]
             );
 
-            output.Share = buttons[(int)Button.Capture];
+            output.Share = minusToShare ? buttons[(int)Button.Minus] : buttons[(int)Button.Capture];
             output.Options = buttons[(int)Button.Plus];
             output.Ps = buttons[(int)Button.Home];
-            output.Touchpad = buttons[(int)Button.Minus];
+            output.Touchpad = minusToShare ? buttons[(int)Button.Capture] : buttons[(int)Button.Minus];
 
             output.ShoulderLeft = buttons[(int)Button.Shoulder1];
             output.ShoulderRight = buttons[(int)Button.Shoulder21];
