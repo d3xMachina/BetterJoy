@@ -92,6 +92,13 @@ public class Joycon
         Vertical
     }
 
+    public enum StickShape
+    {
+        Circle,
+        Square,
+        N64
+    }
+
     private enum ReceiveError
     {
         None,
@@ -2361,6 +2368,23 @@ public class Joycon
         Log("Ready.");
     }
 
+    private static float GetOctagonRadius(float angle, float cardinalRadius, float diagonalRadius)
+    {
+        float cos = MathF.Abs(MathF.Cos(angle));
+        float sin = MathF.Abs(MathF.Sin(angle));
+
+        float max = MathF.Max(cos, sin);
+        float min = MathF.Min(cos, sin);
+
+        // For a regular octagon: radius = 1/(max + k*min) where k = sqrt(2) - 1
+        float k = (cardinalRadius / diagonalRadius) * (MathF.Sqrt(2) - 1.0f);
+
+        float baseRadius = 1.0f / (max + k * min);
+        float radius = baseRadius * cardinalRadius;
+
+        return radius;
+    }
+
     private void CalculateStickCenter(TwoAxisUShort vals, StickLimitsCalibration cal, float deadzone, float range, float[] antiDeadzone, ref Stick stick)
     {
         float dx = vals.X - cal.XCenter;
@@ -2395,10 +2419,18 @@ public class Joycon
             normalizedX *= normalizedMagnitudeX / magnitude;
             normalizedY *= normalizedMagnitudeY / magnitude;
 
-            if (!Config.SticksSquared || normalizedX == 0f || normalizedY == 0f)
+            if (Config.SticksShape == StickShape.Circle || normalizedX == 0f || normalizedY == 0f)
             {
                 stick.X = normalizedX;
                 stick.Y = normalizedY;
+            }
+            else if (Config.SticksShape == StickShape.N64)
+            {
+                float angle = MathF.Atan2(normalizedX, normalizedY);
+                float radius = GetOctagonRadius(angle, cardinalRadius: 1.0f, diagonalRadius: 1.9f);
+
+                stick.X = normalizedX * radius;
+                stick.Y = normalizedY * radius;
             }
             else
             {

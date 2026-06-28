@@ -15,7 +15,7 @@ public class ControllerConfig : Config
     public float StickRightDeadzone = 0.15f;
     public float StickLeftRange = 0.90f;
     public float StickRightRange = 0.90f;
-    public bool SticksSquared = false;
+    public StickShape SticksShape = StickShape.Circle;
     public float[] StickLeftAntiDeadzone = [0.0f, 0.0f];
     public float[] StickRightAntiDeadzone = [0.0f, 0.0f];
     public float AHRSBeta = 0.05f;
@@ -56,7 +56,7 @@ public class ControllerConfig : Config
         StickRightDeadzone = config.StickRightDeadzone;
         StickLeftRange = config.StickLeftRange;
         StickRightRange = config.StickRightRange;
-        SticksSquared = config.SticksSquared;
+        SticksShape = config.SticksShape;
         Array.Copy(config.StickLeftAntiDeadzone, StickLeftAntiDeadzone, StickLeftAntiDeadzone.Length);
         Array.Copy(config.StickRightAntiDeadzone, StickRightAntiDeadzone, StickRightAntiDeadzone.Length);
         AHRSBeta = config.AHRSBeta;
@@ -96,7 +96,7 @@ public class ControllerConfig : Config
         TryUpdateSetting("StickRightDeadzone", ref StickRightDeadzone);
         TryUpdateSetting("StickLeftRange", ref StickLeftRange);
         TryUpdateSetting("StickRightRange", ref StickRightRange);
-        TryUpdateSetting("SticksSquared", ref SticksSquared);
+        TryUpdateSetting("SticksShape", ref SticksShape);
         TryUpdateSetting("StickLeftAntiDeadzone", ref StickLeftAntiDeadzone);
         TryUpdateSetting("StickRightAntiDeadzone", ref StickRightAntiDeadzone);
         TryUpdateSetting("AHRS_beta", ref AHRSBeta);
@@ -124,8 +124,6 @@ public class ControllerConfig : Config
         TryUpdateSetting("AutoPowerOff", ref AutoPowerOff);
         TryUpdateSetting("AllowCalibration", ref AllowCalibration);
     }
-
-
 
     public override ControllerConfig Clone()
     {
