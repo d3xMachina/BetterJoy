@@ -707,9 +707,15 @@ public class Joycon
         SubcommandWithResponse(SubCommandOperation.SetIMUSensitivity, buf);
     }
 
-    private void SetRumble(bool enable)
+    private void SetRumble(bool enable, bool checkResponse = true)
     {
-        SubcommandWithResponse(SubCommandOperation.EnableVibration, [enable ? (byte)0x01 : (byte)0x00]);
+        if (checkResponse)
+        {
+            SubcommandWithResponse(SubCommandOperation.EnableVibration, [enable ? (byte)0x01 : (byte)0x00]);
+            return;
+        }
+
+        Subcommand(SubCommandOperation.EnableVibration, [enable ? (byte)0x01 : (byte)0x00]);
     }
 
     private void IgnoreRumbleInSubcommands()
@@ -1648,7 +1654,7 @@ public class Joycon
 
     private void SendCommands(CancellationToken token)
     {
-        const int SendRumbleIntervalMs = 50;
+        const int SendRumbleIntervalMs = 10;
 
         // the home light stays on for 2625ms, set to less than half in case of packet drop
         const int SendHomeLightIntervalMs = 1250;
@@ -1702,7 +1708,7 @@ public class Joycon
                 // Subcommands send the rumble so no need to call SetRumble
                 if (!subCommandSent)
                 {
-                    SetRumble(true);
+                    SetRumble(true, false);
                 }
 
                 IgnoreRumbleInSubcommands();
@@ -2470,20 +2476,6 @@ public class Joycon
         }
 
         _rumbles.Enqueue(lowFreq, highFreq, lowAmplitude, highAmplitude);
-    }
-
-    // Run from poll thread
-    private void SendRumble(Span<byte> buf, ReadOnlySpan<byte> data)
-    {
-        buf.Clear();
-
-        buf[0] = 0x10;
-        buf[1] = (byte)(_globalCount & 0x0F);
-        ++_globalCount;
-
-        data[..8].CopyTo(buf[2..]);
-        PrintArray<byte>(buf[..10], DebugType.Rumble, format: "Rumble data sent: {0:S}");
-        Write(buf);
     }
 
     private int Subcommand(SubCommandOperation sc, ReadOnlySpan<byte> bufParameters, bool print = true)
